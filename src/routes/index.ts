@@ -2,6 +2,10 @@ import { Router } from 'express'
 import authRoutes from './auth.routes'
 import departmentsRoutes from './departments.routes'
 import designationsRoutes from './designations.routes'
+import companyRoutes from './company.routes'
+import divisionRoutes from './division.routes'
+import workStationRoutes from './workStation.routes'
+import costCenterRoutes from './costCenter.routes'
 import employeeTypeRoutes from './employeeTypes.routes'
 import weekendRoutes from './weekends.routes'
 import employeeRoutes from './employees.routes'
@@ -22,6 +26,10 @@ const router = Router()
 router.use('/auth', authRoutes)
 router.use('/departments', departmentsRoutes)
 router.use('/designations', designationsRoutes)
+router.use('/company', companyRoutes)
+router.use('/divisions', divisionRoutes)
+router.use('/workStations', workStationRoutes)
+router.use('/costCenters', costCenterRoutes)
 router.use('/employeeTypes', employeeTypeRoutes)
 router.use('/weekends', weekendRoutes)
 router.use('/employees', employeeRoutes)

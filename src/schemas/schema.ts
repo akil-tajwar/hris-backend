@@ -169,7 +169,7 @@ export const employeeModel = mysqlTable('employees', {
   country: varchar('country', { length: 100 }),
   city: varchar('city', { length: 100 }),
   zipCode: varchar('zip_code', { length: 20 }),
-  workEmail: varchar('workEmail', { length: 100 }),
+  workEmail: varchar('work_email', { length: 100 }),
   privateEmail: varchar('private_email', { length: 100 }),
   homePhone: varchar('home_phone', { length: 20 }),
   personalPhone: varchar('personal_phone', { length: 20 }),
@@ -184,7 +184,7 @@ export const employeeModel = mysqlTable('employees', {
   maritalStatus: mysqlEnum('marital_status', ['Single', 'Married']),
   photoUrl: varchar('photo_url', { length: 255 }),
   cvUrl: varchar('cv_url', { length: 255 }),
-  religion: varchar('religiion', { length: 20 }),
+  religion: varchar('religion', { length: 20 }),
   bloodGroup: mysqlEnum('blood_group', [
     'A+',
     'A-',
@@ -235,9 +235,7 @@ export const employeeModel = mysqlTable('employees', {
   costCenterId: int('cost_center_id')
     .references(() => costCenterModel.costCenterId)
     .notNull(),
-  reportingAuthorityId: int('reporting_authority_id').references(
-    () => reportingAuthorityModel.reportingAuthorityId
-  ),
+  reportingAuthorityId: int('reporting_authority_id'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -579,10 +577,6 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
   costCenter: one(costCenterModel, {
     fields: [employeeModel.costCenterId],
     references: [costCenterModel.costCenterId],
-  }),
-  reportingAuthority: one(reportingAuthorityModel, {
-    fields: [employeeModel.reportingAuthorityId],
-    references: [reportingAuthorityModel.reportingAuthorityId],
   }),
 }))
 

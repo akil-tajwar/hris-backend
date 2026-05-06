@@ -17,6 +17,7 @@ router.post(
   upload.fields([
     { name: 'photoUrl', maxCount: 1 },
     { name: 'cvUrl', maxCount: 1 },
+    { name: 'certificateUrl', maxCount: 1 },
   ]),
   authenticateUser,
   createEmployeeController
@@ -26,6 +27,7 @@ router.patch(
   upload.fields([
     { name: 'photoUrl', maxCount: 1 },
     { name: 'cvUrl', maxCount: 1 },
+    { name: 'certificateUrl', maxCount: 1 },
   ]),
   authenticateUser,
   updateEmployeeController

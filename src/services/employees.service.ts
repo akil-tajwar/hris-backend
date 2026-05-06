@@ -118,116 +118,60 @@ export const updateEmployee = async (
   employeeId: number,
   data: Partial<NewEmployee> & { leaveTypeIds?: number[] }
 ) => {
-  console.log('🚀 ~ updateEmployee ~ data:', data)
-
   return await db.transaction(async (tx) => {
-    // Check if employee exists
+    // 🔍 Check if employee exists
     const existing = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })
 
     if (!existing) throw new Error('Employee not found')
 
-    // ✅ Prepare update data (only include fields that are provided)
+    // 🔧 Normalize FK values (IMPORTANT)
+    const normalizeFk = (val: any) =>
+      val === 0 || val === '' || val === undefined ? null : val
+
+    // 🔧 Normalize general values (avoid empty string issues)
+    const normalizeValue = (val: any) =>
+      val === '' || val === undefined ? null : val
+
+    // 🎯 Build update data dynamically
     const updateData: any = {}
 
-    // Basic Information
-    if (data.empCode !== undefined) updateData.empCode = data.empCode
-    if (data.empFullName !== undefined)
-      updateData.empFullName = data.empFullName
-    if (data.empShortName !== undefined)
-      updateData.empShortName = data.empShortName
-    if (data.dob !== undefined) updateData.dob = data.dob
-    if (data.doj !== undefined) updateData.doj = data.doj
-    if (data.doc !== undefined) updateData.doc = data.doc
-    if (data.gender !== undefined) updateData.gender = data.gender
-    if (data.nationalIdNo !== undefined)
-      updateData.nationalIdNo = data.nationalIdNo
-    if (data.nationality !== undefined)
-      updateData.nationality = data.nationality
-    if (data.country !== undefined) updateData.country = data.country
-    if (data.city !== undefined) updateData.city = data.city
-    if (data.zipCode !== undefined) updateData.zipCode = data.zipCode
+    Object.entries(data).forEach(([key, value]) => {
+      // Skip leaveTypeIds (handled separately)
+      if (key === 'leaveTypeIds') return
 
-    // Contact Information
-    if (data.workEmail !== undefined) updateData.workEmail = data.workEmail
-    if (data.privateEmail !== undefined)
-      updateData.privateEmail = data.privateEmail
-    if (data.homePhone !== undefined) updateData.homePhone = data.homePhone
-    if (data.personalPhone !== undefined)
-      updateData.personalPhone = data.personalPhone
-    if (data.officialPhone !== undefined)
-      updateData.officialPhone = data.officialPhone
+      // Foreign keys list
+      const fkFields = [
+        'departmentId',
+        'designationId',
+        'employeeTypeId',
+        'officeTimingId',
+        'companyId',
+        'workStationId',
+        'divisionId',
+        'costCenterId',
+        'reportingAuthorityId',
+      ]
 
-    // Address Information
-    if (data.presentAddress !== undefined)
-      updateData.presentAddress = data.presentAddress
-    if (data.permanentAddress !== undefined)
-      updateData.permanentAddress = data.permanentAddress
+      if (fkFields.includes(key)) {
+        updateData[key] = normalizeFk(value)
+      } else if (key === 'isActive') {
+        // Boolean → number
+        updateData[key] = value ? 1 : 0
+      } else {
+        updateData[key] = normalizeValue(value)
+      }
+    })
 
-    // Emergency Contact
-    if (data.emergencyContactName !== undefined)
-      updateData.emergencyContactName = data.emergencyContactName
-    if (data.emergencyContactPhone !== undefined)
-      updateData.emergencyContactPhone = data.emergencyContactPhone
-    if (data.emergencyContactRelation !== undefined)
-      updateData.emergencyContactRelation = data.emergencyContactRelation
+    // 🕒 Audit fields
+    if (data.updatedBy !== undefined) {
+      updateData.updatedBy = data.updatedBy
+    }
 
-    // Personal Information
-    if (data.maritalStatus !== undefined)
-      updateData.maritalStatus = data.maritalStatus
-    if (data.photoUrl !== undefined) updateData.photoUrl = data.photoUrl
-    if (data.cvUrl !== undefined) updateData.cvUrl = data.cvUrl
-    if (data.religion !== undefined) updateData.religion = data.religion
-    if (data.bloodGroup !== undefined) updateData.bloodGroup = data.bloodGroup
+    updateData.updatedAt = new Date()
 
-    // Qualification Information
-    if (data.qualification !== undefined)
-      updateData.qualification = data.qualification
-    if (data.instituteName !== undefined)
-      updateData.instituteName = data.instituteName
-    if (data.subjectName !== undefined)
-      updateData.subjectName = data.subjectName
-    if (data.startDate !== undefined) updateData.startDate = data.startDate
-    if (data.endDate !== undefined) updateData.endDate = data.endDate
-    if (data.result !== undefined) updateData.result = data.result
-    if (data.certificateUrl !== undefined)
-      updateData.certificateUrl = data.certificateUrl
-
-    // Employment Information
-    if (data.basicSalary !== undefined)
-      updateData.basicSalary = data.basicSalary
-    if (data.isActive !== undefined) updateData.isActive = data.isActive
-
-    // Dependents Information
-    if (data.dependentsName !== undefined)
-      updateData.dependentsName = data.dependentsName
-    if (data.dependentRelation !== undefined)
-      updateData.dependentRelation = data.dependentRelation
-
-    // Foreign Keys
-    if (data.departmentId !== undefined)
-      updateData.departmentId = data.departmentId
-    if (data.designationId !== undefined)
-      updateData.designationId = data.designationId
-    if (data.employeeTypeId !== undefined)
-      updateData.employeeTypeId = data.employeeTypeId
-    if (data.officeTimingId !== undefined)
-      updateData.officeTimingId = data.officeTimingId
-    if (data.companyId !== undefined) updateData.companyId = data.companyId
-    if (data.workStationId !== undefined)
-      updateData.workStationId = data.workStationId
-    if (data.divisionId !== undefined) updateData.divisionId = data.divisionId
-    if (data.costCenterId !== undefined)
-      updateData.costCenterId = data.costCenterId
-    if (data.reportingAuthorityId !== undefined)
-      updateData.reportingAuthorityId = data.reportingAuthorityId
-
-    // Audit Fields
-    if (data.updatedBy !== undefined) updateData.updatedBy = data.updatedBy
-    updateData.updatedAt = sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-
-    // ✅ Execute UPDATE if there are fields to update
+    // ✅ Execute update
     if (Object.keys(updateData).length > 0) {
       await tx
         .update(employeeModel)
@@ -235,7 +179,7 @@ export const updateEmployee = async (
         .where(eq(employeeModel.employeeId, employeeId))
     }
 
-    // 🔁 Update leave types if provided
+    // 🔁 Update leave types
     if (data.leaveTypeIds !== undefined) {
       await tx
         .delete(employeeLeaveTypeModel)
@@ -251,7 +195,7 @@ export const updateEmployee = async (
       }
     }
 
-    // ✅ Return updated employee
+    // 📦 Return updated employee
     const updatedEmployee = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })

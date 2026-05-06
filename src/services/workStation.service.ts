@@ -4,14 +4,12 @@ import { eq } from 'drizzle-orm'
 
 // CREATE
 export const createWorkStation = async (
-  workStationId: number,
   workStationName: string,
   workStationNumber: number,
   createdBy: number
 ) => {
   await db.insert(workStationModel).values({
     workStationName,
-    workStationId,
     workStationNumber,
     createdBy,
   })
@@ -49,7 +47,7 @@ export const updateWorkStation = async (
 ) => {
   await db
     .update(workStationModel)
-    .set({ workStationName, workStationId, workStationNumber, updatedBy })
+    .set({ workStationName, workStationNumber, updatedBy })
     .where(eq(workStationModel.workStationId, workStationId))
 
   const [updated] = await db

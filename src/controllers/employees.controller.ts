@@ -45,6 +45,10 @@ export const createEmployeeController = async (req: Request, res: Response) => {
         employeeDetails.cvUrl = `${baseUrl}${files.cvUrl[0].filename}`
       }
 
+      if (files?.certificateUrl?.[0]) {
+        employeeDetails.certificateUrl = `${baseUrl}${files.certificateUrl[0].filename}`
+      }
+
       // 🔁 Create employee (MUST await)
       const employee = await createEmployee(employeeDetails)
       results.push(employee)
@@ -95,6 +99,10 @@ export const updateEmployeeController = async (req: Request, res: Response) => {
     // 📄 CV
     if (files?.cvUrl?.[0]) {
       employeeDetails.cvUrl = `${baseUrl}${files.cvUrl[0].filename}`
+    }
+
+    if (files?.certificateUrl?.[0]) {
+      employeeDetails.certificateUrl = `${baseUrl}${files.certificateUrl[0].filename}`
     }
 
     const updatedEmployee = updateEmployee(employeeId, employeeDetails)
