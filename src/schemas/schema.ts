@@ -72,6 +72,20 @@ export const tenantModel = mysqlTable('tenants', {
   ),
 })
 
+export const customerModel = mysqlTable('customers', {
+  customerId: int('customer_id').primaryKey().autoincrement(),
+  customerName: varchar('customer_name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 50 }).notNull().unique(),
+  phone: varchar('phone', { length: 50 }),
+  address: text('address'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const departmentModel = mysqlTable('departments', {
   departmentId: int('department_id').primaryKey().autoincrement(),
   departmentName: varchar('department_name', { length: 50 }).notNull(),
@@ -717,6 +731,8 @@ export type UserRole = typeof userRolesModel.$inferSelect
 export type NewUserRole = typeof userRolesModel.$inferInsert
 export type RolePermission = typeof rolePermissionsModel.$inferSelect
 export type NewRolePermission = typeof rolePermissionsModel.$inferInsert
+export type Customer = typeof customerModel.$inferSelect
+export type NewCustomer = typeof customerModel.$inferInsert
 export type Tenant = typeof tenantModel.$inferSelect
 export type NewTenant = typeof tenantModel.$inferInsert
 export type Department = typeof departmentModel.$inferSelect
