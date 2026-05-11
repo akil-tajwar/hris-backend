@@ -4,15 +4,17 @@ import { eq } from 'drizzle-orm'
 
 // CREATE
 export const createTenant = async (data: NewTenant) => {
-  await db.insert(tenantModel).values(data)
-
-  const [tenant] = await db
-    .select()
-    .from(tenantModel)
-    .orderBy(tenantModel.tenantId)
-    .limit(1)
-
-  return tenant
+  return await db.transaction(async (tx) => {
+    const [result] = await tx.insert(tenantModel).values(data)
+    const tenantId = result.insertId
+    
+    const [tenant] = await tx
+      .select()
+      .from(tenantModel)
+      .where(eq(tenantModel.tenantId, tenantId))
+    
+    return tenant
+  })
 }
 
 // READ ALL

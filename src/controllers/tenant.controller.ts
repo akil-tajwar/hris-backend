@@ -14,9 +14,9 @@ export const createTenantController = async (
 ) => {
 
   try {
-    requirePermission(req, 'create_tenat')
-    const tenat = await createTenant(req.body)
-    res.status(201).json({ status: 'success', data: tenat })
+    requirePermission(req, 'create_tenant')
+    const tenant = await createTenant(req.body)
+    res.status(201).json({ status: 'success', data: tenant })
   } catch (err) {
     next(err)
   }
@@ -29,9 +29,9 @@ export const getTenantsController = async (
 ) => {
 
   try {
-    requirePermission(req, 'view_tenat')
-    const tenats = await getTenants()
-    res.json(tenats)
+    requirePermission(req, 'view_tenant')
+    const tenants = await getTenants()
+    res.json(tenants)
   } catch (err) {
     next(err)
   }
@@ -44,12 +44,12 @@ export const updateTenantController = async (
 ) => {
 
   try {
-    requirePermission(req, 'edit_tenat')
-    const { tenatId } = req.params
-    const { tenatName, updatedBy } = req.body
+    requirePermission(req, 'edit_tenant')
+    const { tenantId } = req.params
+    const { tenantName, updatedBy } = req.body
 
-    const tenat = await updateTenant(Number(tenatId), tenatName, updatedBy)
-    res.json({ status: 'success', data: tenat })
+    const tenant = await updateTenant(Number(tenantId), tenantName, updatedBy)
+    res.json({ status: 'success', data: tenant })
   } catch (err) {
     next(err)
   }
@@ -62,9 +62,9 @@ export const deleteTenantController = async (
 ) => {
 
   try {
-    requirePermission(req, 'delete_tenat')
-    const { tenatId } = req.params
-    await deleteTenant(Number(tenatId))
+    requirePermission(req, 'delete_tenant')
+    const { tenantId } = req.params
+    await deleteTenant(Number(tenantId))
     res.json({ status: 'success', message: 'Tenant deleted' })
   } catch (err) {
     next(err)

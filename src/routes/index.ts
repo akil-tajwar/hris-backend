@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import authRoutes from './auth.routes'
+import tenantRoutes from './tenant.routes'
 import departmentsRoutes from './departments.routes'
 import designationsRoutes from './designations.routes'
 import companyRoutes from './company.routes'
@@ -24,6 +25,7 @@ import dashboardRoutes from './dashboard.routes'
 const router = Router()
 
 router.use('/auth', authRoutes)
+router.use('/tenants', tenantRoutes)
 router.use('/departments', departmentsRoutes)
 router.use('/designations', designationsRoutes)
 router.use('/company', companyRoutes)
