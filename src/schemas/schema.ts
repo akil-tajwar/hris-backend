@@ -25,6 +25,10 @@ export const userModel = mysqlTable('users', {
   roleId: int('role_id').references(() => roleModel.roleId, {
     onDelete: 'set null',
   }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'set null',
+  }),
+  email: varchar('email', { length: 50 }).notNull().unique(),
   isPasswordResetRequired: boolean('is_password_reset_required').default(true),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at')
@@ -537,6 +541,10 @@ export const userRelations = relations(userModel, ({ one }) => ({
   role: one(roleModel, {
     fields: [userModel.roleId],
     references: [roleModel.roleId],
+  }),
+  tenant: one(tenantModel, {
+    fields: [userModel.tenantId],
+    references: [tenantModel.tenantId],
   }),
 }))
 
