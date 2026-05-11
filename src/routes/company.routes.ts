@@ -6,14 +6,22 @@ import {
   updateCompanyController,
   deleteCompanyController,
 } from '../controllers/company.controller'
-import { authenticateUser } from '../middlewares/auth.middleware'
+import { upload } from '../middlewares/upload'
 
 const router = Router()
 
-router.post('/create', authenticateUser, createCompanyController)
-router.get('/getAll', authenticateUser, getCompaniesController)
-router.get('/get/:companyId', authenticateUser, getCompanyByIdController)
-router.patch('/edit/:companyId', authenticateUser, updateCompanyController)
-router.delete('/delete/:companyId', authenticateUser, deleteCompanyController)
+router.post(
+  '/create',
+  upload.fields([{ name: 'logoUrl', maxCount: 1 }]),
+  createCompanyController
+)
+router.patch(
+  '/edit/:companyId',
+  upload.fields([{ name: 'logoUrl', maxCount: 1 }]),
+  updateCompanyController
+)
+router.get('/getAll', getCompaniesController)
+router.get('/get/:companyId', getCompanyByIdController)
+router.delete('/delete/:companyId', deleteCompanyController)
 
 export default router

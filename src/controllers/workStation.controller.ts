@@ -15,8 +15,12 @@ export const createWorkStationController = async (
 ) => {
   try {
     requirePermission(req, 'create_work_station')
-    const { workStationName, workStationId, divisionId, createdBy } = req.body
-    const workStation = await createWorkStation(workStationName, workStationId, divisionId, createdBy)
+    const { workStationName, workStationNumber, createdBy } = req.body
+    const workStation = await createWorkStation(
+      workStationName,
+      workStationNumber,
+      createdBy
+    )
     res.status(201).json({ status: 'success', data: workStation })
   } catch (err) {
     next(err)
@@ -63,9 +67,9 @@ export const updateWorkStationController = async (
     const { workStationName, workStationNumber, updatedBy } = req.body
 
     const workStation = await updateWorkStation(
-      Number(workStationId), 
-      workStationName, 
-      workStationNumber, 
+      Number(workStationId),
+      workStationName,
+      workStationNumber,
       updatedBy
     )
     res.json({ status: 'success', data: workStation })

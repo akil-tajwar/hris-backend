@@ -56,6 +56,8 @@ export const createUser = async (userData: NewUser) => {
     active: userData.active ? true : false,
     isPasswordResetRequired: userData.isPasswordResetRequired ? true : false,
     roleId: userData.roleId,
+    tenantId: userData.tenantId,
+    email: userData.email,
   })
 
   const newUserId = result[0] // Drizzle returns array with inserted row ID
@@ -66,6 +68,9 @@ export const createUser = async (userData: NewUser) => {
     password: userData.password,
     active: userData.active,
     roleId: userData.roleId,
+    tenantId: userData.tenantId,
+    email: userData.email,
+    isPasswordResetRequired: userData.isPasswordResetRequired,
   }
 }
 

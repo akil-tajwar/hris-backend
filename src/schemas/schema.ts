@@ -25,6 +25,10 @@ export const userModel = mysqlTable('users', {
   roleId: int('role_id').references(() => roleModel.roleId, {
     onDelete: 'set null',
   }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'set null',
+  }),
+  email: varchar('email', { length: 50 }).notNull().unique(),
   isPasswordResetRequired: boolean('is_password_reset_required').default(true),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at')
@@ -56,6 +60,32 @@ export const userRolesModel = mysqlTable('user_roles', {
 // ========================
 // Business Tables
 // ========================
+export const tenantModel = mysqlTable('tenants', {
+  tenantId: int('tenant_id').primaryKey().autoincrement(),
+  tenantName: varchar('tenant_name', { length: 100 }).notNull(),
+  status: boolean('status').default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const customerModel = mysqlTable('customers', {
+  customerId: int('customer_id').primaryKey().autoincrement(),
+  customerName: varchar('customer_name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 50 }).notNull().unique(),
+  phone: varchar('phone', { length: 50 }),
+  address: text('address'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const departmentModel = mysqlTable('departments', {
   departmentId: int('department_id').primaryKey().autoincrement(),
   departmentName: varchar('department_name', { length: 50 }).notNull(),
@@ -80,8 +110,20 @@ export const designationModel = mysqlTable('designations', {
 
 export const companyModel = mysqlTable('companies', {
   companyId: int('company_id').primaryKey().autoincrement(),
+  code: varchar('code', { length: 50 }),
   companyName: varchar('company_name', { length: 100 }).notNull(),
-  createdBy: int('created_by').notNull(),
+  shortName: varchar('short_name', { length: 50 }),
+  tradeLicense: varchar('trade_license', { length: 100 }),
+  tin: varchar('tin', { length: 50 }),
+  bin: varchar('bin', { length: 50 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  address: text('address'),
+  logoUrl: varchar('logo_url', { length: 500 }),
+  timezone: varchar('timezone', { length: 100 }).default('UTC'),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  status: boolean('status').default(true),
+  createdBy: int('created_by'),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
   updatedAt: timestamp('updated_at').default(
@@ -169,7 +211,7 @@ export const employeeModel = mysqlTable('employees', {
   country: varchar('country', { length: 100 }),
   city: varchar('city', { length: 100 }),
   zipCode: varchar('zip_code', { length: 20 }),
-  workEmail: varchar('workEmail', { length: 100 }),
+  workEmail: varchar('work_email', { length: 100 }),
   privateEmail: varchar('private_email', { length: 100 }),
   homePhone: varchar('home_phone', { length: 20 }),
   personalPhone: varchar('personal_phone', { length: 20 }),
@@ -184,7 +226,7 @@ export const employeeModel = mysqlTable('employees', {
   maritalStatus: mysqlEnum('marital_status', ['Single', 'Married']),
   photoUrl: varchar('photo_url', { length: 255 }),
   cvUrl: varchar('cv_url', { length: 255 }),
-  religion: varchar('religiion', { length: 20 }),
+  religion: varchar('religion', { length: 20 }),
   bloodGroup: mysqlEnum('blood_group', [
     'A+',
     'A-',
@@ -235,9 +277,7 @@ export const employeeModel = mysqlTable('employees', {
   costCenterId: int('cost_center_id')
     .references(() => costCenterModel.costCenterId)
     .notNull(),
-  reportingAuthorityId: int('reporting_authority_id').references(
-    () => reportingAuthorityModel.reportingAuthorityId
-  ),
+  reportingAuthorityId: int('reporting_authority_id'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -516,6 +556,10 @@ export const userRelations = relations(userModel, ({ one }) => ({
     fields: [userModel.roleId],
     references: [roleModel.roleId],
   }),
+  tenant: one(tenantModel, {
+    fields: [userModel.tenantId],
+    references: [tenantModel.tenantId],
+  }),
 }))
 
 export const roleRelations = relations(roleModel, ({ many }) => ({
@@ -579,10 +623,6 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
   costCenter: one(costCenterModel, {
     fields: [employeeModel.costCenterId],
     references: [costCenterModel.costCenterId],
-  }),
-  reportingAuthority: one(reportingAuthorityModel, {
-    fields: [employeeModel.reportingAuthorityId],
-    references: [reportingAuthorityModel.reportingAuthorityId],
   }),
 }))
 
@@ -691,10 +731,24 @@ export type UserRole = typeof userRolesModel.$inferSelect
 export type NewUserRole = typeof userRolesModel.$inferInsert
 export type RolePermission = typeof rolePermissionsModel.$inferSelect
 export type NewRolePermission = typeof rolePermissionsModel.$inferInsert
+export type Customer = typeof customerModel.$inferSelect
+export type NewCustomer = typeof customerModel.$inferInsert
+export type Tenant = typeof tenantModel.$inferSelect
+export type NewTenant = typeof tenantModel.$inferInsert
 export type Department = typeof departmentModel.$inferSelect
 export type NewDepartment = typeof departmentModel.$inferInsert
-export type Designation = typeof designationModel.$inferInsert
+export type Designation = typeof designationModel.$inferSelect
 export type NewDesignation = typeof designationModel.$inferInsert
+export type Company = typeof companyModel.$inferSelect
+export type NewCompany = typeof companyModel.$inferInsert
+export type WorkStation = typeof workStationModel.$inferSelect
+export type NewWorkStation = typeof workStationModel.$inferInsert
+export type Division = typeof divisionModel.$inferSelect
+export type NewDivision = typeof divisionModel.$inferInsert
+export type CostCenter = typeof costCenterModel.$inferSelect
+export type NewCostCenter = typeof costCenterModel.$inferInsert
+export type ReportingAuthority = typeof reportingAuthorityModel.$inferSelect
+export type NewReportingAuthority = typeof reportingAuthorityModel.$inferInsert
 export type EmployeeType = typeof employeeTypeModel.$inferSelect
 export type NewEmployeeType = typeof employeeTypeModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect
