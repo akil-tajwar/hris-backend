@@ -13,11 +13,13 @@ export const createCustomerController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'create_customer')
     const customer = await createCustomer(req.body)
-    res.status(201).json({ status: 'success', data: customer })
+    res.status(201).json({
+      status: 'success',
+      data: customer,
+    })
   } catch (err) {
     next(err)
   }
@@ -28,7 +30,6 @@ export const getCustomersController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'view_customer')
     const customers = await getCustomers()
@@ -43,13 +44,16 @@ export const updateCustomerController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'edit_customer')
     const { customerId } = req.params
     const { customerName, updatedBy } = req.body
 
-    const customer = await updateCustomer(Number(customerId), customerName, updatedBy)
+    const customer = await updateCustomer(
+      Number(customerId),
+      customerName,
+      updatedBy
+    )
     res.json({ status: 'success', data: customer })
   } catch (err) {
     next(err)
@@ -61,7 +65,6 @@ export const deleteCustomerController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'delete_customer')
     const { customerId } = req.params
@@ -78,10 +81,10 @@ export const activateCustomerController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'edit_customer') // Adjust permission as needed
-    const { customerId, updatedBy } = req.body
+    requirePermission(req, 'edit_customer')
+    const { customerId } = req.params
 
-    const customer = await activateCustomer(Number(customerId), updatedBy)
+    const customer = await activateCustomer(Number(customerId))
     res.json({ status: 'success', data: customer })
   } catch (err) {
     next(err)

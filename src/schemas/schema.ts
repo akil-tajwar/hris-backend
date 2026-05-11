@@ -79,6 +79,9 @@ export const customerModel = mysqlTable('customers', {
   phone: varchar('phone', { length: 50 }),
   address: text('address'),
   isActive: boolean('is_active').default(false),
+  companyId: int('company_id').references(() => companyModel.companyId, {
+    onDelete: 'set null',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -589,6 +592,13 @@ export const userRolesRelations = relations(userRolesModel, ({ one }) => ({
   role: one(roleModel, {
     fields: [userRolesModel.roleId],
     references: [roleModel.roleId],
+  }),
+}))
+
+export const customerRelations = relations(customerModel, ({ one }) => ({
+  company: one(companyModel, {
+    fields: [customerModel.companyId],
+    references: [companyModel.companyId],
   }),
 }))
 
