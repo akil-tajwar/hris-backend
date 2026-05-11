@@ -80,7 +80,19 @@ export const designationModel = mysqlTable('designations', {
 
 export const companyModel = mysqlTable('companies', {
   companyId: int('company_id').primaryKey().autoincrement(),
+  code: varchar('code', { length: 50 }),
   companyName: varchar('company_name', { length: 100 }).notNull(),
+  shortName: varchar('short_name', { length: 50 }),
+  tradeLicense: varchar('trade_license', { length: 100 }),
+  tin: varchar('tin', { length: 50 }),
+  bin: varchar('bin', { length: 50 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  address: text('address'),
+  logoUrl: varchar('logo_url', { length: 500 }),
+  timezone: varchar('timezone', { length: 100 }).default('UTC'),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  status: boolean('status').default(true),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -689,6 +701,16 @@ export type Department = typeof departmentModel.$inferSelect
 export type NewDepartment = typeof departmentModel.$inferInsert
 export type Designation = typeof designationModel.$inferInsert
 export type NewDesignation = typeof designationModel.$inferInsert
+export type Company = typeof companyModel.$inferSelect
+export type NewCompany = typeof companyModel.$inferInsert
+export type WorkStation = typeof workStationModel.$inferSelect
+export type NewWorkStation = typeof workStationModel.$inferInsert
+export type Division = typeof divisionModel.$inferSelect
+export type NewDivision = typeof divisionModel.$inferInsert
+export type CostCenter = typeof costCenterModel.$inferSelect
+export type NewCostCenter = typeof costCenterModel.$inferInsert
+export type ReportingAuthority = typeof reportingAuthorityModel.$inferSelect
+export type NewReportingAuthority = typeof reportingAuthorityModel.$inferInsert
 export type EmployeeType = typeof employeeTypeModel.$inferSelect
 export type NewEmployeeType = typeof employeeTypeModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect

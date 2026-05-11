@@ -1,18 +1,72 @@
 import { db } from '../config/database'
-import { companyModel } from '../schemas'
+import { companyModel, NewCompany } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createCompany = async (companyName: string, createdBy: number) => {
-  await db.insert(companyModel).values({ companyName, createdBy })
+/* ================================
+   CREATE COMPANY
+================================ */
+export const createCompany = async (data: NewCompany) => {
+  const insertResult = await db.insert(companyModel).values({
+    ...data,
+  })
+
+  const companyId = Number(insertResult[0].insertId)
 
   const [company] = await db
     .select()
     .from(companyModel)
-    .orderBy(companyModel.companyId)
-    .limit(1)
+    .where(eq(companyModel.companyId, companyId))
 
   return company
+}
+
+/* ================================
+   UPDATE COMPANY
+================================ */
+export const updateCompany = async (
+  companyId: number,
+  data: Partial<NewCompany>
+) => {
+  return await db.transaction(async (tx) => {
+    // 🔍 Check existing company
+    const existing = await tx.query.companyModel.findFirst({
+      where: eq(companyModel.companyId, companyId),
+    })
+
+    if (!existing) {
+      throw new Error('Company not found')
+    }
+
+    // 🔧 Normalize values
+    const normalizeValue = (val: any) =>
+      val === '' || val === undefined ? null : val
+
+    // 🎯 Dynamic update object
+    const updateData: any = {}
+
+    Object.entries(data).forEach(([key, value]) => {
+      updateData[key] = normalizeValue(value)
+    })
+
+    // 🕒 Updated time
+    updateData.updatedAt = new Date()
+
+    // ✅ Update
+    if (Object.keys(updateData).length > 0) {
+      await tx
+        .update(companyModel)
+        .set(updateData)
+        .where(eq(companyModel.companyId, companyId))
+    }
+
+    // 📦 Return updated company
+    const updatedCompany = await tx.query.companyModel.findFirst({
+      where: eq(companyModel.companyId, companyId),
+    })
+
+    return updatedCompany
+  })
 }
 
 // READ ALL
@@ -26,32 +80,11 @@ export const getCompanyById = async (companyId: number) => {
     .select()
     .from(companyModel)
     .where(eq(companyModel.companyId, companyId))
-  
+
   return company
-}
-
-// UPDATE
-export const updateCompany = async (
-  companyId: number,
-  companyName: string,
-  updatedBy: number
-) => {
-  await db
-    .update(companyModel)
-    .set({ companyName, updatedBy })
-    .where(eq(companyModel.companyId, companyId))
-
-  const [updated] = await db
-    .select()
-    .from(companyModel)
-    .where(eq(companyModel.companyId, companyId))
-
-  return updated
 }
 
 // DELETE
 export const deleteCompany = async (companyId: number) => {
-  await db
-    .delete(companyModel)
-    .where(eq(companyModel.companyId, companyId))
+  await db.delete(companyModel).where(eq(companyModel.companyId, companyId))
 }
