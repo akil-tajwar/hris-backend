@@ -78,6 +78,7 @@ export const customerModel = mysqlTable('customers', {
   email: varchar('email', { length: 50 }).notNull().unique(),
   phone: varchar('phone', { length: 50 }),
   address: text('address'),
+  isActive: boolean('is_active').default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),

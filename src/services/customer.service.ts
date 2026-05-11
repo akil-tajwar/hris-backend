@@ -1,6 +1,6 @@
 import { db } from '../config/database'
 import { NewCustomer, customerModel } from '../schemas'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 // CREATE
 export const createCustomer = async (data: NewCustomer) => {
@@ -46,4 +46,26 @@ export const deleteCustomer = async (customerId: number) => {
   await db
     .delete(customerModel)
     .where(eq(customerModel.customerId, customerId))
+}
+
+//Active Customer
+export const activateCustomer = async (
+  customerId: number,
+  updatedBy: number
+) => {
+  await db
+    .update(customerModel)
+    .set({ 
+      isActive: true, 
+      updatedBy: updatedBy,
+      updatedAt: sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    })
+    .where(eq(customerModel.customerId, customerId))
+
+  const [activated] = await db
+    .select()
+    .from(customerModel)
+    .where(eq(customerModel.customerId, customerId))
+
+  return activated
 }

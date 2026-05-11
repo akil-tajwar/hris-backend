@@ -4,6 +4,7 @@ import {
   getCustomers,
   updateCustomer,
   deleteCustomer,
+  activateCustomer,
 } from '../services/customer.service'
 import { requirePermission } from '../services/utils/jwt.utils'
 
@@ -66,6 +67,22 @@ export const deleteCustomerController = async (
     const { customerId } = req.params
     await deleteCustomer(Number(customerId))
     res.json({ status: 'success', message: 'Customer deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const activateCustomerController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    requirePermission(req, 'edit_customer') // Adjust permission as needed
+    const { customerId, updatedBy } = req.body
+
+    const customer = await activateCustomer(Number(customerId), updatedBy)
+    res.json({ status: 'success', data: customer })
   } catch (err) {
     next(err)
   }
