@@ -56,6 +56,18 @@ export const userRolesModel = mysqlTable('user_roles', {
 // ========================
 // Business Tables
 // ========================
+export const tenantModel = mysqlTable('tenants', {
+  tenantId: int('tenant_id').primaryKey().autoincrement(),
+  tenantName: varchar('tenant_name', { length: 100 }).notNull(),
+  status: boolean('status').default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const departmentModel = mysqlTable('departments', {
   departmentId: int('department_id').primaryKey().autoincrement(),
   departmentName: varchar('department_name', { length: 50 }).notNull(),
@@ -93,7 +105,7 @@ export const companyModel = mysqlTable('companies', {
   timezone: varchar('timezone', { length: 100 }).default('UTC'),
   currency: varchar('currency', { length: 3 }).default('USD'),
   status: boolean('status').default(true),
-  createdBy: int('created_by').notNull(),
+  createdBy: int('created_by'),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
   updatedAt: timestamp('updated_at').default(
@@ -697,9 +709,11 @@ export type UserRole = typeof userRolesModel.$inferSelect
 export type NewUserRole = typeof userRolesModel.$inferInsert
 export type RolePermission = typeof rolePermissionsModel.$inferSelect
 export type NewRolePermission = typeof rolePermissionsModel.$inferInsert
+export type Tenant = typeof tenantModel.$inferSelect
+export type NewTenant = typeof tenantModel.$inferInsert
 export type Department = typeof departmentModel.$inferSelect
 export type NewDepartment = typeof departmentModel.$inferInsert
-export type Designation = typeof designationModel.$inferInsert
+export type Designation = typeof designationModel.$inferSelect
 export type NewDesignation = typeof designationModel.$inferInsert
 export type Company = typeof companyModel.$inferSelect
 export type NewCompany = typeof companyModel.$inferInsert
