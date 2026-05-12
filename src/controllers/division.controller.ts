@@ -15,8 +15,7 @@ export const createDivisionController = async (
 ) => {
   try {
     requirePermission(req, 'create_division')
-    const { divisionName, divisionId, createdBy } = req.body
-    const division = await createDivision(divisionName, divisionId, createdBy)
+    const division = await createDivision(req.body)
     res.status(201).json({ status: 'success', data: division })
   } catch (err) {
     next(err)
@@ -60,9 +59,9 @@ export const updateDivisionController = async (
   try {
     requirePermission(req, 'edit_division')
     const { divisionId } = req.params
-    const { divisionName, updatedBy } = req.body
+    const data = { ...req.body, divisionId: Number(divisionId) }
 
-    const division = await updateDivision(Number(divisionId), divisionName, updatedBy)
+    const division = await updateDivision(data)
     res.json({ status: 'success', data: division })
   } catch (err) {
     next(err)

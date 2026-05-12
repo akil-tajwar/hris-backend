@@ -12,11 +12,9 @@ export const createDepartmentController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'create_department')
-    const { departmentName, createdBy } = req.body
-    const department = await createDepartment(departmentName, createdBy)
+    const department = await createDepartment(req.body)
     res.status(201).json({ status: 'success', data: department })
   } catch (err) {
     next(err)
@@ -28,7 +26,6 @@ export const getDepartmentsController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'view_department')
     const departments = await getDepartments()
@@ -43,13 +40,13 @@ export const updateDepartmentController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'edit_department')
     const { departmentId } = req.params
-    const { departmentName, updatedBy } = req.body
-
-    const department = await updateDepartment(Number(departmentId), departmentName, updatedBy)
+    const department = await updateDepartment({
+      departmentId: Number(departmentId),
+      ...req.body,
+    })
     res.json({ status: 'success', data: department })
   } catch (err) {
     next(err)
@@ -61,7 +58,6 @@ export const deleteDepartmentController = async (
   res: Response,
   next: NextFunction
 ) => {
-
   try {
     requirePermission(req, 'delete_department')
     const { departmentId } = req.params

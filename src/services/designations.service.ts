@@ -1,15 +1,14 @@
 import { db } from '../config/database'
-import { designationModel } from '../schemas'
+import { Designation, designationModel, NewDesignation } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
 export const createDesignation = async (
-  designationName: string,
-  createdBy: number
+  data: NewDesignation
 ) => {
   await db
     .insert(designationModel)
-    .values({ designationName, createdBy })
+    .values(data)
 
   const [designation] = await db
     .select()
@@ -27,19 +26,17 @@ export const getDesignations = async () => {
 
 // UPDATE
 export const updateDesignation = async (
-  designationId: number,
-  designationName: string,
-  updatedBy: number
+  data: Designation & { designationId: number },
 ) => {
   await db
     .update(designationModel)
-    .set({ designationName, updatedBy })
-    .where(eq(designationModel.designationId, designationId))
+    .set(data)
+    .where(eq(designationModel.designationId, data.designationId))
 
   const [updated] = await db
     .select()
     .from(designationModel)
-    .where(eq(designationModel.designationId, designationId))
+    .where(eq(designationModel.designationId, data.designationId))
 
   return updated
 }

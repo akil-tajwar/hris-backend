@@ -6,10 +6,11 @@ import customerRoutes from './customer.routes'
 import departmentsRoutes from './departments.routes'
 import designationsRoutes from './designations.routes'
 import companyRoutes from './company.routes'
+import businessUnitsRoutes from './businessUnits.routes'
 import divisionRoutes from './division.routes'
 import workStationRoutes from './workStation.routes'
 import costCenterRoutes from './costCenter.routes'
-import employeeTypeRoutes from './employeeTypes.routes'
+import employmentTypeRoutes from './employmentTypes.routes'
 import weekendRoutes from './weekends.routes'
 import employeeRoutes from './employees.routes'
 import officeTimingRoutes from './officeTimings.routes'
@@ -33,10 +34,11 @@ router.use('/customers', customerRoutes)
 router.use('/departments', departmentsRoutes)
 router.use('/designations', designationsRoutes)
 router.use('/company', companyRoutes)
+router.use('/business-units', businessUnitsRoutes)
 router.use('/divisions', divisionRoutes)
 router.use('/workStations', workStationRoutes)
 router.use('/costCenters', costCenterRoutes)
-router.use('/employeeTypes', employeeTypeRoutes)
+router.use('/employmentTypes', employmentTypeRoutes)
 router.use('/weekends', weekendRoutes)
 router.use('/employees', employeeRoutes)
 router.use('/officeTimings', officeTimingRoutes)

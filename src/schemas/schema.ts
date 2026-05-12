@@ -1,5 +1,10 @@
 import { relations, sql } from 'drizzle-orm'
-import { boolean, date, double } from 'drizzle-orm/mysql-core'
+import {
+  boolean,
+  date,
+  double,
+  MySqlTableWithColumns,
+} from 'drizzle-orm/mysql-core'
 import {
   mysqlTable,
   int,
@@ -78,6 +83,10 @@ export const customerModel = mysqlTable('customers', {
   email: varchar('email', { length: 50 }).notNull().unique(),
   phone: varchar('phone', { length: 50 }),
   address: text('address'),
+  isActive: boolean('is_active').default(false),
+  companyId: int('company_id').references(() => companyModel.companyId, {
+    onDelete: 'set null',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -86,16 +95,40 @@ export const customerModel = mysqlTable('customers', {
   ),
 })
 
-export const departmentModel = mysqlTable('departments', {
-  departmentId: int('department_id').primaryKey().autoincrement(),
-  departmentName: varchar('department_name', { length: 50 }).notNull(),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
+export const departmentModel: MySqlTableWithColumns<any> = mysqlTable(
+  'departments',
+  {
+    departmentId: int('department_id').primaryKey().autoincrement(),
+    departmentName: varchar('department_name', { length: 50 }).notNull(),
+    departmentCode: varchar('department_code', { length: 20 }),
+    divisionId: int('division_id').references(() => divisionModel.divisionId, {
+      onDelete: 'cascade',
+    }),
+    parentDepartmentId: int('parent_department_id').references(
+      () => departmentModel.departmentId,
+      {
+        onDelete: 'set null',
+      }
+    ),
+    costCenterId: int('cost_center_id').references(
+      () => costCenterModel.costCenterId,
+      {
+        onDelete: 'set null',
+      }
+    ),
+    headEmployeeId: int('head_employee_id').references(
+      () => employeeModel.employeeId,
+      { onDelete: 'set null' }
+    ),
+    status: boolean('status').default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const designationModel = mysqlTable('designations', {
   designationId: int('designation_id').primaryKey().autoincrement(),
@@ -143,16 +176,54 @@ export const workStationModel = mysqlTable('work_stations', {
   ),
 })
 
-export const divisionModel = mysqlTable('divisions', {
-  divisionId: int('division_id').primaryKey().autoincrement(),
-  divisionName: varchar('division_name', { length: 100 }).notNull(),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
+export const businessUnitsModel: MySqlTableWithColumns<any> = mysqlTable(
+  'business_units',
+  {
+    businessUnitId: int('business_unit_id').primaryKey().autoincrement(),
+    companyId: int('company_id')
+      .references(() => companyModel.companyId, { onDelete: 'cascade' })
+      .notNull(),
+    unitName: varchar('unit_name', { length: 100 }).notNull(),
+    unitCode: varchar('unit_code', { length: 50 }),
+    description: text('description'),
+    headEmployeeId: int('head_employee_id').references(
+      () => employeeModel.employeeId,
+      { onDelete: 'set null' }
+    ),
+    status: boolean('status').default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const divisionModel: MySqlTableWithColumns<any> = mysqlTable(
+  'divisions',
+  {
+    divisionId: int('division_id').primaryKey().autoincrement(),
+    divisionName: varchar('division_name', { length: 100 }).notNull(),
+    divisionCode: varchar('division_code', { length: 50 }),
+    description: text('description'),
+    businessUnitId: int('business_unit_id').references(
+      () => businessUnitsModel.businessUnitId,
+      { onDelete: 'cascade' }
+    ),
+    headEmployeeId: int('head_employee_id').references(
+      () => employeeModel.employeeId,
+      { onDelete: 'set null' }
+    ),
+    status: boolean('status').default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const costCenterModel = mysqlTable('cost_centers', {
   costCenterId: int('cost_center_id').primaryKey().autoincrement(),
@@ -180,9 +251,9 @@ export const reportingAuthorityModel = mysqlTable('reporting_authorities', {
   ),
 })
 
-export const employeeTypeModel = mysqlTable('employee_types', {
-  employeeTypeId: int('employee_type_id').primaryKey().autoincrement(),
-  employeeTypeName: varchar('employee_type_name', { length: 50 }).notNull(),
+export const employmentTypeModel = mysqlTable('employment_types', {
+  employmentTypeId: int('employment_type_id').primaryKey().autoincrement(),
+  employmentTypeName: varchar('employment_type_name', { length: 50 }).notNull(),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -259,8 +330,8 @@ export const employeeModel = mysqlTable('employees', {
   designationId: int('designation_id')
     .references(() => designationModel.designationId)
     .notNull(),
-  employeeTypeId: int('employee_type_id')
-    .references(() => employeeTypeModel.employeeTypeId)
+  employmentTypeId: int('employee_type_id')
+    .references(() => employmentTypeModel.employmentTypeId)
     .notNull(),
   officeTimingId: int('office_timing_id')
     .references(() => officeTimingModel.officeTimingId)
@@ -591,6 +662,53 @@ export const userRolesRelations = relations(userRolesModel, ({ one }) => ({
   }),
 }))
 
+export const customerRelations = relations(customerModel, ({ one }) => ({
+  company: one(companyModel, {
+    fields: [customerModel.companyId],
+    references: [companyModel.companyId],
+  }),
+}))
+
+export const businessUnitRelations = relations(
+  businessUnitsModel,
+  ({ one }) => ({
+    company: one(companyModel, {
+      fields: [businessUnitsModel.companyId],
+      references: [companyModel.companyId],
+    }),
+    headEmployee: one(employeeModel, {
+      fields: [businessUnitsModel.headEmployeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
+export const divisionRelations = relations(divisionModel, ({ one }) => ({
+  businessUnit: one(businessUnitsModel, {
+    fields: [divisionModel.businessUnitId],
+    references: [businessUnitsModel.businessUnitId],
+  }),
+  headEmployee: one(employeeModel, {
+    fields: [divisionModel.headEmployeeId],
+    references: [employeeModel.employeeId],
+  }),
+}))
+
+export const departmentRelations = relations(departmentModel, ({ one }) => ({
+  division: one(divisionModel, {
+    fields: [departmentModel.divisionId],
+    references: [divisionModel.divisionId],
+  }),
+  costCenter: one(costCenterModel, {
+    fields: [departmentModel.costCenterId],
+    references: [costCenterModel.costCenterId],
+  }),
+  headEmployee: one(employeeModel, {
+    fields: [departmentModel.headEmployeeId],
+    references: [employeeModel.employeeId],
+  }),
+}))
+
 export const employeeRelations = relations(employeeModel, ({ one }) => ({
   department: one(departmentModel, {
     fields: [employeeModel.departmentId],
@@ -600,9 +718,9 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
     fields: [employeeModel.designationId],
     references: [designationModel.designationId],
   }),
-  employeeType: one(employeeTypeModel, {
-    fields: [employeeModel.employeeTypeId],
-    references: [employeeTypeModel.employeeTypeId],
+  employmentType: one(employmentTypeModel, {
+    fields: [employeeModel.employmentTypeId],
+    references: [employmentTypeModel.employmentTypeId],
   }),
   officeTiming: one(officeTimingModel, {
     fields: [employeeModel.officeTimingId],
@@ -742,6 +860,8 @@ export type NewDesignation = typeof designationModel.$inferInsert
 export type Company = typeof companyModel.$inferSelect
 export type NewCompany = typeof companyModel.$inferInsert
 export type WorkStation = typeof workStationModel.$inferSelect
+export type BusinessUnit = typeof businessUnitsModel.$inferSelect
+export type NewBusinessUnit = typeof businessUnitsModel.$inferInsert
 export type NewWorkStation = typeof workStationModel.$inferInsert
 export type Division = typeof divisionModel.$inferSelect
 export type NewDivision = typeof divisionModel.$inferInsert
@@ -749,8 +869,8 @@ export type CostCenter = typeof costCenterModel.$inferSelect
 export type NewCostCenter = typeof costCenterModel.$inferInsert
 export type ReportingAuthority = typeof reportingAuthorityModel.$inferSelect
 export type NewReportingAuthority = typeof reportingAuthorityModel.$inferInsert
-export type EmployeeType = typeof employeeTypeModel.$inferSelect
-export type NewEmployeeType = typeof employeeTypeModel.$inferInsert
+export type EmploymentType = typeof employmentTypeModel.$inferSelect
+export type NewEmploymentType = typeof employmentTypeModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect
 export type NewEmployee = typeof employeeModel.$inferInsert
 export type Weekend = typeof weekendModel.$inferSelect

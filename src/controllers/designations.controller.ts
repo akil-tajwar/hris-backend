@@ -14,8 +14,7 @@ export const createDesignationController = async (
 ) => {
   try {
     requirePermission(req, 'create_designation')
-    const { designationName, createdBy } = req.body
-    const designation = await createDesignation(designationName, createdBy)
+    const designation = await createDesignation(req.body)
     res.status(201).json({ status: 'success', data: designation })
   } catch (err) {
     next(err)
@@ -44,13 +43,11 @@ export const updateDesignationController = async (
   try {
     requirePermission(req, 'edit_designation')
     const { designationId } = req.params
-    const { designationName, updatedBy } = req.body
 
-    const designation = await updateDesignation(
-      Number(designationId),
-      designationName,
-      updatedBy
-    )
+    const designation = await updateDesignation({
+      designationId: Number(designationId),
+      ...req.body
+    })
     res.json({ status: 'success', data: designation })
   } catch (err) {
     next(err)
