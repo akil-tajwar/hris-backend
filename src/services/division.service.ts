@@ -1,10 +1,10 @@
 import { db } from '../config/database'
-import { divisionModel } from '../schemas'
+import { Division, divisionModel, NewDivision } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createDivision = async (divisionName: string, divisionId: number, createdBy: number) => {
-  await db.insert(divisionModel).values({ divisionName, divisionId, createdBy })
+export const createDivision = async (data: NewDivision) => {
+  await db.insert(divisionModel).values(data)
 
   const [division] = await db
     .select()
@@ -32,19 +32,17 @@ export const getDivisionById = async (divisionId: number) => {
 
 // UPDATE
 export const updateDivision = async (
-  divisionId: number,
-  divisionName: string,
-  updatedBy: number
+  data: Division & { divisionId: number },
 ) => {
   await db
     .update(divisionModel)
-    .set({ divisionName, divisionId, updatedBy })
-    .where(eq(divisionModel.divisionId, divisionId))
+    .set(data)
+    .where(eq(divisionModel.divisionId, data.divisionId))
 
   const [updated] = await db
     .select()
     .from(divisionModel)
-    .where(eq(divisionModel.divisionId, divisionId))
+    .where(eq(divisionModel.divisionId, data.divisionId))
 
   return updated
 }

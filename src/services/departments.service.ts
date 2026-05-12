@@ -1,10 +1,10 @@
 import { db } from '../config/database'
-import { departmentModel } from '../schemas'
+import { departmentModel, NewDepartment } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createDepartment = async (departmentName: string, createdBy: number) => {
-  await db.insert(departmentModel).values({ departmentName, createdBy })
+export const createDepartment = async (data: NewDepartment) => {
+  await db.insert(departmentModel).values(data)
 
   const [department] = await db
     .select()
@@ -22,19 +22,17 @@ export const getDepartments = async () => {
 
 // UPDATE
 export const updateDepartment = async (
-  departmentId: number,
-  departmentName: string,
-  updatedBy: number
+  data: { departmentId: number } & { departmentName: string; updatedBy: number }
 ) => {
   await db
     .update(departmentModel)
-    .set({ departmentName, updatedBy })
-    .where(eq(departmentModel.departmentId, departmentId))
+    .set(data)
+    .where(eq(departmentModel.departmentId, data.departmentId))
 
   const [updated] = await db
     .select()
     .from(departmentModel)
-    .where(eq(departmentModel.departmentId, departmentId))
+    .where(eq(departmentModel.departmentId, data.departmentId))
 
   return updated
 }

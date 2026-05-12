@@ -4,7 +4,7 @@ import {
   employeeModel,
   departmentModel,
   designationModel,
-  employeeTypeModel,
+  employmentTypeModel,
   employeeLeaveTypeModel,
   NewEmployee,
   companyModel,
@@ -78,7 +78,7 @@ export const createEmployee = async (
       // Foreign Keys
       departmentId: data.departmentId,
       designationId: data.designationId,
-      employeeTypeId: data.employeeTypeId,
+      employmentTypeId: data.employmentTypeId,
       officeTimingId: data.officeTimingId,
       companyId: data.companyId,
       workStationId: data.workStationId,
@@ -145,7 +145,7 @@ export const updateEmployee = async (
       const fkFields = [
         'departmentId',
         'designationId',
-        'employeeTypeId',
+        'employmentTypeId',
         'officeTimingId',
         'companyId',
         'workStationId',
@@ -266,7 +266,7 @@ export const getAllEmployees = async () => {
       // Foreign Keys (IDs)
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
-      employeeTypeId: employeeModel.employeeTypeId,
+      employmentTypeId: employeeModel.employmentTypeId,
       officeTimingId: employeeModel.officeTimingId,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
@@ -277,7 +277,7 @@ export const getAllEmployees = async () => {
       // Related Names
       departmentName: departmentModel.departmentName,
       designationName: designationModel.designationName,
-      employeeTypeName: employeeTypeModel.employeeTypeName,
+      employmentTypeName: employmentTypeModel.employmentTypeName,
       companyName: companyModel.companyName,
       workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
@@ -300,8 +300,8 @@ export const getAllEmployees = async () => {
       eq(employeeModel.designationId, designationModel.designationId)
     )
     .leftJoin(
-      employeeTypeModel,
-      eq(employeeModel.employeeTypeId, employeeTypeModel.employeeTypeId)
+      employmentTypeModel,
+      eq(employeeModel.employmentTypeId, employmentTypeModel.employmentTypeId)
     )
     .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
     .leftJoin(

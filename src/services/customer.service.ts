@@ -90,19 +90,17 @@ export const getCustomers = async () => {
 
 // UPDATE
 export const updateCustomer = async (
-  customerId: number,
-  customerName: string,
-  updatedBy: number
+  data: NewCustomer & { customerId: number }
 ) => {
   await db
     .update(customerModel)
-    .set({ customerName, updatedBy })
-    .where(eq(customerModel.customerId, customerId))
+    .set(data)
+    .where(eq(customerModel.customerId, data.customerId))
 
   const [updated] = await db
     .select()
     .from(customerModel)
-    .where(eq(customerModel.customerId, customerId))
+    .where(eq(customerModel.customerId, data.customerId))
 
   return updated
 }

@@ -1,16 +1,12 @@
 import { db } from '../config/database'
-import { costCenterModel } from '../schemas'
+import { CostCenter, costCenterModel, NewCostCenter } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createCostCenter = async (
-  costCenterName: string,
-  costCenterId: number,
-  createdBy: number
-) => {
+export const createCostCenter = async (data: NewCostCenter) => {
   await db
     .insert(costCenterModel)
-    .values({ costCenterName, costCenterId, createdBy })
+    .values(data)
 
   const [costCenter] = await db
     .select()
@@ -26,7 +22,6 @@ export const getCostCenters = async () => {
   return await db.select().from(costCenterModel)
 }
 
-
 // READ ONE
 export const getCostCenterById = async (costCenterId: number) => {
   const [costCenter] = await db
@@ -39,19 +34,17 @@ export const getCostCenterById = async (costCenterId: number) => {
 
 // UPDATE
 export const updateCostCenter = async (
-  costCenterId: number,
-  costCenterName: string,
-  updatedBy: number
+  data: CostCenter & { costCenterId: number },
 ) => {
   await db
     .update(costCenterModel)
-    .set({ costCenterName, costCenterId, updatedBy })
-    .where(eq(costCenterModel.costCenterId, costCenterId))
+    .set(data)
+    .where(eq(costCenterModel.costCenterId, data.costCenterId))
 
   const [updated] = await db
     .select()
     .from(costCenterModel)
-    .where(eq(costCenterModel.costCenterId, costCenterId))
+    .where(eq(costCenterModel.costCenterId, data.costCenterId))
 
   return updated
 }

@@ -15,8 +15,7 @@ export const createCostCenterController = async (
 ) => {
   try {
     requirePermission(req, 'create_cost_center')
-    const { costCenterName, costCenterId, createdBy } = req.body
-    const costCenter = await createCostCenter(costCenterName, costCenterId, createdBy)
+    const costCenter = await createCostCenter(req.body)
     res.status(201).json({ status: 'success', data: costCenter })
   } catch (err) {
     next(err)
@@ -60,9 +59,9 @@ export const updateCostCenterController = async (
   try {
     requirePermission(req, 'edit_cost_center')
     const { costCenterId } = req.params
-    const { costCenterName, updatedBy } = req.body
+    const data = { ...req.body, costCenterId: Number(costCenterId) }
 
-    const costCenter = await updateCostCenter(Number(costCenterId), costCenterName, updatedBy)
+    const costCenter = await updateCostCenter(data)
     res.json({ status: 'success', data: costCenter })
   } catch (err) {
     next(err)

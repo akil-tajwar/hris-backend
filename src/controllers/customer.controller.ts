@@ -47,13 +47,9 @@ export const updateCustomerController = async (
   try {
     requirePermission(req, 'edit_customer')
     const { customerId } = req.params
-    const { customerName, updatedBy } = req.body
+    const data = { ...req.body, customerId: Number(customerId) }
 
-    const customer = await updateCustomer(
-      Number(customerId),
-      customerName,
-      updatedBy
-    )
+    const customer = await updateCustomer(data)
     res.json({ status: 'success', data: customer })
   } catch (err) {
     next(err)
