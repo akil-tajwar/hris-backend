@@ -79,13 +79,66 @@ export const activateCustomerController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
-    requirePermission(req, 'edit_customer')
     const { customerId } = req.params
 
     const customer = await activateCustomer(Number(customerId))
-    res.json({ status: 'success', data: customer })
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Customer Activated</title>
+
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+          }
+
+          .card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+          }
+
+          .success {
+            color: #16a34a;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 16px;
+          }
+
+          .text {
+            color: #374151;
+            font-size: 16px;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="card">
+          <div class="success">
+            Customer Activated Successfully
+          </div>
+
+          <div class="text">
+            Customer "${customer?.customerName}" is now active.
+          </div>
+        </div>
+      </body>
+      </html>
+    `)
   } catch (err) {
     next(err)
   }

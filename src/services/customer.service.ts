@@ -73,14 +73,6 @@ export const createCustomer = async (data: NewCustomer) => {
               >
                 Activate Customer
               </a>
-
-              <p style="margin-top: 20px;">
-                Or use this link:
-              </p>
-
-              <p>
-                ${activationLink}
-              </p>
             </div>
           `,
         })
@@ -121,14 +113,12 @@ export const deleteCustomer = async (customerId: number) => {
 }
 
 //Active Customer
-export const activateCustomer = async (
-  customerId: number,
-) => {
+export const activateCustomer = async (customerId: number) => {
   await db
     .update(customerModel)
     .set({
       isActive: true,
-      updatedAt: sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`,
+      updatedAt: sql`CURRENT_TIMESTAMP`,
     })
     .where(eq(customerModel.customerId, customerId))
 

@@ -13,7 +13,10 @@ const router = Router()
 router.post('/create', authenticateUser, createCustomerController)
 router.get('/getAll', authenticateUser, getCustomersController)
 router.patch('/edit/:customerId', authenticateUser, updateCustomerController)
-router.patch('/activate-customer/:customerId', authenticateUser, activateCustomerController)
+router.get(
+  '/activate-customer/:customerId',
+  activateCustomerController
+)
 router.delete('/delete/:customerId', authenticateUser, deleteCustomerController)
 
 export default router
