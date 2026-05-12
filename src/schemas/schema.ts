@@ -133,6 +133,10 @@ export const departmentModel: MySqlTableWithColumns<any> = mysqlTable(
 export const designationModel = mysqlTable('designations', {
   designationId: int('designation_id').primaryKey().autoincrement(),
   designationName: varchar('designation_name', { length: 50 }).notNull(),
+  designationCode: varchar('designation_code', { length: 20 }),
+  jobLevel: int('job_level'),
+  description: text('description'),
+  status: boolean('status').default(true),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
