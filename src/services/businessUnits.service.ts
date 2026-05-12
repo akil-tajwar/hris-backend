@@ -1,5 +1,5 @@
 import { db } from '../config/database'
-import { businessUnitsModel, NewBusinessUnit } from '../schemas'
+import { businessUnitsModel, companyModel, departmentModel, designationModel, employeeModel, NewBusinessUnit } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
@@ -17,8 +17,32 @@ export const createBusinessUnit = async (data: NewBusinessUnit) => {
 
 // READ ALL
 export const getBusinessUnits = async () => {
-  return await db.select().from(businessUnitsModel)
-}
+  return await db
+    .select({
+      // Business Unit fields
+      businessUnitId: businessUnitsModel.businessUnitId,
+      companyId: businessUnitsModel.companyId,
+      unitName: businessUnitsModel.unitName,
+      unitCode: businessUnitsModel.unitCode,
+      description: businessUnitsModel.description,
+      headEmployeeId: businessUnitsModel.headEmployeeId,
+      status: businessUnitsModel.status,
+      createdBy: businessUnitsModel.createdBy,
+      createdAt: businessUnitsModel.createdAt,
+      updatedBy: businessUnitsModel.updatedBy,
+      updatedAt: businessUnitsModel.updatedAt,
+      companyName: companyModel.companyName,
+      empCode: employeeModel.empCode,
+      empFullName: employeeModel.empFullName,
+      departmentName: departmentModel.departmentName,
+      designationName: designationModel.designationName,
+    })
+    .from(businessUnitsModel)
+    .leftJoin(companyModel, eq(businessUnitsModel.companyId, companyModel.companyId))
+    .leftJoin(employeeModel, eq(businessUnitsModel.headEmployeeId, employeeModel.employeeId))
+    .leftJoin(departmentModel, eq(employeeModel.departmentId, departmentModel.departmentId))
+    .leftJoin(designationModel, eq(employeeModel.designationId, designationModel.designationId));
+};
 
 // UPDATE
 export const updateBusinessUnit = async (

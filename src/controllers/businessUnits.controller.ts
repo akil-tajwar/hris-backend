@@ -13,7 +13,7 @@ export const createBusinessUnitController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'create_businessUnit')
+    requirePermission(req, 'create_business_unit')
     const businessUnit = await createBusinessUnit(req.body)
     res.status(201).json({ status: 'success', data: businessUnit })
   } catch (err) {
@@ -27,7 +27,7 @@ export const getBusinessUnitsController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'view_businessUnit')
+    requirePermission(req, 'view_business_unit')
     const businessUnits = await getBusinessUnits()
     res.json(businessUnits)
   } catch (err) {
@@ -41,7 +41,7 @@ export const updateBusinessUnitController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'edit_businessUnit')
+    requirePermission(req, 'edit_business_unit')
     const { businessUnitId } = req.params
     const businessUnit = await updateBusinessUnit({
       businessUnitId: Number(businessUnitId),
@@ -59,7 +59,7 @@ export const deleteBusinessUnitController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'delete_businessUnit')
+    requirePermission(req, 'delete_business_unit')
     const { businessUnitId } = req.params
     await deleteBusinessUnit(Number(businessUnitId))
     res.json({ status: 'success', message: 'BusinessUnit deleted' })
