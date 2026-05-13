@@ -11,9 +11,9 @@ import divisionRoutes from './division.routes'
 import workStationRoutes from './workStation.routes'
 import costCenterRoutes from './costCenter.routes'
 import employmentTypeRoutes from './employmentTypes.routes'
-import weekendRoutes from './weekends.routes'
+import weekDayRoutes from './weekdays.routes'
 import employeeRoutes from './employees.routes'
-import officeTimingRoutes from './officeTimings.routes'
+import shiftRoutes from './shifts.routes'
 import holidayRoutes from './holidays.routes'
 import leaveTypeRoutes from './leaveTypes.routes'
 import employeeAttendanceRoutes from './employeeAttendances.routes'
@@ -39,9 +39,9 @@ router.use('/divisions', divisionRoutes)
 router.use('/workStations', workStationRoutes)
 router.use('/costCenters', costCenterRoutes)
 router.use('/employmentTypes', employmentTypeRoutes)
-router.use('/weekends', weekendRoutes)
+router.use('/weekDays', weekDayRoutes)
 router.use('/employees', employeeRoutes)
-router.use('/officeTimings', officeTimingRoutes)
+router.use('/shift', shiftRoutes)
 router.use('/holidays', holidayRoutes)
 router.use('/leaveTypes', leaveTypeRoutes)
 router.use('/employeeAttendances', employeeAttendanceRoutes)

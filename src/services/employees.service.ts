@@ -79,7 +79,7 @@ export const createEmployee = async (
       departmentId: data.departmentId,
       designationId: data.designationId,
       employmentTypeId: data.employmentTypeId,
-      officeTimingId: data.officeTimingId,
+      shiftId: data.shiftId,
       companyId: data.companyId,
       workStationId: data.workStationId,
       divisionId: data.divisionId,
@@ -146,7 +146,7 @@ export const updateEmployee = async (
         'departmentId',
         'designationId',
         'employmentTypeId',
-        'officeTimingId',
+        'shiftId',
         'companyId',
         'workStationId',
         'divisionId',
@@ -267,7 +267,7 @@ export const getAllEmployees = async () => {
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
-      officeTimingId: employeeModel.officeTimingId,
+      shiftId: employeeModel.shiftId,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
@@ -335,14 +335,14 @@ export const getEmployeeById = async (employeeId: number) => {
 
   if (!employee || employee.length === 0) return null
 
-  const weekends = await db
-    .select({ weekendId: employeeLeaveTypeModel.leaveTypeId })
+  const weekDays = await db
+    .select({ weekDayId: employeeLeaveTypeModel.leaveTypeId })
     .from(employeeLeaveTypeModel)
     .where(eq(employeeLeaveTypeModel.employeeId, employeeId))
 
   return {
     ...employee[0],
-    leaveTypeIds: weekends.map((w) => w.weekendId),
+    leaveTypeIds: weekDays.map((w) => w.weekDayId),
   }
 }
 

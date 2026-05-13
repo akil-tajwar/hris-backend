@@ -337,8 +337,8 @@ export const employeeModel = mysqlTable('employees', {
   employmentTypeId: int('employee_type_id')
     .references(() => employmentTypeModel.employmentTypeId)
     .notNull(),
-  officeTimingId: int('office_timing_id')
-    .references(() => officeTimingModel.officeTimingId)
+  shiftId: int('shift_id')
+    .references(() => shiftModel.shiftId)
     .notNull(),
   companyId: int('company_id')
     .references(() => companyModel.companyId)
@@ -361,8 +361,38 @@ export const employeeModel = mysqlTable('employees', {
   ),
 })
 
-export const weekendModel = mysqlTable('weekends', {
-  weekendId: int('weekend_id').primaryKey().autoincrement(),
+export const shiftModel = mysqlTable('shift', {
+  shiftId: int('shift_id').primaryKey().autoincrement(),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  shiftName: varchar('shift_name', { length: 100 }).notNull(),
+  shiftCode: varchar('shift_code', { length: 20 }).notNull(),
+  shiftType: mysqlEnum('shift_type', [
+    'Fixed',
+    'Flexible',
+    'Rotational',
+  ]).notNull(),
+  startTime: varchar('start_time', { length: 10 }).notNull(),
+  endTime: varchar('end_time', { length: 10 }).notNull(),
+  breakMinutes: int('break_minutes').notNull(),
+  expectedWorkHours: double('expected_work_hours').notNull(),
+  crossDay: boolean('cross_day').notNull().default(false),
+  isFlexible: boolean('is_flexible').notNull().default(false),
+  flexibleInFrom: varchar('flexible_in_from', { length: 10 }),
+  flexibleInTo: varchar('flexible_in_to', { length: 10 }),
+  minimumHoursForPresent: double('minimum_hours_for_present').notNull(),
+  status: boolean('status').notNull().default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const weekDayModel = mysqlTable('week_days', {
+  weekDayId: int('week_day_id').primaryKey().autoincrement(),
   day: mysqlEnum('day', [
     'Saturday',
     'Sunday',
@@ -374,30 +404,24 @@ export const weekendModel = mysqlTable('weekends', {
   ]).notNull(),
 })
 
-export const officeTimingModel = mysqlTable('office_timing', {
-  officeTimingId: int('office_timing_id').primaryKey().autoincrement(),
-  startTime: varchar('start_time', { length: 10 }).notNull(),
-  endTime: varchar('end_time', { length: 10 }).notNull(),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
-export const officeTimingWeekendsModel = mysqlTable('office_timing_weekends', {
-  officeTimingWeekendId: int('office_timing_weekend_id')
+export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
+  shiftDayAndWeekDaysId: int('shift_day_and_week_days_id')
     .primaryKey()
     .autoincrement(),
-  officeTimingId: int('office_timing_id')
+  shiftId: int('shift_id')
     .notNull()
-    .references(() => officeTimingModel.officeTimingId, {
+    .references(() => shiftModel.shiftId, {
       onDelete: 'cascade',
     }),
-  weekendId: int('weekend_id')
+  weekDayId: int('week_day_id')
     .notNull()
-    .references(() => weekendModel.weekendId, { onDelete: 'cascade' }),
+    .references(() => weekDayModel.weekDayId, { onDelete: 'cascade' }),
+  dayType: mysqlEnum('day_type', ['FullDay', 'HalfDay', 'Weekend']).notNull(),
+  startTime: varchar('start_time', { length: 10 }).notNull(),
+  endTime: varchar('end_time', { length: 10 }).notNull(),
+  breakMinutes: int('break_minutes').notNull(),
+  expectedWorkHours: double('expected_work_hours').notNull(),
+  minimumHoursForPresent: double('minimum_hours_for_present').notNull(),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -726,9 +750,9 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
     fields: [employeeModel.employmentTypeId],
     references: [employmentTypeModel.employmentTypeId],
   }),
-  officeTiming: one(officeTimingModel, {
-    fields: [employeeModel.officeTimingId],
-    references: [officeTimingModel.officeTimingId],
+  shift: one(shiftModel, {
+    fields: [employeeModel.shiftId],
+    references: [shiftModel.shiftId],
   }),
   company: one(companyModel, {
     fields: [employeeModel.companyId],
@@ -748,16 +772,23 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
   }),
 }))
 
-export const officeTimingWeekendRelations = relations(
-  officeTimingWeekendsModel,
+export const shiftRelations = relations(shiftModel, ({ one }) => ({
+  company: one(companyModel, {
+    fields: [shiftModel.companyId],
+    references: [companyModel.companyId],
+  }),
+}))
+
+export const shiftDayAndWeekDaysRelations = relations(
+  shiftDayAndWeekDaysModel,
   ({ one }) => ({
-    officeTiming: one(officeTimingModel, {
-      fields: [officeTimingWeekendsModel.officeTimingId],
-      references: [officeTimingModel.officeTimingId],
+    shift: one(shiftModel, {
+      fields: [shiftDayAndWeekDaysModel.shiftId],
+      references: [shiftModel.shiftId],
     }),
-    weekend: one(weekendModel, {
-      fields: [officeTimingWeekendsModel.weekendId],
-      references: [weekendModel.weekendId],
+    weekDay: one(weekDayModel, {
+      fields: [shiftDayAndWeekDaysModel.weekDayId],
+      references: [weekDayModel.weekDayId],
     }),
   })
 )
@@ -877,10 +908,10 @@ export type EmploymentType = typeof employmentTypeModel.$inferSelect
 export type NewEmploymentType = typeof employmentTypeModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect
 export type NewEmployee = typeof employeeModel.$inferInsert
-export type Weekend = typeof weekendModel.$inferSelect
-export type NewWeekend = typeof weekendModel.$inferInsert
-export type OfficeTiming = typeof officeTimingModel.$inferSelect
-export type NewOfficeTiming = typeof officeTimingModel.$inferInsert
+export type WeekDay = typeof weekDayModel.$inferSelect
+export type NewWeekDay = typeof weekDayModel.$inferInsert
+export type Shift = typeof shiftModel.$inferSelect
+export type NewShift = typeof shiftModel.$inferInsert
 export type Holiday = typeof holidayModel.$inferSelect
 export type NewHoliday = typeof holidayModel.$inferInsert
 export type LeaveType = typeof leaveTypeModel.$inferSelect

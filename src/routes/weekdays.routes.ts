@@ -1,9 +1,9 @@
 import { Router } from 'express'
-import { getWeekendsController } from '../controllers/weekdends.controller'
+import { getWeekDaysController } from '../controllers/weekdayss.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
 const router = Router()
 
-router.get('/getAll', authenticateUser, getWeekendsController)
+router.get('/getAll', authenticateUser, getWeekDaysController)
 
 export default router
