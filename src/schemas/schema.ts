@@ -445,11 +445,89 @@ export const holidayModel = mysqlTable('holidays', {
   ),
 })
 
+// export const leaveTypeModel = mysqlTable('leave_types', {
+//   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
+//   leaveTypeName: varchar('leave_type_name', { length: 100 }).notNull(),
+//   totalLeaves: int('total_leaves').notNull(),
+//   yearPeriod: int('year_period').notNull(),
+//   createdBy: int('created_by').notNull(),
+//   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+//   updatedBy: int('updated_by'),
+//   updatedAt: timestamp('updated_at').default(
+//     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+//   ),
+// })
+
+// //to track which leave types are assigned to which employees
+// export const employeeLeaveTypeModel = mysqlTable('employee_leave_types', {
+//   employeeLeaveTypeId: int('employee_leave_type_id')
+//     .primaryKey()
+//     .autoincrement(),
+//   employeeId: int('employee_id')
+//     .notNull()
+//     .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+
+//   leaveTypeId: int('leave_type_id')
+//     .notNull()
+//     .references(() => leaveTypeModel.leaveTypeId, { onDelete: 'cascade' }),
+// })
+
+// // to track leaves taken by employees
+// export const employeeLeaveModel = mysqlTable('employee_leaves', {
+//   employeeLeaveId: int('employee_leave_id').primaryKey().autoincrement(),
+//   employeeId: int('employee_id')
+//     .notNull()
+//     .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+//   startDate: date('start_date').notNull(),
+//   endDate: date('end_date').notNull(),
+//   noOfDays: int('no_of_days').notNull(),
+//   leaveTypeId: int('leave_type_id')
+//     .notNull()
+//     .references(() => leaveTypeModel.leaveTypeId, {
+//       onDelete: 'cascade',
+//     }),
+//   description: text('description'),
+//   createdBy: int('created_by').notNull(),
+//   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+//   updatedBy: int('updated_by'),
+//   updatedAt: timestamp('updated_at').default(
+//     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+//   ),
+// })
+
 export const leaveTypeModel = mysqlTable('leave_types', {
   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
-  leaveTypeName: varchar('leave_type_name', { length: 100 }).notNull(),
-  totalLeaves: int('total_leaves').notNull(),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  code: varchar('code', { length: 20 }).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  category: mysqlEnum('category', ['Paid', 'Unpaid', 'Special']).notNull(),
+  genderApplicable: mysqlEnum('gender_applicable', ['Male', 'Female', 'All']),
+  religionApplicable: boolean('religion_applicable'),
+  maritalStatusApplicable: boolean('marital_status_applicable'),
+  maxDaysPerYear: double('max_days_per_year').notNull(),
+  maxDaysPerRequest: double('max_days_per_request').notNull(),
+  minDaysPerRequest: double('min_days_per_request').notNull(),
+  allowHalfDay: boolean('allow_half_day').notNull().default(false),
+  allowHourly: boolean('allow_hourly').notNull().default(false),
+  attachmentRequired: boolean('attachment_required').notNull().default(false),
+  attachmentAfterDays: double('attachment_after_days'),
+  carryForwardAllowed: boolean('carry_forward_allowed')
+    .notNull()
+    .default(false),
+  maxCarryForwardDays: double('max_carry_forward_days'),
+  encashmentAllowed: boolean('encashment_allowed').notNull().default(false),
+  negativeBalanceAllowed: boolean('negative_balance_allowed')
+    .notNull()
+    .default(false),
+  sandwichPolicyApplicable: boolean('sandwich_policy_applicable')
+    .notNull()
+    .default(false),
+  probationAllowed: boolean('probation_allowed').notNull().default(true),
+  noticePeriodAllowed: boolean('notice_period_allowed').notNull().default(true),
   yearPeriod: int('year_period').notNull(),
+  active: boolean('active').notNull().default(true),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -458,35 +536,20 @@ export const leaveTypeModel = mysqlTable('leave_types', {
   ),
 })
 
-//to track which leave types are assigned to which employees
-export const employeeLeaveTypeModel = mysqlTable('employee_leave_types', {
-  employeeLeaveTypeId: int('employee_leave_type_id')
+export const leavePolicyMasterModel = mysqlTable('leave_policy_master', {
+  leavePolicyMasterId: int('leave_policy_master_id')
     .primaryKey()
     .autoincrement(),
-  employeeId: int('employee_id')
-    .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-
-  leaveTypeId: int('leave_type_id')
-    .notNull()
-    .references(() => leaveTypeModel.leaveTypeId, { onDelete: 'cascade' }),
-})
-
-// to track leaves taken by employees
-export const employeeLeaveModel = mysqlTable('employee_leaves', {
-  employeeLeaveId: int('employee_leave_id').primaryKey().autoincrement(),
-  employeeId: int('employee_id')
-    .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-  startDate: date('start_date').notNull(),
-  endDate: date('end_date').notNull(),
-  noOfDays: int('no_of_days').notNull(),
-  leaveTypeId: int('leave_type_id')
-    .notNull()
-    .references(() => leaveTypeModel.leaveTypeId, {
-      onDelete: 'cascade',
-    }),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  policyName: varchar('policy_name', {
+    length: 150,
+  }).notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
   description: text('description'),
+  active: boolean('active').notNull().default(true),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -494,6 +557,58 @@ export const employeeLeaveModel = mysqlTable('employee_leaves', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
+
+export const leavePolicyDetailsModel = mysqlTable('leave_policy_details', {
+  leavePolicyDetailsId: int('leave_policy_details_id')
+    .primaryKey()
+    .autoincrement(),
+  leavePolicyMasterId: int('leave_policy_master_id')
+    .references(() => leavePolicyMasterModel.leavePolicyMasterId)
+    .notNull(),
+  leaveTypeId: int('leave_type_id')
+    .references(() => leaveTypeModel.leaveTypeId)
+    .notNull(),
+  yearlyAllocation: double('yearly_allocation').notNull(),
+  accrualFrequency: mysqlEnum('accrual_frequency', [
+    'Monthly',
+    'Quarterly',
+    'Yearly',
+  ]).notNull(),
+  accrualRate: double('accrual_rate').notNull(),
+  maxBalanceAllowed: double('max_balance_allowed').notNull(),
+  carryForwardLimit: double('carry_forward_limit').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeeLeaveAssignmentModel = mysqlTable(
+  'employee_leave_assignment',
+  {
+    employeeLeaveAssignmentId: int('employee_leave_assignment_id')
+      .primaryKey()
+      .autoincrement(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    leavePolicyMasterId: int('leave_policy_master_id')
+      .references(() => leavePolicyMasterModel.leavePolicyMasterId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    active: boolean('active').notNull().default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   employeeAttendanceId: int('employee_attendance_id')
@@ -793,34 +908,6 @@ export const shiftDayAndWeekDaysRelations = relations(
   })
 )
 
-export const employeeLeaveTypeRelations = relations(
-  employeeLeaveTypeModel,
-  ({ one }) => ({
-    employee: one(employeeModel, {
-      fields: [employeeLeaveTypeModel.employeeId],
-      references: [employeeModel.employeeId],
-    }),
-    leaveType: one(leaveTypeModel, {
-      fields: [employeeLeaveTypeModel.leaveTypeId],
-      references: [leaveTypeModel.leaveTypeId],
-    }),
-  })
-)
-
-export const employeeLeaveRelations = relations(
-  employeeLeaveModel,
-  ({ one }) => ({
-    employee: one(employeeModel, {
-      fields: [employeeLeaveModel.employeeId],
-      references: [employeeModel.employeeId],
-    }),
-    leaveType: one(leaveTypeModel, {
-      fields: [employeeLeaveModel.leaveTypeId],
-      references: [leaveTypeModel.leaveTypeId],
-    }),
-  })
-)
-
 export const employeeAttendanceRelations = relations(
   employeeAttendanceModel,
   ({ one }) => ({
@@ -916,10 +1003,12 @@ export type Holiday = typeof holidayModel.$inferSelect
 export type NewHoliday = typeof holidayModel.$inferInsert
 export type LeaveType = typeof leaveTypeModel.$inferSelect
 export type NewLeaveType = typeof leaveTypeModel.$inferInsert
-export type EmployeeLeaveType = typeof employeeLeaveTypeModel.$inferSelect
-export type NewEmployeeLeaveType = typeof employeeLeaveTypeModel.$inferInsert
-export type EmployeeLeave = typeof employeeLeaveModel.$inferSelect
-export type NewEmployeeLeave = typeof employeeLeaveModel.$inferInsert
+export type LeavePolicyMaster = typeof leavePolicyMasterModel.$inferSelect
+export type NewLeavePolicyMaster = typeof leavePolicyMasterModel.$inferInsert
+export type LeavePolicyDetails = typeof leavePolicyDetailsModel.$inferSelect
+export type NewLeavePolicyDetails = typeof leavePolicyDetailsModel.$inferInsert
+export type EmployeeLeaveAssignment = typeof employeeLeaveAssignmentModel.$inferSelect
+export type NewEmployeeLeaveAssignment = typeof employeeLeaveAssignmentModel.$inferInsert
 export type EmployeeAttendance = typeof employeeAttendanceModel.$inferSelect
 export type NewEmployeeAttendance = typeof employeeAttendanceModel.$inferInsert
 export type OtherSalaryComponent =
