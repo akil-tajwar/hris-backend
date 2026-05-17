@@ -16,6 +16,7 @@ import employeeRoutes from './employees.routes'
 import shiftRoutes from './shifts.routes'
 import holidayRoutes from './holidays.routes'
 import leaveTypeRoutes from './leaveTypes.routes'
+import leavePolicyRoutes from './leavePolicy.routes'
 import employeeAttendanceRoutes from './employeeAttendances.routes'
 import otherSalaryComponentsRoutes from './otherSalaryComponents.routes'
 import employeeOtherSalaryComponentsRoutes from './employeeOtherSalaryComponents.routes'
@@ -44,6 +45,7 @@ router.use('/employees', employeeRoutes)
 router.use('/shift', shiftRoutes)
 router.use('/holidays', holidayRoutes)
 router.use('/leaveTypes', leaveTypeRoutes)
+router.use('/leavePolicy', leavePolicyRoutes)
 router.use('/employeeAttendances', employeeAttendanceRoutes)
 router.use('/otherSalaryComponents', otherSalaryComponentsRoutes)
 router.use(
