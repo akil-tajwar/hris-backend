@@ -5,143 +5,159 @@ import {
   departmentModel,
   designationModel,
   employmentTypeModel,
-  employeeLeaveTypeModel,
   NewEmployee,
   companyModel,
   divisionModel,
   costCenterModel,
-  reportingAuthorityModel,
   workStationModel,
+  shiftModel,
+  NewUser,
+  userModel,
 } from '../schemas'
+import { alias } from 'drizzle-orm/mysql-core'
+import { BadRequestError } from './utils/errors.utils'
+import { hashPassword, validatePassword } from './utils/password.utils'
 
 //CREATE
-export const createEmployee = async (
-  data: NewEmployee & { leaveTypeIds?: number[] }
-) => {
+export const createEmployee = async (input: {
+  employeeData: NewEmployee
+  userData: NewUser
+}) => {
   return await db.transaction(async (tx) => {
-    // 1️⃣ Insert employee - ALL FIELDS FROM SCHEMA
-    const insertResult = await tx.insert(employeeModel).values({
-      // Basic Information
-      empCode: data.empCode,
-      empFullName: data.empFullName,
-      empShortName: data.empShortName ?? null,
-      dob: data.dob,
-      doj: data.doj,
-      doc: data.doc ?? null,
-      gender: data.gender,
-      nationalIdNo: data.nationalIdNo ?? null,
-      nationality: data.nationality ?? null,
-      country: data.country ?? null,
-      city: data.city ?? null,
-      zipCode: data.zipCode ?? null,
+    const { employeeData, userData } = input
 
-      // Contact Information
-      workEmail: data.workEmail ?? null,
-      privateEmail: data.privateEmail ?? null,
-      homePhone: data.homePhone ?? null,
-      personalPhone: data.personalPhone ?? null,
-      officialPhone: data.officialPhone,
+    // 1️⃣ Check duplicate username
+    const existingUser = await tx
+      .select()
+      .from(userModel)
+      .where(eq(userModel.username, userData.username))
+      .limit(1)
 
-      // Address Information
-      presentAddress: data.presentAddress,
-      permanentAddress: data.permanentAddress ?? null,
-
-      // Emergency Contact
-      emergencyContactName: data.emergencyContactName ?? null,
-      emergencyContactPhone: data.emergencyContactPhone ?? null,
-      emergencyContactRelation: data.emergencyContactRelation ?? null,
-
-      // Personal Information
-      maritalStatus: data.maritalStatus ?? null,
-      photoUrl: data.photoUrl ?? null,
-      cvUrl: data.cvUrl ?? null,
-      religion: data.religion ?? null,
-      bloodGroup: data.bloodGroup ?? null,
-
-      // Qualification Information
-      qualification: data.qualification,
-      instituteName: data.instituteName ?? null,
-      subjectName: data.subjectName ?? null,
-      startDate: data.startDate ?? null,
-      endDate: data.endDate ?? null,
-      result: data.result ?? null,
-      certificateUrl: data.certificateUrl ?? null,
-
-      // Employment Information
-      basicSalary: data.basicSalary,
-      isActive: data.isActive ?? true,
-
-      // Dependents Information
-      dependentsName: data.dependentsName ?? null,
-      dependentRelation: data.dependentRelation ?? null,
-
-      // Foreign Keys
-      departmentId: data.departmentId,
-      designationId: data.designationId,
-      employmentTypeId: data.employmentTypeId,
-      shiftId: data.shiftId,
-      companyId: data.companyId,
-      workStationId: data.workStationId,
-      divisionId: data.divisionId,
-      costCenterId: data.costCenterId,
-      reportingAuthorityId: data.reportingAuthorityId,
-
-      // Audit Fields
-      createdBy: data.createdBy,
-    })
-
-    // ✅ MySQL: Get insertId from result array
-    const employeeId = Number(insertResult[0].insertId)
-
-    // 2️⃣ Insert employee leave types (BULK)
-    if (data.leaveTypeIds?.length) {
-      await tx.insert(employeeLeaveTypeModel).values(
-        data.leaveTypeIds.map((leaveTypeId) => ({
-          employeeId,
-          leaveTypeId,
-        }))
-      )
+    if (existingUser.length > 0) {
+      throw BadRequestError('Username already registered, Please Try Another')
     }
 
-    // 3️⃣ Return created employee
+    // 2️⃣ Validate + hash password
+    validatePassword(userData.password)
+    const hashedPassword = await hashPassword(userData.password)
+
+    // 3️⃣ Create user
+    const userInsertResult = await tx.insert(userModel).values({
+      username: userData.username,
+      password: hashedPassword,
+      active: userData.active ? true : false,
+      isPasswordResetRequired: true,
+      roleId: userData.roleId,
+      tenantId: userData.tenantId,
+      email: userData.email,
+    })
+
+    const userId = Number(userInsertResult[0].insertId)
+
+    // 4️⃣ Create employee (attach userId)
+    const employeeInsertResult = await tx.insert(employeeModel).values({
+      empCode: employeeData.empCode,
+      empFullName: employeeData.empFullName,
+      empShortName: employeeData.empShortName ?? null,
+      dob: employeeData.dob,
+      doj: employeeData.doj,
+      doc: employeeData.doc ?? null,
+      gender: employeeData.gender,
+      nationalIdNo: employeeData.nationalIdNo ?? null,
+      nationality: employeeData.nationality ?? null,
+      country: employeeData.country ?? null,
+      city: employeeData.city ?? null,
+      zipCode: employeeData.zipCode ?? null,
+
+      workEmail: employeeData.workEmail ?? null,
+      privateEmail: employeeData.privateEmail ?? null,
+      homePhone: employeeData.homePhone ?? null,
+      personalPhone: employeeData.personalPhone ?? null,
+      officialPhone: employeeData.officialPhone,
+
+      presentAddress: employeeData.presentAddress,
+      permanentAddress: employeeData.permanentAddress ?? null,
+
+      emergencyContactName: employeeData.emergencyContactName ?? null,
+      emergencyContactPhone: employeeData.emergencyContactPhone ?? null,
+      emergencyContactRelation: employeeData.emergencyContactRelation ?? null,
+
+      maritalStatus: employeeData.maritalStatus ?? null,
+      photoUrl: employeeData.photoUrl ?? null,
+      cvUrl: employeeData.cvUrl ?? null,
+      religion: employeeData.religion ?? null,
+      bloodGroup: employeeData.bloodGroup ?? null,
+
+      qualification: employeeData.qualification,
+      instituteName: employeeData.instituteName ?? null,
+      subjectName: employeeData.subjectName ?? null,
+      startDate: employeeData.startDate ?? null,
+      endDate: employeeData.endDate ?? null,
+      result: employeeData.result ?? null,
+      certificateUrl: employeeData.certificateUrl ?? null,
+
+      basicSalary: employeeData.basicSalary,
+      isActive: employeeData.isActive ?? true,
+
+      dependentsName: employeeData.dependentsName ?? null,
+      dependentRelation: employeeData.dependentRelation ?? null,
+
+      departmentId: employeeData.departmentId,
+      designationId: employeeData.designationId,
+      employmentTypeId: employeeData.employmentTypeId,
+      shiftId: employeeData.shiftId,
+      companyId: employeeData.companyId,
+      workStationId: employeeData.workStationId,
+      divisionId: employeeData.divisionId,
+      costCenterId: employeeData.costCenterId,
+      reportingAuthorityId: employeeData.reportingAuthorityId,
+
+      createdBy: employeeData.createdBy,
+    })
+
+    const employeeId = Number(employeeInsertResult[0].insertId)
+
+    // 5️⃣ Return full employee
     const [employee] = await tx
       .select()
       .from(employeeModel)
       .where(eq(employeeModel.employeeId, employeeId))
 
-    return employee
+    return {
+      employee,
+      user: {
+        id: userId,
+        username: userData.username,
+        email: userData.email,
+        roleId: userData.roleId,
+        tenantId: userData.tenantId,
+        active: userData.active,
+      },
+    }
   })
 }
 
 // UPDATE
 export const updateEmployee = async (
   employeeId: number,
-  data: Partial<NewEmployee> & { leaveTypeIds?: number[] }
+  data: Partial<NewEmployee>
 ) => {
   return await db.transaction(async (tx) => {
-    // 🔍 Check if employee exists
     const existing = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })
 
     if (!existing) throw new Error('Employee not found')
 
-    // 🔧 Normalize FK values (IMPORTANT)
     const normalizeFk = (val: any) =>
       val === 0 || val === '' || val === undefined ? null : val
 
-    // 🔧 Normalize general values (avoid empty string issues)
     const normalizeValue = (val: any) =>
       val === '' || val === undefined ? null : val
 
-    // 🎯 Build update data dynamically
     const updateData: any = {}
 
     Object.entries(data).forEach(([key, value]) => {
-      // Skip leaveTypeIds (handled separately)
-      if (key === 'leaveTypeIds') return
-
-      // Foreign keys list
       const fkFields = [
         'departmentId',
         'designationId',
@@ -157,45 +173,19 @@ export const updateEmployee = async (
       if (fkFields.includes(key)) {
         updateData[key] = normalizeFk(value)
       } else if (key === 'isActive') {
-        // Boolean → number
         updateData[key] = value ? 1 : 0
       } else {
         updateData[key] = normalizeValue(value)
       }
     })
 
-    // 🕒 Audit fields
-    if (data.updatedBy !== undefined) {
-      updateData.updatedBy = data.updatedBy
-    }
-
     updateData.updatedAt = new Date()
 
-    // ✅ Execute update
-    if (Object.keys(updateData).length > 0) {
-      await tx
-        .update(employeeModel)
-        .set(updateData)
-        .where(eq(employeeModel.employeeId, employeeId))
-    }
+    await tx
+      .update(employeeModel)
+      .set(updateData)
+      .where(eq(employeeModel.employeeId, employeeId))
 
-    // 🔁 Update leave types
-    if (data.leaveTypeIds !== undefined) {
-      await tx
-        .delete(employeeLeaveTypeModel)
-        .where(eq(employeeLeaveTypeModel.employeeId, employeeId))
-
-      if (data.leaveTypeIds.length > 0) {
-        await tx.insert(employeeLeaveTypeModel).values(
-          data.leaveTypeIds.map((leaveTypeId) => ({
-            employeeId,
-            leaveTypeId,
-          }))
-        )
-      }
-    }
-
-    // 📦 Return updated employee
     const updatedEmployee = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })
@@ -206,6 +196,8 @@ export const updateEmployee = async (
 
 //GET ALL EMPLOYEES
 export const getAllEmployees = async () => {
+  const reportingAuthority = alias(employeeModel, 'reportingAuthority')
+
   return await db
     .select({
       // Employee Basic Information
@@ -281,8 +273,13 @@ export const getAllEmployees = async () => {
       companyName: companyModel.companyName,
       workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
+      shiftName: shiftModel.shiftName,
+      startTime: shiftModel.startTime,
+      endTime: shiftModel.endTime,
       costCenterName: costCenterModel.costCenterName,
-      reportingAuthorityName: reportingAuthorityModel.reportingAuthorityName,
+
+      // ✅ SELF JOIN (Reporting Authority)
+      reportingAuthorityName: reportingAuthority.empFullName,
 
       // Audit Fields
       createdBy: employeeModel.createdBy,
@@ -291,6 +288,149 @@ export const getAllEmployees = async () => {
       updatedAt: employeeModel.updatedAt,
     })
     .from(employeeModel)
+
+    // Department
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
+    )
+
+    // Designation
+    .leftJoin(
+      designationModel,
+      eq(employeeModel.designationId, designationModel.designationId)
+    )
+
+    // Employment Type
+    .leftJoin(
+      employmentTypeModel,
+      eq(employeeModel.employmentTypeId, employmentTypeModel.employmentTypeId)
+    )
+
+    // Company
+    .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
+
+    // Work Station
+    .leftJoin(
+      workStationModel,
+      eq(employeeModel.workStationId, workStationModel.workStationId)
+    )
+
+    // Division
+    .leftJoin(
+      divisionModel,
+      eq(employeeModel.divisionId, divisionModel.divisionId)
+    )
+
+    // Cost Center
+    .leftJoin(
+      costCenterModel,
+      eq(employeeModel.costCenterId, costCenterModel.costCenterId)
+    )
+
+    // Shift
+    .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
+
+    // 🔥 SELF JOIN (Reporting Authority = Employee Table)
+    .leftJoin(
+      reportingAuthority,
+      eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
+    )
+}
+
+//GET EMPLOYEE BY ID (WITH WEEKENDS)
+export const getEmployeeById = async (employeeId: number) => {
+  const reportingAuthority = alias(employeeModel, 'reportingAuthority')
+
+  const employee = await db
+    .select({
+      // Employee Basic Information
+      employeeId: employeeModel.employeeId,
+      empCode: employeeModel.empCode,
+      empFullName: employeeModel.empFullName,
+      empShortName: employeeModel.empShortName,
+      dob: employeeModel.dob,
+      doj: employeeModel.doj,
+      doc: employeeModel.doc,
+      gender: employeeModel.gender,
+      nationalIdNo: employeeModel.nationalIdNo,
+      nationality: employeeModel.nationality,
+      country: employeeModel.country,
+      city: employeeModel.city,
+      zipCode: employeeModel.zipCode,
+
+      // Contact Information
+      workEmail: employeeModel.workEmail,
+      privateEmail: employeeModel.privateEmail,
+      homePhone: employeeModel.homePhone,
+      personalPhone: employeeModel.personalPhone,
+      officialPhone: employeeModel.officialPhone,
+
+      // Address
+      presentAddress: employeeModel.presentAddress,
+      permanentAddress: employeeModel.permanentAddress,
+
+      // Emergency Contact
+      emergencyContactName: employeeModel.emergencyContactName,
+      emergencyContactPhone: employeeModel.emergencyContactPhone,
+      emergencyContactRelation: employeeModel.emergencyContactRelation,
+
+      // Personal
+      maritalStatus: employeeModel.maritalStatus,
+      photoUrl: employeeModel.photoUrl,
+      cvUrl: employeeModel.cvUrl,
+      religion: employeeModel.religion,
+      bloodGroup: employeeModel.bloodGroup,
+
+      // Qualification
+      qualification: employeeModel.qualification,
+      instituteName: employeeModel.instituteName,
+      subjectName: employeeModel.subjectName,
+      startDate: employeeModel.startDate,
+      endDate: employeeModel.endDate,
+      result: employeeModel.result,
+      certificateUrl: employeeModel.certificateUrl,
+
+      // Employment
+      basicSalary: employeeModel.basicSalary,
+      isActive: employeeModel.isActive,
+
+      // Dependents
+      dependentsName: employeeModel.dependentsName,
+      dependentRelation: employeeModel.dependentRelation,
+
+      // Foreign Keys
+      departmentId: employeeModel.departmentId,
+      designationId: employeeModel.designationId,
+      employmentTypeId: employeeModel.employmentTypeId,
+      shiftId: employeeModel.shiftId,
+      companyId: employeeModel.companyId,
+      workStationId: employeeModel.workStationId,
+      divisionId: employeeModel.divisionId,
+      costCenterId: employeeModel.costCenterId,
+      reportingAuthorityId: employeeModel.reportingAuthorityId,
+
+      // Names
+      departmentName: departmentModel.departmentName,
+      designationName: designationModel.designationName,
+      employmentTypeName: employmentTypeModel.employmentTypeName,
+      companyName: companyModel.companyName,
+      workStationName: workStationModel.workStationName,
+      divisionName: divisionModel.divisionName,
+      shiftName: shiftModel.shiftName,
+      costCenterName: costCenterModel.costCenterName,
+
+      // Self join
+      reportingAuthorityName: reportingAuthority.empFullName,
+
+      // Audit
+      createdBy: employeeModel.createdBy,
+      createdAt: employeeModel.createdAt,
+      updatedBy: employeeModel.updatedBy,
+      updatedAt: employeeModel.updatedAt,
+    })
+    .from(employeeModel)
+    .where(eq(employeeModel.employeeId, employeeId))
     .leftJoin(
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
@@ -316,34 +456,16 @@ export const getAllEmployees = async () => {
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
+    .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
     .leftJoin(
-      reportingAuthorityModel,
-      eq(
-        employeeModel.reportingAuthorityId,
-        reportingAuthorityModel.reportingAuthorityId
-      )
+      reportingAuthority,
+      eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
     )
-}
-
-//GET EMPLOYEE BY ID (WITH WEEKENDS)
-export const getEmployeeById = async (employeeId: number) => {
-  const employee = await db
-    .select()
-    .from(employeeModel)
-    .where(eq(employeeModel.employeeId, employeeId))
     .limit(1)
 
   if (!employee || employee.length === 0) return null
 
-  const weekDays = await db
-    .select({ weekDayId: employeeLeaveTypeModel.leaveTypeId })
-    .from(employeeLeaveTypeModel)
-    .where(eq(employeeLeaveTypeModel.employeeId, employeeId))
-
-  return {
-    ...employee[0],
-    leaveTypeIds: weekDays.map((w) => w.weekDayId),
-  }
+  return employee[0]
 }
 
 //DELETE
@@ -364,81 +486,6 @@ export const deleteEmployee = async (employeeId: number) => {
     return {
       message: 'Employee deleted successfully',
       deletedEmployee: existing,
-    }
-  })
-}
-
-// ASSIGN LEAVE TYPES TO EMPLOYEES
-type AssignLeaveTypeGrouped = {
-  employeeId: number
-  leaveTypeIds: number[]
-}
-
-type AssignLeaveTypeFlat = {
-  employeeId: number
-  leaveTypeId: number
-}
-
-export const assignLeaveType = async (
-  payload:
-    | AssignLeaveTypeGrouped
-    | AssignLeaveTypeFlat
-    | AssignLeaveTypeGrouped[]
-    | AssignLeaveTypeFlat[]
-) => {
-  const data = Array.isArray(payload) ? payload : [payload]
-
-  console.log('🚀 ~ assignLeaveType ~ raw data:', data)
-
-  return await db.transaction(async (tx) => {
-    const groupedByEmployee = new Map<number, Set<number>>()
-
-    for (const item of data) {
-      const { employeeId } = item
-      if (!employeeId) continue
-
-      if (!groupedByEmployee.has(employeeId)) {
-        groupedByEmployee.set(employeeId, new Set())
-      }
-
-      const bucket = groupedByEmployee.get(employeeId)!
-
-      // 🟢 Grouped payload
-      if ('leaveTypeIds' in item && Array.isArray(item.leaveTypeIds)) {
-        item.leaveTypeIds
-          .filter((id): id is number => Number.isInteger(id))
-          .forEach((id) => bucket.add(id))
-      }
-
-      // 🟢 Flat payload
-      if ('leaveTypeId' in item && Number.isInteger(item.leaveTypeId)) {
-        bucket.add(item.leaveTypeId)
-      }
-    }
-
-    // Process each employee
-    for (const [employeeId, leaveTypeSet] of groupedByEmployee) {
-      const leaveTypeIds = Array.from(leaveTypeSet)
-
-      // 1️⃣ Delete old assignments
-      await tx
-        .delete(employeeLeaveTypeModel)
-        .where(eq(employeeLeaveTypeModel.employeeId, employeeId))
-
-      // 2️⃣ Insert new ones
-      if (leaveTypeIds.length > 0) {
-        await tx.insert(employeeLeaveTypeModel).values(
-          leaveTypeIds.map((leaveTypeId) => ({
-            employeeId,
-            leaveTypeId,
-          }))
-        )
-      }
-    }
-
-    return {
-      success: true,
-      message: 'Leave types assigned successfully',
     }
   })
 }

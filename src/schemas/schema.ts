@@ -445,56 +445,6 @@ export const holidayModel = mysqlTable('holidays', {
   ),
 })
 
-// export const leaveTypeModel = mysqlTable('leave_types', {
-//   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
-//   leaveTypeName: varchar('leave_type_name', { length: 100 }).notNull(),
-//   totalLeaves: int('total_leaves').notNull(),
-//   yearPeriod: int('year_period').notNull(),
-//   createdBy: int('created_by').notNull(),
-//   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-//   updatedBy: int('updated_by'),
-//   updatedAt: timestamp('updated_at').default(
-//     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-//   ),
-// })
-
-// //to track which leave types are assigned to which employees
-// export const employeeLeaveTypeModel = mysqlTable('employee_leave_types', {
-//   employeeLeaveTypeId: int('employee_leave_type_id')
-//     .primaryKey()
-//     .autoincrement(),
-//   employeeId: int('employee_id')
-//     .notNull()
-//     .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-
-//   leaveTypeId: int('leave_type_id')
-//     .notNull()
-//     .references(() => leaveTypeModel.leaveTypeId, { onDelete: 'cascade' }),
-// })
-
-// // to track leaves taken by employees
-// export const employeeLeaveModel = mysqlTable('employee_leaves', {
-//   employeeLeaveId: int('employee_leave_id').primaryKey().autoincrement(),
-//   employeeId: int('employee_id')
-//     .notNull()
-//     .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-//   startDate: date('start_date').notNull(),
-//   endDate: date('end_date').notNull(),
-//   noOfDays: int('no_of_days').notNull(),
-//   leaveTypeId: int('leave_type_id')
-//     .notNull()
-//     .references(() => leaveTypeModel.leaveTypeId, {
-//       onDelete: 'cascade',
-//     }),
-//   description: text('description'),
-//   createdBy: int('created_by').notNull(),
-//   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-//   updatedBy: int('updated_by'),
-//   updatedAt: timestamp('updated_at').default(
-//     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-//   ),
-// })
-
 export const leaveTypeModel = mysqlTable('leave_types', {
   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
   companyId: int('company_id')

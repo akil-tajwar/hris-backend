@@ -5,7 +5,7 @@ import {
   employeeAttendanceModel,
   EmployeeLeave,
   employeeLeaveModel,
-  employeeLeaveTypeModel,
+  leaveTypeModel,
   employeeModel,
   employeeOtherSalaryComponentsModel,
   leaveTypeModel,
@@ -53,11 +53,11 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
   // Check eligibility
   const [employeeLeaveType] = await db
     .select()
-    .from(employeeLeaveTypeModel)
+    .from(leaveTypeModel)
     .where(
       and(
-        eq(employeeLeaveTypeModel.employeeId, data.employeeId),
-        eq(employeeLeaveTypeModel.leaveTypeId, data.leaveTypeId)
+        eq(leaveTypeModel.employeeId, data.employeeId),
+        eq(leaveTypeModel.leaveTypeId, data.leaveTypeId)
       )
     )
     .limit(1)
@@ -306,9 +306,9 @@ export const deleteEmployeeLeave = async (employeeLeaveId: number) => {
 export const getEmployeeLeaveTypes = async () => {
   const result = await db
     .select({
-      employeeLeaveTypeId: employeeLeaveTypeModel.employeeLeaveTypeId,
-      employeeId: employeeLeaveTypeModel.employeeId,
-      leaveTypeId: employeeLeaveTypeModel.leaveTypeId,
+      employeeLeaveTypeId: leaveTypeModel.employeeLeaveTypeId,
+      employeeId: leaveTypeModel.employeeId,
+      leaveTypeId: leaveTypeModel.leaveTypeId,
       leaveTypeName: leaveTypeModel.leaveTypeName,
       totalLeaves: leaveTypeModel.totalLeaves,
       employeeName: employeeModel.empFullName,
@@ -316,14 +316,14 @@ export const getEmployeeLeaveTypes = async () => {
       designationName: designationModel.designationName,
       departmentName: departmentModel.departmentName,
     })
-    .from(employeeLeaveTypeModel)
+    .from(leaveTypeModel)
     .leftJoin(
       employeeModel,
-      eq(employeeLeaveTypeModel.employeeId, employeeModel.employeeId)
+      eq(leaveTypeModel.employeeId, employeeModel.employeeId)
     )
     .leftJoin(
       leaveTypeModel,
-      eq(employeeLeaveTypeModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+      eq(leaveTypeModel.leaveTypeId, leaveTypeModel.leaveTypeId)
     )
     .leftJoin(
       designationModel,

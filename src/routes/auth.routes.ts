@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   changePasswordController,
+  getRolesController,
   getUserList,
   getUsersWithRoles,
   login,
@@ -15,6 +16,7 @@ router.post("/register", register);
 router.post("/login", login);
 router.get('/users',  getUserList);
 router.get("/users-by-roles", getUsersWithRoles);
+router.get("/roles", getRolesController);
 router.put("/users/:userId", updateUserController);
 router.patch("/change-password/:userId", changePasswordController);
 
