@@ -3,11 +3,11 @@ import {
   departmentModel,
   designationModel,
   employeeModel,
-  employeeOtherSalaryComponentsModel,
+  employeeSalaryComponentsModel,
   Lone,
   employeeLoneModel,
   NewLone,
-  otherSalaryComponentsModel,
+  salaryComponentsModel,
 } from '../schemas'
 import { and, eq, sql } from 'drizzle-orm'
 import { BadRequestError, NotFoundError } from './utils/errors.utils'
@@ -35,8 +35,8 @@ export const createLone = async (data: NewLone) => {
   // Fetch lone salary component where isLoneFee = 1 (or true)
   const [loneSalaryComponent] = await db
     .select()
-    .from(otherSalaryComponentsModel)
-    .where(eq(otherSalaryComponentsModel.isLoneFee, true))
+    .from(salaryComponentsModel)
+    .where(eq(salaryComponentsModel.isLoneFee, true))
     .limit(1)
 
   if (!loneSalaryComponent) {
@@ -83,7 +83,7 @@ export const createLone = async (data: NewLone) => {
 
     insertPayload.push({
       employeeId: data.employeeId,
-      otherSalaryComponentId: loneSalaryComponent.otherSalaryComponentId,
+      salaryComponentId: loneSalaryComponent.salaryComponentId,
       employeeLoneId: employeeLoneId,
       salaryMonth,
       salaryYear,
@@ -102,7 +102,7 @@ export const createLone = async (data: NewLone) => {
 
   // Bulk insert all months
   if (insertPayload.length > 0) {
-    await db.insert(employeeOtherSalaryComponentsModel).values(insertPayload)
+    await db.insert(employeeSalaryComponentsModel).values(insertPayload)
   }
 
   // ---- INSTALLMENT LOGIC END ----
@@ -171,9 +171,9 @@ export const deleteLone = async (employeeLoneId: number) => {
   await db.transaction(async (trx) => {
     // Delete related records first
     await trx
-      .delete(employeeOtherSalaryComponentsModel)
+      .delete(employeeSalaryComponentsModel)
       .where(
-        eq(employeeOtherSalaryComponentsModel.employeeLoneId, employeeLoneId)
+        eq(employeeSalaryComponentsModel.employeeLoneId, employeeLoneId)
       )
 
     // Then delete the loan record
@@ -185,7 +185,7 @@ export const deleteLone = async (employeeLoneId: number) => {
 
 //skip lone
 interface SkipLoneParams {
-  employeeOtherSalaryComponentId: number
+  employeeSalaryComponentId: number
   updatedBy: number
 }
 
@@ -214,16 +214,16 @@ function toDate(month: string, year: number): Date {
 }
 
 export const skipLoneInstallment = async (params: SkipLoneParams) => {
-  const { employeeOtherSalaryComponentId, updatedBy } = params
+  const { employeeSalaryComponentId, updatedBy } = params
 
   // Get the installment to skip
   const [installment] = await db
     .select()
-    .from(employeeOtherSalaryComponentsModel)
+    .from(employeeSalaryComponentsModel)
     .where(
       eq(
-        employeeOtherSalaryComponentsModel.employeeOtherSalaryComponentId,
-        employeeOtherSalaryComponentId
+        employeeSalaryComponentsModel.employeeSalaryComponentId,
+        employeeSalaryComponentId
       )
     )
     .limit(1)
@@ -252,7 +252,7 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
 
   // Mark current installment as skipped
   await db
-    .update(employeeOtherSalaryComponentsModel)
+    .update(employeeSalaryComponentsModel)
     .set({
       isSkipped: true,
       updatedBy: updatedBy,
@@ -260,8 +260,8 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
     })
     .where(
       eq(
-        employeeOtherSalaryComponentsModel.employeeOtherSalaryComponentId,
-        employeeOtherSalaryComponentId
+        employeeSalaryComponentsModel.employeeSalaryComponentId,
+        employeeSalaryComponentId
       )
     )
 
@@ -270,9 +270,9 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
   // Get all installments under this loan
   const allInstallments = await db
     .select()
-    .from(employeeOtherSalaryComponentsModel)
+    .from(employeeSalaryComponentsModel)
     .where(
-      eq(employeeOtherSalaryComponentsModel.employeeLoneId, employeeLoneId)
+      eq(employeeSalaryComponentsModel.employeeLoneId, employeeLoneId)
     )
 
   if (!allInstallments.length) {
@@ -300,9 +300,9 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
   const newSalaryYear = nextDate.getFullYear()
 
   // Insert new installment
-  await db.insert(employeeOtherSalaryComponentsModel).values({
+  await db.insert(employeeSalaryComponentsModel).values({
     employeeId: installment.employeeId,
-    otherSalaryComponentId: installment.otherSalaryComponentId,
+    salaryComponentId: installment.salaryComponentId,
     employeeLoneId: employeeLoneId,
     salaryMonth: newSalaryMonth as
       | 'January'
@@ -329,9 +329,9 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
   const updatedInstallments = (
     await db
       .select()
-      .from(employeeOtherSalaryComponentsModel)
+      .from(employeeSalaryComponentsModel)
       .where(
-        eq(employeeOtherSalaryComponentsModel.employeeLoneId, employeeLoneId)
+        eq(employeeSalaryComponentsModel.employeeLoneId, employeeLoneId)
       )
   ).sort((a, b) => {
     const dateA = toDate(a.salaryMonth, a.salaryYear).getTime()

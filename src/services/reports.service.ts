@@ -6,8 +6,8 @@ import {
   employeeAttendanceModel,
   employeeLoneModel,
   employeeModel,
-  employeeOtherSalaryComponentsModel,
-  otherSalaryComponentsModel,
+  employeeSalaryComponentsModel,
+  salaryComponentsModel,
   salaryModel,
 } from '../schemas'
 
@@ -127,51 +127,51 @@ export const salaryReport = async (
   // Get all other salary components for the employees in this salary period
   const employeeIds = salaryData.map((s) => s.employeeId)
 
-  const otherSalaryComponents = await db
+  const salaryComponents = await db
     .select({
-      employeeOtherSalaryComponentId:
-        employeeOtherSalaryComponentsModel.employeeOtherSalaryComponentId,
-      employeeId: employeeOtherSalaryComponentsModel.employeeId,
+      employeeSalaryComponentId:
+        employeeSalaryComponentsModel.employeeSalaryComponentId,
+      employeeId: employeeSalaryComponentsModel.employeeId,
       empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
-      otherSalaryComponentId:
-        employeeOtherSalaryComponentsModel.otherSalaryComponentId,
-      componentName: otherSalaryComponentsModel.componentName,
-      componentType: otherSalaryComponentsModel.componentType,
-      amount: employeeOtherSalaryComponentsModel.amount,
-      salaryMonth: employeeOtherSalaryComponentsModel.salaryMonth,
-      salaryYear: employeeOtherSalaryComponentsModel.salaryYear,
-      createdBy: employeeOtherSalaryComponentsModel.createdBy,
-      createdAt: employeeOtherSalaryComponentsModel.createdAt,
-      updatedBy: employeeOtherSalaryComponentsModel.updatedBy,
-      updatedAt: employeeOtherSalaryComponentsModel.updatedAt,
+      salaryComponentId:
+        employeeSalaryComponentsModel.salaryComponentId,
+      componentName: salaryComponentsModel.componentName,
+      componentType: salaryComponentsModel.componentType,
+      amount: employeeSalaryComponentsModel.amount,
+      salaryMonth: employeeSalaryComponentsModel.salaryMonth,
+      salaryYear: employeeSalaryComponentsModel.salaryYear,
+      createdBy: employeeSalaryComponentsModel.createdBy,
+      createdAt: employeeSalaryComponentsModel.createdAt,
+      updatedBy: employeeSalaryComponentsModel.updatedBy,
+      updatedAt: employeeSalaryComponentsModel.updatedAt,
     })
-    .from(employeeOtherSalaryComponentsModel)
+    .from(employeeSalaryComponentsModel)
     .innerJoin(
-      otherSalaryComponentsModel,
+      salaryComponentsModel,
       eq(
-        employeeOtherSalaryComponentsModel.otherSalaryComponentId,
-        otherSalaryComponentsModel.otherSalaryComponentId
+        employeeSalaryComponentsModel.salaryComponentId,
+        salaryComponentsModel.salaryComponentId
       )
     )
     .innerJoin(
       employeeModel,
       eq(
-        employeeOtherSalaryComponentsModel.employeeId,
+        employeeSalaryComponentsModel.employeeId,
         employeeModel.employeeId
       )
     )
     .where(
       and(
-        inArray(employeeOtherSalaryComponentsModel.employeeId, employeeIds),
-        eq(employeeOtherSalaryComponentsModel.salaryMonth, salaryMonth),
-        eq(employeeOtherSalaryComponentsModel.salaryYear, salaryYear)
+        inArray(employeeSalaryComponentsModel.employeeId, employeeIds),
+        eq(employeeSalaryComponentsModel.salaryMonth, salaryMonth),
+        eq(employeeSalaryComponentsModel.salaryYear, salaryYear)
       )
     )
     .orderBy(
-      employeeOtherSalaryComponentsModel.employeeId,
-      otherSalaryComponentsModel.componentType,
-      otherSalaryComponentsModel.componentName
+      employeeSalaryComponentsModel.employeeId,
+      salaryComponentsModel.componentType,
+      salaryComponentsModel.componentName
     )
 
   // Transform salary data to match the schema
@@ -196,11 +196,11 @@ export const salaryReport = async (
   }))
 
   // Transform other salary components
-  const transformedOtherSalary = otherSalaryComponents.map((component) => ({
+  const transformedOtherSalary = salaryComponents.map((component) => ({
     employeeId: component.employeeId,
     empCode: component.empCode,
     employeeName: component.employeeName,
-    otherSalaryComponentId: component.otherSalaryComponentId,
+    salaryComponentId: component.salaryComponentId,
     componentName: component.componentName,
     componentType: component.componentType as 'Allowance' | 'Deduction',
     salaryMonth: component.salaryMonth,
@@ -245,17 +245,17 @@ export const loneReport = async (fromDate: string, toDate: string) => {
       designationName: designationModel.designationName,
 
       // installment data
-      employeeOtherSalaryComponentId:
-        employeeOtherSalaryComponentsModel.employeeOtherSalaryComponentId,
-      otherSalaryComponentId:
-        employeeOtherSalaryComponentsModel.otherSalaryComponentId,
-      salaryMonth: employeeOtherSalaryComponentsModel.salaryMonth,
-      salaryYear: employeeOtherSalaryComponentsModel.salaryYear,
-      installmentAmount: employeeOtherSalaryComponentsModel.amount,
-      isAuthorized: employeeOtherSalaryComponentsModel.isAuthorized,
-      isSkipped: employeeOtherSalaryComponentsModel.isSkipped,
-      isSalaryGiven: employeeOtherSalaryComponentsModel.isSalaryGiven,
-      installmentCreatedAt: employeeOtherSalaryComponentsModel.createdAt,
+      employeeSalaryComponentId:
+        employeeSalaryComponentsModel.employeeSalaryComponentId,
+      salaryComponentId:
+        employeeSalaryComponentsModel.salaryComponentId,
+      salaryMonth: employeeSalaryComponentsModel.salaryMonth,
+      salaryYear: employeeSalaryComponentsModel.salaryYear,
+      installmentAmount: employeeSalaryComponentsModel.amount,
+      isAuthorized: employeeSalaryComponentsModel.isAuthorized,
+      isSkipped: employeeSalaryComponentsModel.isSkipped,
+      isSalaryGiven: employeeSalaryComponentsModel.isSalaryGiven,
+      installmentCreatedAt: employeeSalaryComponentsModel.createdAt,
     })
     .from(employeeLoneModel)
     .leftJoin(
@@ -271,10 +271,10 @@ export const loneReport = async (fromDate: string, toDate: string) => {
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
     .leftJoin(
-      employeeOtherSalaryComponentsModel,
+      employeeSalaryComponentsModel,
       eq(
         employeeLoneModel.employeeLoneId,
-        employeeOtherSalaryComponentsModel.employeeLoneId
+        employeeSalaryComponentsModel.employeeLoneId
       )
     )
     .where(
@@ -285,8 +285,8 @@ export const loneReport = async (fromDate: string, toDate: string) => {
     )
     .orderBy(
       employeeLoneModel.employeeLoneId,
-      employeeOtherSalaryComponentsModel.salaryYear,
-      employeeOtherSalaryComponentsModel.salaryMonth
+      employeeSalaryComponentsModel.salaryYear,
+      employeeSalaryComponentsModel.salaryMonth
     )
 
   const groupedMap = new Map()
@@ -319,10 +319,10 @@ export const loneReport = async (fromDate: string, toDate: string) => {
       })
     }
 
-    if (row.employeeOtherSalaryComponentId) {
+    if (row.employeeSalaryComponentId) {
       groupedMap.get(loneId).installments.push({
-        employeeOtherSalaryComponentId: row.employeeOtherSalaryComponentId,
-        otherSalaryComponentId: row.otherSalaryComponentId,
+        employeeSalaryComponentId: row.employeeSalaryComponentId,
+        salaryComponentId: row.salaryComponentId,
         salaryMonth: row.salaryMonth,
         salaryYear: row.salaryYear,
         amount: row.installmentAmount,

@@ -3,9 +3,9 @@ import { db } from '../config/database'
 import {
   employeeAttendanceModel,
   employeeModel,
-  employeeOtherSalaryComponentsModel,
+  employeeSalaryComponentsModel,
   NewEmployeeAttendance,
-  otherSalaryComponentsModel,
+  salaryComponentsModel,
 } from '../schemas'
 import { BadRequestError } from './utils/errors.utils'
 
@@ -27,14 +27,14 @@ export const createEmployeeAttendance = async (
   // Fetch salary components dynamically at the beginning
   const [absentFeeComponent] = await db
     .select()
-    .from(otherSalaryComponentsModel)
-    .where(eq(otherSalaryComponentsModel.isAbsentFee, true))
+    .from(salaryComponentsModel)
+    .where(eq(salaryComponentsModel.isAbsentFee, true))
     .limit(1)
 
   const [lateEarlyOutFeeComponent] = await db
     .select()
-    .from(otherSalaryComponentsModel)
-    .where(eq(otherSalaryComponentsModel.isLateEarlyOutFee, true))
+    .from(salaryComponentsModel)
+    .where(eq(salaryComponentsModel.isLateEarlyOutFee, true))
     .limit(1)
 
   // Validate that required components exist
@@ -151,19 +151,19 @@ export const createEmployeeAttendance = async (
         // Get count of existing records for this employee, month, year, and component
         const existingCountResult = await db
           .select({ count: sql<number>`count(*)` })
-          .from(employeeOtherSalaryComponentsModel)
+          .from(employeeSalaryComponentsModel)
           .where(
             and(
               eq(
-                employeeOtherSalaryComponentsModel.employeeId,
+                employeeSalaryComponentsModel.employeeId,
                 item.employeeId
               ),
               eq(
-                employeeOtherSalaryComponentsModel.otherSalaryComponentId,
-                salaryComponentToUse.otherSalaryComponentId
+                employeeSalaryComponentsModel.salaryComponentId,
+                salaryComponentToUse.salaryComponentId
               ),
               eq(
-                employeeOtherSalaryComponentsModel.salaryMonth,
+                employeeSalaryComponentsModel.salaryMonth,
                 salaryMonth as
                   | 'January'
                   | 'February'
@@ -178,7 +178,7 @@ export const createEmployeeAttendance = async (
                   | 'November'
                   | 'December'
               ),
-              eq(employeeOtherSalaryComponentsModel.salaryYear, salaryYear)
+              eq(employeeSalaryComponentsModel.salaryYear, salaryYear)
             )
           )
 
@@ -193,7 +193,7 @@ export const createEmployeeAttendance = async (
 
       salaryComponentsToInsert.push({
         employeeId: item.employeeId,
-        otherSalaryComponentId: salaryComponentToUse.otherSalaryComponentId,
+        salaryComponentId: salaryComponentToUse.salaryComponentId,
         salaryMonth: salaryMonth as
           | 'January'
           | 'February'
@@ -219,7 +219,7 @@ export const createEmployeeAttendance = async (
   // Insert all other salary components if any
   if (salaryComponentsToInsert.length > 0) {
     await db
-      .insert(employeeOtherSalaryComponentsModel)
+      .insert(employeeSalaryComponentsModel)
       .values(salaryComponentsToInsert)
   }
 

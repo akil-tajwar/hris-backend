@@ -536,29 +536,6 @@ export const leavePolicyDetailsModel = mysqlTable('leave_policy_details', {
   ),
 })
 
-export const employeeLeaveAssignmentModel = mysqlTable(
-  'employee_leave_assignment',
-  {
-    employeeLeaveAssignmentId: int('employee_leave_assignment_id')
-      .primaryKey()
-      .autoincrement(),
-    employeeId: int('employee_id')
-      .references(() => employeeModel.employeeId)
-      .notNull(),
-    leavePolicyMasterId: int('leave_policy_master_id')
-      .references(() => leavePolicyMasterModel.leavePolicyMasterId)
-      .notNull(),
-    effectiveFrom: date('effective_from').notNull(),
-    effectiveTo: date('effective_to'),
-    active: boolean('active').notNull().default(true),
-    createdBy: int('created_by').notNull(),
-    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-    updatedBy: int('updated_by'),
-    updatedAt: timestamp('updated_at').default(
-      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-    ),
-  }
-)
 
 export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   employeeAttendanceId: int('employee_attendance_id')
@@ -582,25 +559,22 @@ export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   ),
 })
 
-export const otherSalaryComponentsModel = mysqlTable(
-  'other_salary_components',
+export const salaryComponentsModel = mysqlTable(
+  'salary_components',
   {
-    otherSalaryComponentId: int('other_salary_component_id')
+    salaryComponentId: int('salary_component_id')
       .primaryKey()
       .autoincrement(),
+    componentCode: varchar('component_code', { length: 20 }).notNull(),
     componentName: text('component_name').notNull(),
+    percentage: double('percentage'),
+    formulaExpression: varchar('formula_expression', { length: 255 }),
+    taxable: boolean('taxable').notNull().default(false),
     componentType: mysqlEnum('component_type', [
       'Allowance',
       'Deduction',
     ]).notNull(),
-    amount: double('amount').notNull(),
-    forDays: int('for_days').notNull(),
-    status: int('status').notNull().default(1),
-    isAbsentFee: boolean('is_absent_fee').notNull().default(false),
-    isLoneFee: boolean('is_lone_fee').notNull().default(false),
-    isLateEarlyOutFee: boolean('is_late_early_out_fee')
-      .notNull()
-      .default(false),
+    active: int('status').notNull().default(1),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
@@ -610,18 +584,18 @@ export const otherSalaryComponentsModel = mysqlTable(
   }
 )
 
-export const employeeOtherSalaryComponentsModel = mysqlTable(
-  'employee_other_salary_components',
+export const employeeSalaryComponentsModel = mysqlTable(
+  'employee_salary_components',
   {
-    employeeOtherSalaryComponentId: int('employee_other_salary_component_id')
+    employeeSalaryComponentId: int('employee_salary_component_id')
       .primaryKey()
       .autoincrement(),
     employeeId: int('employee_id')
       .notNull()
       .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-    otherSalaryComponentId: int('other_salary_component_id')
+    salaryComponentId: int('salary_component_id')
       .notNull()
-      .references(() => otherSalaryComponentsModel.otherSalaryComponentId, {
+      .references(() => salaryComponentsModel.salaryComponentId, {
         onDelete: 'cascade',
       }),
     employeeLoneId: int('employee_lone_id').references(
@@ -868,19 +842,19 @@ export const employeeAttendanceRelations = relations(
   })
 )
 
-export const employeeOtherSalaryComponentsRelations = relations(
-  employeeOtherSalaryComponentsModel,
+export const employeeSalaryComponentsRelations = relations(
+  employeeSalaryComponentsModel,
   ({ one }) => ({
     employee: one(employeeModel, {
-      fields: [employeeOtherSalaryComponentsModel.employeeId],
+      fields: [employeeSalaryComponentsModel.employeeId],
       references: [employeeModel.employeeId],
     }),
-    otherSalaryComponent: one(otherSalaryComponentsModel, {
-      fields: [employeeOtherSalaryComponentsModel.otherSalaryComponentId],
-      references: [otherSalaryComponentsModel.otherSalaryComponentId],
+    salaryComponent: one(salaryComponentsModel, {
+      fields: [employeeSalaryComponentsModel.salaryComponentId],
+      references: [salaryComponentsModel.salaryComponentId],
     }),
     employeeLone: one(employeeLoneModel, {
-      fields: [employeeOtherSalaryComponentsModel.employeeLoneId],
+      fields: [employeeSalaryComponentsModel.employeeLoneId],
       references: [employeeLoneModel.employeeLoneId],
     }),
   })
@@ -961,14 +935,14 @@ export type EmployeeLeaveAssignment = typeof employeeLeaveAssignmentModel.$infer
 export type NewEmployeeLeaveAssignment = typeof employeeLeaveAssignmentModel.$inferInsert
 export type EmployeeAttendance = typeof employeeAttendanceModel.$inferSelect
 export type NewEmployeeAttendance = typeof employeeAttendanceModel.$inferInsert
-export type OtherSalaryComponent =
-  typeof otherSalaryComponentsModel.$inferSelect
-export type NewOtherSalaryComponent =
-  typeof otherSalaryComponentsModel.$inferInsert
-export type EmployeeOtherSalaryComponent =
-  typeof employeeOtherSalaryComponentsModel.$inferSelect
-export type NewEmployeeOtherSalaryComponent =
-  typeof employeeOtherSalaryComponentsModel.$inferInsert
+export type SalaryComponent =
+  typeof salaryComponentsModel.$inferSelect
+export type NewSalaryComponent =
+  typeof salaryComponentsModel.$inferInsert
+export type EmployeeSalaryComponent =
+  typeof employeeSalaryComponentsModel.$inferSelect
+export type NewEmployeeSalaryComponent =
+  typeof employeeSalaryComponentsModel.$inferInsert
 export type Salary = typeof salaryModel.$inferSelect
 export type NewSalary = typeof salaryModel.$inferInsert
 export type Lone = typeof employeeLoneModel.$inferSelect

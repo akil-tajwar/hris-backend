@@ -7,10 +7,10 @@ import {
   employeeLeaveModel,
   leaveTypeModel,
   employeeModel,
-  employeeOtherSalaryComponentsModel,
+  employeeSalaryComponentsModel,
   leaveTypeModel,
   NewEmployeeLeave,
-  otherSalaryComponentsModel,
+  salaryComponentsModel,
 } from '../schemas'
 import { and, eq, sql } from 'drizzle-orm'
 import { BadRequestError } from './utils/errors.utils'
@@ -141,8 +141,8 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
   // Fetch absent deduction component where isAbsentFee = 1
   const [salaryComponent] = await db
     .select()
-    .from(otherSalaryComponentsModel)
-    .where(eq(otherSalaryComponentsModel.isAbsentFee, true))
+    .from(salaryComponentsModel)
+    .where(eq(salaryComponentsModel.isAbsentFee, true))
     .limit(1)
 
   if (!salaryComponent) {
@@ -194,7 +194,7 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
     if (salaryComponent) {
       salaryComponentsToInsert.push({
         employeeId: data.employeeId,
-        otherSalaryComponentId: salaryComponent.otherSalaryComponentId,
+        salaryComponentId: salaryComponent.salaryComponentId,
         salaryMonth: salaryMonth as
           | 'January'
           | 'February'
@@ -225,7 +225,7 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
   // Bulk insert salary components
   if (salaryComponentsToInsert.length) {
     await db
-      .insert(employeeOtherSalaryComponentsModel)
+      .insert(employeeSalaryComponentsModel)
       .values(salaryComponentsToInsert)
   }
 

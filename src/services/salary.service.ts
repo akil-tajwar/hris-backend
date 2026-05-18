@@ -5,9 +5,9 @@ import {
   employeeModel,
   departmentModel,
   designationModel,
-  employeeOtherSalaryComponentsModel,
-  NewEmployeeOtherSalaryComponent,
-  otherSalaryComponentsModel,
+  employeeSalaryComponentsModel,
+  NewEmployeeSalaryComponent,
+  salaryComponentsModel,
 } from '../schemas'
 import { and, eq } from 'drizzle-orm'
 
@@ -47,7 +47,7 @@ export const createSalaries = async (
     // Update employee other salary components
     for (const salary of salariesData) {
       await db
-        .update(employeeOtherSalaryComponentsModel)
+        .update(employeeSalaryComponentsModel)
         .set({
           isSalaryGiven: true,
           updatedAt: new Date(), // Use Date object
@@ -55,14 +55,14 @@ export const createSalaries = async (
         .where(
           and(
             eq(
-              employeeOtherSalaryComponentsModel.employeeId,
+              employeeSalaryComponentsModel.employeeId,
               salary.employeeId
             ),
             eq(
-              employeeOtherSalaryComponentsModel.salaryMonth,
+              employeeSalaryComponentsModel.salaryMonth,
               salary.salaryMonth
             ),
-            eq(employeeOtherSalaryComponentsModel.salaryYear, salary.salaryYear)
+            eq(employeeSalaryComponentsModel.salaryYear, salary.salaryYear)
           )
         )
     }
@@ -104,11 +104,11 @@ export const getSalarys = async () => {
       designationName: designationModel.designationName,
 
       // Other salary
-      otherSalaryComponentId:
-        employeeOtherSalaryComponentsModel.otherSalaryComponentId,
-      otherAmount: employeeOtherSalaryComponentsModel.amount,
-      componentName: otherSalaryComponentsModel.componentName,
-      componentType: otherSalaryComponentsModel.componentType,
+      salaryComponentId:
+        employeeSalaryComponentsModel.salaryComponentId,
+      otherAmount: employeeSalaryComponentsModel.amount,
+      componentName: salaryComponentsModel.componentName,
+      componentType: salaryComponentsModel.componentType,
 
       createdAt: salaryModel.createdAt,
     })
@@ -126,28 +126,28 @@ export const getSalarys = async () => {
       eq(salaryModel.designationId, designationModel.designationId)
     )
     .leftJoin(
-      employeeOtherSalaryComponentsModel,
+      employeeSalaryComponentsModel,
       and(
         eq(
           salaryModel.employeeId,
-          employeeOtherSalaryComponentsModel.employeeId
+          employeeSalaryComponentsModel.employeeId
         ),
         eq(
           salaryModel.salaryMonth,
-          employeeOtherSalaryComponentsModel.salaryMonth
+          employeeSalaryComponentsModel.salaryMonth
         ),
         eq(
           salaryModel.salaryYear,
-          employeeOtherSalaryComponentsModel.salaryYear
+          employeeSalaryComponentsModel.salaryYear
         )
       )
     )
     .leftJoin(
-      otherSalaryComponentsModel,
+      salaryComponentsModel,
       and(
         eq(
-          employeeOtherSalaryComponentsModel.otherSalaryComponentId,
-          otherSalaryComponentsModel.otherSalaryComponentId
+          employeeSalaryComponentsModel.salaryComponentId,
+          salaryComponentsModel.salaryComponentId
         )
       )
     )
@@ -182,9 +182,9 @@ export const getSalarys = async () => {
       })
     }
 
-    if (row.otherSalaryComponentId) {
+    if (row.salaryComponentId) {
       map.get(row.salaryId).otherSalary.push({
-        otherSalaryComponentId: row.otherSalaryComponentId,
+        salaryComponentId: row.salaryComponentId,
         amount: row.otherAmount,
         componentName: row.componentName,
         componentType: row.componentType,
@@ -202,9 +202,9 @@ export const getSalarys = async () => {
 // UPDATE
 type UpdateSalaryPayload = {
   salary: Partial<NewSalary>
-  otherSalary?: NewEmployeeOtherSalaryComponent[]
+  otherSalary?: NewEmployeeSalaryComponent[]
 }
-export const updateSalaryWithOtherSalaryComponents = async (
+export const updateSalaryWithSalaryComponents = async (
   salaryId: number,
   data: UpdateSalaryPayload
 ) => {
@@ -217,19 +217,19 @@ export const updateSalaryWithOtherSalaryComponents = async (
 
     /* ---------------- delete old other salary components ---------------- */
     await tx
-      .delete(employeeOtherSalaryComponentsModel)
+      .delete(employeeSalaryComponentsModel)
       .where(
         and(
           eq(
-            employeeOtherSalaryComponentsModel.employeeId,
+            employeeSalaryComponentsModel.employeeId,
             data.salary.employeeId!
           ),
           eq(
-            employeeOtherSalaryComponentsModel.salaryMonth,
+            employeeSalaryComponentsModel.salaryMonth,
             data.salary.salaryMonth!
           ),
           eq(
-            employeeOtherSalaryComponentsModel.salaryYear,
+            employeeSalaryComponentsModel.salaryYear,
             data.salary.salaryYear!
           )
         )
@@ -238,7 +238,7 @@ export const updateSalaryWithOtherSalaryComponents = async (
     /* ---------------- insert new other salary components ---------------- */
     if (data.otherSalary && data.otherSalary.length > 0) {
       await tx
-        .insert(employeeOtherSalaryComponentsModel)
+        .insert(employeeSalaryComponentsModel)
         .values(data.otherSalary)
     }
 
@@ -250,15 +250,15 @@ export const updateSalaryWithOtherSalaryComponents = async (
 
     const otherSalary = await tx
       .select()
-      .from(employeeOtherSalaryComponentsModel)
+      .from(employeeSalaryComponentsModel)
       .where(
         and(
-          eq(employeeOtherSalaryComponentsModel.employeeId, salary.employeeId),
+          eq(employeeSalaryComponentsModel.employeeId, salary.employeeId),
           eq(
-            employeeOtherSalaryComponentsModel.salaryMonth,
+            employeeSalaryComponentsModel.salaryMonth,
             salary.salaryMonth
           ),
-          eq(employeeOtherSalaryComponentsModel.salaryYear, salary.salaryYear)
+          eq(employeeSalaryComponentsModel.salaryYear, salary.salaryYear)
         )
       )
 
@@ -270,7 +270,7 @@ export const updateSalaryWithOtherSalaryComponents = async (
 }
 
 // DELETE
-export const deleteSalaryWithOtherSalaryComponents = async (
+export const deleteSalaryWithSalaryComponents = async (
   salaryId: number
 ) => {
   return await db.transaction(async (tx) => {
@@ -284,15 +284,15 @@ export const deleteSalaryWithOtherSalaryComponents = async (
 
     /* ---------------- delete other salary components ---------------- */
     await tx
-      .delete(employeeOtherSalaryComponentsModel)
+      .delete(employeeSalaryComponentsModel)
       .where(
         and(
-          eq(employeeOtherSalaryComponentsModel.employeeId, salary.employeeId),
+          eq(employeeSalaryComponentsModel.employeeId, salary.employeeId),
           eq(
-            employeeOtherSalaryComponentsModel.salaryMonth,
+            employeeSalaryComponentsModel.salaryMonth,
             salary.salaryMonth
           ),
-          eq(employeeOtherSalaryComponentsModel.salaryYear, salary.salaryYear)
+          eq(employeeSalaryComponentsModel.salaryYear, salary.salaryYear)
         )
       )
 

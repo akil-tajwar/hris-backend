@@ -18,8 +18,8 @@ import holidayRoutes from './holidays.routes'
 import leaveTypeRoutes from './leaveTypes.routes'
 import leavePolicyRoutes from './leavePolicy.routes'
 import employeeAttendanceRoutes from './employeeAttendances.routes'
-import otherSalaryComponentsRoutes from './otherSalaryComponents.routes'
-import employeeOtherSalaryComponentsRoutes from './employeeOtherSalaryComponents.routes'
+import salaryComponentsRoutes from './salaryComponents.routes'
+import employeeSalaryComponentsRoutes from './employeeSalaryComponents.routes'
 import salaryRoutes from './salary.routes'
 import employeeLoneRoutes from './employeeLones.routes'
 import employeeLeaveroutes from './employeeLeaves.routes'
@@ -47,10 +47,10 @@ router.use('/holidays', holidayRoutes)
 router.use('/leaveTypes', leaveTypeRoutes)
 router.use('/leavePolicy', leavePolicyRoutes)
 router.use('/employeeAttendances', employeeAttendanceRoutes)
-router.use('/otherSalaryComponents', otherSalaryComponentsRoutes)
+router.use('/salaryComponents', salaryComponentsRoutes)
 router.use(
-  '/employeeOtherSalaryComponents',
-  employeeOtherSalaryComponentsRoutes
+  '/employeeSalaryComponents',
+  employeeSalaryComponentsRoutes
 )
 router.use('/salary', salaryRoutes)
 router.use('/employeeLones', employeeLoneRoutes)
