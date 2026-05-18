@@ -447,9 +447,37 @@ export const holidayModel = mysqlTable('holidays', {
 
 export const leaveTypeModel = mysqlTable('leave_types', {
   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
-  leaveTypeName: varchar('leave_type_name', { length: 100 }).notNull(),
-  totalLeaves: int('total_leaves').notNull(),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  code: varchar('code', { length: 20 }).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  category: mysqlEnum('category', ['Paid', 'Unpaid', 'Special']).notNull(),
+  genderApplicable: mysqlEnum('gender_applicable', ['Male', 'Female', 'All']),
+  religionApplicable: boolean('religion_applicable'),
+  maritalStatusApplicable: boolean('marital_status_applicable'),
+  maxDaysPerYear: double('max_days_per_year').notNull(),
+  maxDaysPerRequest: double('max_days_per_request').notNull(),
+  minDaysPerRequest: double('min_days_per_request').notNull(),
+  allowHalfDay: boolean('allow_half_day').notNull().default(false),
+  allowHourly: boolean('allow_hourly').notNull().default(false),
+  attachmentRequired: boolean('attachment_required').notNull().default(false),
+  attachmentAfterDays: double('attachment_after_days'),
+  carryForwardAllowed: boolean('carry_forward_allowed')
+    .notNull()
+    .default(false),
+  maxCarryForwardDays: double('max_carry_forward_days'),
+  encashmentAllowed: boolean('encashment_allowed').notNull().default(false),
+  negativeBalanceAllowed: boolean('negative_balance_allowed')
+    .notNull()
+    .default(false),
+  sandwichPolicyApplicable: boolean('sandwich_policy_applicable')
+    .notNull()
+    .default(false),
+  probationAllowed: boolean('probation_allowed').notNull().default(true),
+  noticePeriodAllowed: boolean('notice_period_allowed').notNull().default(true),
   yearPeriod: int('year_period').notNull(),
+  active: boolean('active').notNull().default(true),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -458,35 +486,20 @@ export const leaveTypeModel = mysqlTable('leave_types', {
   ),
 })
 
-//to track which leave types are assigned to which employees
-export const employeeLeaveTypeModel = mysqlTable('employee_leave_types', {
-  employeeLeaveTypeId: int('employee_leave_type_id')
+export const leavePolicyMasterModel = mysqlTable('leave_policy_master', {
+  leavePolicyMasterId: int('leave_policy_master_id')
     .primaryKey()
     .autoincrement(),
-  employeeId: int('employee_id')
-    .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-
-  leaveTypeId: int('leave_type_id')
-    .notNull()
-    .references(() => leaveTypeModel.leaveTypeId, { onDelete: 'cascade' }),
-})
-
-// to track leaves taken by employees
-export const employeeLeaveModel = mysqlTable('employee_leaves', {
-  employeeLeaveId: int('employee_leave_id').primaryKey().autoincrement(),
-  employeeId: int('employee_id')
-    .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-  startDate: date('start_date').notNull(),
-  endDate: date('end_date').notNull(),
-  noOfDays: int('no_of_days').notNull(),
-  leaveTypeId: int('leave_type_id')
-    .notNull()
-    .references(() => leaveTypeModel.leaveTypeId, {
-      onDelete: 'cascade',
-    }),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  policyName: varchar('policy_name', {
+    length: 150,
+  }).notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
   description: text('description'),
+  active: boolean('active').notNull().default(true),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -494,6 +507,58 @@ export const employeeLeaveModel = mysqlTable('employee_leaves', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
+
+export const leavePolicyDetailsModel = mysqlTable('leave_policy_details', {
+  leavePolicyDetailsId: int('leave_policy_details_id')
+    .primaryKey()
+    .autoincrement(),
+  leavePolicyMasterId: int('leave_policy_master_id')
+    .references(() => leavePolicyMasterModel.leavePolicyMasterId)
+    .notNull(),
+  leaveTypeId: int('leave_type_id')
+    .references(() => leaveTypeModel.leaveTypeId)
+    .notNull(),
+  yearlyAllocation: double('yearly_allocation').notNull(),
+  accrualFrequency: mysqlEnum('accrual_frequency', [
+    'Monthly',
+    'Quarterly',
+    'Yearly',
+  ]).notNull(),
+  accrualRate: double('accrual_rate').notNull(),
+  maxBalanceAllowed: double('max_balance_allowed').notNull(),
+  carryForwardLimit: double('carry_forward_limit').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeeLeaveAssignmentModel = mysqlTable(
+  'employee_leave_assignment',
+  {
+    employeeLeaveAssignmentId: int('employee_leave_assignment_id')
+      .primaryKey()
+      .autoincrement(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    leavePolicyMasterId: int('leave_policy_master_id')
+      .references(() => leavePolicyMasterModel.leavePolicyMasterId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    active: boolean('active').notNull().default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   employeeAttendanceId: int('employee_attendance_id')
@@ -517,25 +582,72 @@ export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   ),
 })
 
-export const otherSalaryComponentsModel = mysqlTable(
-  'other_salary_components',
+export const salaryComponentsModel = mysqlTable('salary_components', {
+  salaryComponentId: int('salary_component_id').primaryKey().autoincrement(),
+  componentCode: varchar('component_code', { length: 20 }).notNull(),
+  componentName: text('component_name').notNull(),
+  percentage: double('percentage'),
+  formulaExpression: varchar('formula_expression', { length: 255 }),
+  taxable: boolean('taxable').notNull().default(false),
+  componentType: mysqlEnum('component_type', [
+    'Allowance',
+    'Deduction',
+  ]).notNull(),
+  active: int('active').notNull().default(1), // Changed from 'status' to 'active'
+  affectsGross: boolean('affects_gross').notNull().default(false), // Add this
+  affectsNet: boolean('affects_net').notNull().default(false), // Add this
+  sequenceNo: int('sequence_no').notNull(),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const salaryStructureMasterModel = mysqlTable('salary_structure_master', {
+  salaryStructureId: int('salary_structure_master_id').primaryKey().autoincrement(),
+  structureName: varchar('structure_name', { length: 100 }).notNull(),
+  structureCode: varchar('structure_code', { length: 20 }),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  structureType: mysqlEnum('structure_type', [
+    'Earning',
+    'Deduction',
+  ]).notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  active: boolean('active').notNull().default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const salaryStructureDetailsModel = mysqlTable(
+  'salary_structure_details',
   {
-    otherSalaryComponentId: int('other_salary_component_id')
+    salaryStructureDetailId: int('salary_structure_detail_id')
       .primaryKey()
       .autoincrement(),
-    componentName: text('component_name').notNull(),
-    componentType: mysqlEnum('component_type', [
-      'Allowance',
-      'Deduction',
-    ]).notNull(),
-    amount: double('amount').notNull(),
-    forDays: int('for_days').notNull(),
-    status: int('status').notNull().default(1),
-    isAbsentFee: boolean('is_absent_fee').notNull().default(false),
-    isLoneFee: boolean('is_lone_fee').notNull().default(false),
-    isLateEarlyOutFee: boolean('is_late_early_out_fee')
+    salaryStructureId: int('salary_structure_master_id')
       .notNull()
-      .default(false),
+      .references(() => salaryStructureMasterModel.salaryStructureId, {
+        onDelete: 'cascade',
+      }),
+    salaryComponentId: int('salary_component_id')
+      .notNull()
+      .references(() => salaryComponentsModel.salaryComponentId, {
+        onDelete: 'cascade',
+      }),
+    amount: double('amount').notNull(),
+    percentage: double('percentage'),
+    formulaExpression: varchar('formula_expression', { length: 255 }),
+    calculationOrder: int('calculation_order').notNull(),
+    mandatory: boolean('mandatory').notNull().default(false),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
@@ -545,18 +657,18 @@ export const otherSalaryComponentsModel = mysqlTable(
   }
 )
 
-export const employeeOtherSalaryComponentsModel = mysqlTable(
-  'employee_other_salary_components',
+export const employeeSalaryComponentsModel = mysqlTable(
+  'employee_salary_components',
   {
-    employeeOtherSalaryComponentId: int('employee_other_salary_component_id')
+    employeeSalaryComponentId: int('employee_salary_component_id')
       .primaryKey()
       .autoincrement(),
     employeeId: int('employee_id')
       .notNull()
       .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
-    otherSalaryComponentId: int('other_salary_component_id')
+    salaryComponentId: int('salary_component_id')
       .notNull()
-      .references(() => otherSalaryComponentsModel.otherSalaryComponentId, {
+      .references(() => salaryComponentsModel.salaryComponentId, {
         onDelete: 'cascade',
       }),
     employeeLoneId: int('employee_lone_id').references(
@@ -793,34 +905,6 @@ export const shiftDayAndWeekDaysRelations = relations(
   })
 )
 
-export const employeeLeaveTypeRelations = relations(
-  employeeLeaveTypeModel,
-  ({ one }) => ({
-    employee: one(employeeModel, {
-      fields: [employeeLeaveTypeModel.employeeId],
-      references: [employeeModel.employeeId],
-    }),
-    leaveType: one(leaveTypeModel, {
-      fields: [employeeLeaveTypeModel.leaveTypeId],
-      references: [leaveTypeModel.leaveTypeId],
-    }),
-  })
-)
-
-export const employeeLeaveRelations = relations(
-  employeeLeaveModel,
-  ({ one }) => ({
-    employee: one(employeeModel, {
-      fields: [employeeLeaveModel.employeeId],
-      references: [employeeModel.employeeId],
-    }),
-    leaveType: one(leaveTypeModel, {
-      fields: [employeeLeaveModel.leaveTypeId],
-      references: [leaveTypeModel.leaveTypeId],
-    }),
-  })
-)
-
 export const employeeAttendanceRelations = relations(
   employeeAttendanceModel,
   ({ one }) => ({
@@ -831,19 +915,19 @@ export const employeeAttendanceRelations = relations(
   })
 )
 
-export const employeeOtherSalaryComponentsRelations = relations(
-  employeeOtherSalaryComponentsModel,
+export const employeeSalaryComponentsRelations = relations(
+  employeeSalaryComponentsModel,
   ({ one }) => ({
     employee: one(employeeModel, {
-      fields: [employeeOtherSalaryComponentsModel.employeeId],
+      fields: [employeeSalaryComponentsModel.employeeId],
       references: [employeeModel.employeeId],
     }),
-    otherSalaryComponent: one(otherSalaryComponentsModel, {
-      fields: [employeeOtherSalaryComponentsModel.otherSalaryComponentId],
-      references: [otherSalaryComponentsModel.otherSalaryComponentId],
+    salaryComponent: one(salaryComponentsModel, {
+      fields: [employeeSalaryComponentsModel.salaryComponentId],
+      references: [salaryComponentsModel.salaryComponentId],
     }),
     employeeLone: one(employeeLoneModel, {
-      fields: [employeeOtherSalaryComponentsModel.employeeLoneId],
+      fields: [employeeSalaryComponentsModel.employeeLoneId],
       references: [employeeLoneModel.employeeLoneId],
     }),
   })
@@ -916,20 +1000,22 @@ export type Holiday = typeof holidayModel.$inferSelect
 export type NewHoliday = typeof holidayModel.$inferInsert
 export type LeaveType = typeof leaveTypeModel.$inferSelect
 export type NewLeaveType = typeof leaveTypeModel.$inferInsert
-export type EmployeeLeaveType = typeof employeeLeaveTypeModel.$inferSelect
-export type NewEmployeeLeaveType = typeof employeeLeaveTypeModel.$inferInsert
-export type EmployeeLeave = typeof employeeLeaveModel.$inferSelect
-export type NewEmployeeLeave = typeof employeeLeaveModel.$inferInsert
+export type LeavePolicyMaster = typeof leavePolicyMasterModel.$inferSelect
+export type NewLeavePolicyMaster = typeof leavePolicyMasterModel.$inferInsert
+export type LeavePolicyDetails = typeof leavePolicyDetailsModel.$inferSelect
+export type NewLeavePolicyDetails = typeof leavePolicyDetailsModel.$inferInsert
+export type EmployeeLeaveAssignment =
+  typeof employeeLeaveAssignmentModel.$inferSelect
+export type NewEmployeeLeaveAssignment =
+  typeof employeeLeaveAssignmentModel.$inferInsert
 export type EmployeeAttendance = typeof employeeAttendanceModel.$inferSelect
 export type NewEmployeeAttendance = typeof employeeAttendanceModel.$inferInsert
-export type OtherSalaryComponent =
-  typeof otherSalaryComponentsModel.$inferSelect
-export type NewOtherSalaryComponent =
-  typeof otherSalaryComponentsModel.$inferInsert
-export type EmployeeOtherSalaryComponent =
-  typeof employeeOtherSalaryComponentsModel.$inferSelect
-export type NewEmployeeOtherSalaryComponent =
-  typeof employeeOtherSalaryComponentsModel.$inferInsert
+export type SalaryComponent = typeof salaryComponentsModel.$inferSelect
+export type NewSalaryComponent = typeof salaryComponentsModel.$inferInsert
+export type EmployeeSalaryComponent =
+  typeof employeeSalaryComponentsModel.$inferSelect
+export type NewEmployeeSalaryComponent =
+  typeof employeeSalaryComponentsModel.$inferInsert
 export type Salary = typeof salaryModel.$inferSelect
 export type NewSalary = typeof salaryModel.$inferInsert
 export type Lone = typeof employeeLoneModel.$inferSelect

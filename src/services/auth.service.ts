@@ -7,7 +7,7 @@ import {
   hashPassword,
   validatePassword,
 } from './utils/password.utils'
-import { NewUser, userModel } from '../schemas'
+import { NewUser, roleModel, userModel } from '../schemas'
 
 // Find user by username
 export const findUserByUsername = async (username: string) => {
@@ -172,4 +172,8 @@ export const changePassword = async (
     .update(userModel)
     .set({ password: hashedPassword })
     .where(eq(userModel.userId, userId))
+}
+
+export const getRoles = async () => {
+  return await db.select().from(roleModel)
 }

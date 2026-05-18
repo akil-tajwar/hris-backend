@@ -1,5 +1,5 @@
 import { db } from '../config/database'
-import { leaveTypeModel, NewLeaveType } from '../schemas'
+import { companyModel, leaveTypeModel, NewLeaveType } from '../schemas'
 import { eq, inArray } from 'drizzle-orm'
 
 // CREATE
@@ -9,7 +9,6 @@ export const createLeaveType = async (data: NewLeaveType | NewLeaveType[]) => {
 
   const result = await db.insert(leaveTypeModel).values(values)
 
-  // SQLite specific
   const lastId = Number(result[0].insertId)
   const firstId = lastId - values.length + 1
 
@@ -23,9 +22,43 @@ export const createLeaveType = async (data: NewLeaveType | NewLeaveType[]) => {
       )
     )
 }
+
 // READ ALL
 export const getLeaveTypes = async () => {
-  return await db.select().from(leaveTypeModel)
+  return await db
+    .select({
+      leaveTypeId: leaveTypeModel.leaveTypeId,
+      companyId: leaveTypeModel.companyId,
+      companyName: companyModel.companyName,
+      code: leaveTypeModel.code,
+      name: leaveTypeModel.name,
+      category: leaveTypeModel.category,
+      genderApplicable: leaveTypeModel.genderApplicable,
+      religionApplicable: leaveTypeModel.religionApplicable,
+      maritalStatusApplicable: leaveTypeModel.maritalStatusApplicable,
+      maxDaysPerYear: leaveTypeModel.maxDaysPerYear,
+      maxDaysPerRequest: leaveTypeModel.maxDaysPerRequest,
+      minDaysPerRequest: leaveTypeModel.minDaysPerRequest,
+      allowHalfDay: leaveTypeModel.allowHalfDay,
+      allowHourly: leaveTypeModel.allowHourly,
+      attachmentRequired: leaveTypeModel.attachmentRequired,
+      attachmentAfterDays: leaveTypeModel.attachmentAfterDays,
+      carryForwardAllowed: leaveTypeModel.carryForwardAllowed,
+      maxCarryForwardDays: leaveTypeModel.maxCarryForwardDays,
+      encashmentAllowed: leaveTypeModel.encashmentAllowed,
+      negativeBalanceAllowed: leaveTypeModel.negativeBalanceAllowed,
+      sandwichPolicyApplicable: leaveTypeModel.sandwichPolicyApplicable,
+      probationAllowed: leaveTypeModel.probationAllowed,
+      noticePeriodAllowed: leaveTypeModel.noticePeriodAllowed,
+      active: leaveTypeModel.active,
+      createdAt: leaveTypeModel.createdAt,
+      updatedAt: leaveTypeModel.updatedAt,
+    })
+    .from(leaveTypeModel)
+    .leftJoin(
+      companyModel,
+      eq(leaveTypeModel.companyId, companyModel.companyId)
+    )
 }
 
 // UPDATE

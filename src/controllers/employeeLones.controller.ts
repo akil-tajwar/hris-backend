@@ -78,18 +78,18 @@ export const skipLoneInstallmentController = async (
 ) => {
   try {
     requirePermission(req, 'skip_employee_lone')
-    const { employeeOtherSalaryComponentId, updatedBy } = req.params
+    const { employeeSalaryComponentId, updatedBy } = req.params
     console.log("🚀 ~ skipLoneInstallmentController ~ req.params:", req.params)
 
-    if (!employeeOtherSalaryComponentId || !updatedBy) {
+    if (!employeeSalaryComponentId || !updatedBy) {
       res.status(400).json({
         success: false,
-        message: 'employeeOtherSalaryComponentId and updatedBy are required',
+        message: 'employeeSalaryComponentId and updatedBy are required',
       })
     }
 
     const result = await skipLoneInstallment({
-      employeeOtherSalaryComponentId: parseInt(employeeOtherSalaryComponentId),
+      employeeSalaryComponentId: parseInt(employeeSalaryComponentId),
       updatedBy: parseInt(updatedBy),
     })
 

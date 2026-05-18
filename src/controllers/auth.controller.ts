@@ -8,6 +8,7 @@ import { eq, sql } from 'drizzle-orm'
 import {
   changePassword,
   createUser,
+  getRoles,
   getUsers,
   loginUser,
   updateUser,
@@ -195,6 +196,19 @@ export const getUserList = async (
   try {
     const users = await getUsers()
     res.json(users)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getRolesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const roles = await getRoles()
+    res.json(roles)
   } catch (err) {
     next(err)
   }

@@ -5,12 +5,12 @@ import {
   employeeAttendanceModel,
   EmployeeLeave,
   employeeLeaveModel,
-  employeeLeaveTypeModel,
+  leaveTypeModel,
   employeeModel,
-  employeeOtherSalaryComponentsModel,
+  employeeSalaryComponentsModel,
   leaveTypeModel,
   NewEmployeeLeave,
-  otherSalaryComponentsModel,
+  salaryComponentsModel,
 } from '../schemas'
 import { and, eq, sql } from 'drizzle-orm'
 import { BadRequestError } from './utils/errors.utils'
@@ -53,11 +53,11 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
   // Check eligibility
   const [employeeLeaveType] = await db
     .select()
-    .from(employeeLeaveTypeModel)
+    .from(leaveTypeModel)
     .where(
       and(
-        eq(employeeLeaveTypeModel.employeeId, data.employeeId),
-        eq(employeeLeaveTypeModel.leaveTypeId, data.leaveTypeId)
+        eq(leaveTypeModel.employeeId, data.employeeId),
+        eq(leaveTypeModel.leaveTypeId, data.leaveTypeId)
       )
     )
     .limit(1)
@@ -141,8 +141,8 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
   // Fetch absent deduction component where isAbsentFee = 1
   const [salaryComponent] = await db
     .select()
-    .from(otherSalaryComponentsModel)
-    .where(eq(otherSalaryComponentsModel.isAbsentFee, true))
+    .from(salaryComponentsModel)
+    .where(eq(salaryComponentsModel.isAbsentFee, true))
     .limit(1)
 
   if (!salaryComponent) {
@@ -194,7 +194,7 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
     if (salaryComponent) {
       salaryComponentsToInsert.push({
         employeeId: data.employeeId,
-        otherSalaryComponentId: salaryComponent.otherSalaryComponentId,
+        salaryComponentId: salaryComponent.salaryComponentId,
         salaryMonth: salaryMonth as
           | 'January'
           | 'February'
@@ -225,7 +225,7 @@ export const createEmployeeLeave = async (data: NewEmployeeLeave) => {
   // Bulk insert salary components
   if (salaryComponentsToInsert.length) {
     await db
-      .insert(employeeOtherSalaryComponentsModel)
+      .insert(employeeSalaryComponentsModel)
       .values(salaryComponentsToInsert)
   }
 
@@ -306,9 +306,9 @@ export const deleteEmployeeLeave = async (employeeLeaveId: number) => {
 export const getEmployeeLeaveTypes = async () => {
   const result = await db
     .select({
-      employeeLeaveTypeId: employeeLeaveTypeModel.employeeLeaveTypeId,
-      employeeId: employeeLeaveTypeModel.employeeId,
-      leaveTypeId: employeeLeaveTypeModel.leaveTypeId,
+      employeeLeaveTypeId: leaveTypeModel.employeeLeaveTypeId,
+      employeeId: leaveTypeModel.employeeId,
+      leaveTypeId: leaveTypeModel.leaveTypeId,
       leaveTypeName: leaveTypeModel.leaveTypeName,
       totalLeaves: leaveTypeModel.totalLeaves,
       employeeName: employeeModel.empFullName,
@@ -316,14 +316,14 @@ export const getEmployeeLeaveTypes = async () => {
       designationName: designationModel.designationName,
       departmentName: departmentModel.departmentName,
     })
-    .from(employeeLeaveTypeModel)
+    .from(leaveTypeModel)
     .leftJoin(
       employeeModel,
-      eq(employeeLeaveTypeModel.employeeId, employeeModel.employeeId)
+      eq(leaveTypeModel.employeeId, employeeModel.employeeId)
     )
     .leftJoin(
       leaveTypeModel,
-      eq(employeeLeaveTypeModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+      eq(leaveTypeModel.leaveTypeId, leaveTypeModel.leaveTypeId)
     )
     .leftJoin(
       designationModel,
