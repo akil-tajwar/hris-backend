@@ -19,6 +19,7 @@ import leaveTypeRoutes from './leaveTypes.routes'
 import leavePolicyRoutes from './leavePolicy.routes'
 import employeeAttendanceRoutes from './employeeAttendances.routes'
 import salaryComponentsRoutes from './salaryComponents.routes'
+import salaryStructureRoutes from './salaryStructure.routes'
 import employeeSalaryComponentsRoutes from './employeeSalaryComponents.routes'
 import salaryRoutes from './salary.routes'
 import employeeLoneRoutes from './employeeLones.routes'
@@ -48,6 +49,7 @@ router.use('/leaveTypes', leaveTypeRoutes)
 router.use('/leavePolicy', leavePolicyRoutes)
 router.use('/employeeAttendances', employeeAttendanceRoutes)
 router.use('/salaryComponents', salaryComponentsRoutes)
+router.use('/salaryStructures', salaryStructureRoutes)
 router.use(
   '/employeeSalaryComponents',
   employeeSalaryComponentsRoutes
