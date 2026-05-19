@@ -28,10 +28,10 @@ export const userModel = mysqlTable('users', {
   password: varchar('PASSWORD', { length: 255 }).notNull(),
   active: boolean('active').notNull().default(true),
   roleId: int('role_id').references(() => roleModel.roleId, {
-    onDelete: 'set null',
+    onDelete: 'restrict',
   }),
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-    onDelete: 'set null',
+    onDelete: 'restrict',
   }),
   email: varchar('email', { length: 50 }).notNull().unique(),
   isPasswordResetRequired: boolean('is_password_reset_required').default(true),
@@ -85,7 +85,7 @@ export const customerModel = mysqlTable('customers', {
   address: text('address'),
   isActive: boolean('is_active').default(false),
   companyId: int('company_id').references(() => companyModel.companyId, {
-    onDelete: 'set null',
+    onDelete: 'restrict',
   }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -102,23 +102,23 @@ export const departmentModel: MySqlTableWithColumns<any> = mysqlTable(
     departmentName: varchar('department_name', { length: 50 }).notNull(),
     departmentCode: varchar('department_code', { length: 20 }),
     divisionId: int('division_id').references(() => divisionModel.divisionId, {
-      onDelete: 'cascade',
+      onDelete: 'restrict',
     }),
     parentDepartmentId: int('parent_department_id').references(
       () => departmentModel.departmentId,
       {
-        onDelete: 'set null',
+        onDelete: 'restrict',
       }
     ),
     costCenterId: int('cost_center_id').references(
       () => costCenterModel.costCenterId,
       {
-        onDelete: 'set null',
+        onDelete: 'restrict',
       }
     ),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
@@ -185,14 +185,14 @@ export const businessUnitsModel: MySqlTableWithColumns<any> = mysqlTable(
   {
     businessUnitId: int('business_unit_id').primaryKey().autoincrement(),
     companyId: int('company_id')
-      .references(() => companyModel.companyId, { onDelete: 'cascade' })
+      .references(() => companyModel.companyId, { onDelete: 'restrict' })
       .notNull(),
     unitName: varchar('unit_name', { length: 100 }).notNull(),
     unitCode: varchar('unit_code', { length: 50 }),
     description: text('description'),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
@@ -213,11 +213,11 @@ export const divisionModel: MySqlTableWithColumns<any> = mysqlTable(
     description: text('description'),
     businessUnitId: int('business_unit_id').references(
       () => businessUnitsModel.businessUnitId,
-      { onDelete: 'cascade' }
+      { onDelete: 'restrict' }
     ),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
@@ -411,11 +411,11 @@ export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
   shiftId: int('shift_id')
     .notNull()
     .references(() => shiftModel.shiftId, {
-      onDelete: 'cascade',
+      onDelete: 'restrict',
     }),
   weekDayId: int('week_day_id')
     .notNull()
-    .references(() => weekDayModel.weekDayId, { onDelete: 'cascade' }),
+    .references(() => weekDayModel.weekDayId, { onDelete: 'restrict' }),
   dayType: mysqlEnum('day_type', ['FullDay', 'HalfDay', 'Weekend']).notNull(),
   startTime: varchar('start_time', { length: 10 }).notNull(),
   endTime: varchar('end_time', { length: 10 }).notNull(),
@@ -566,7 +566,7 @@ export const employeeAttendanceModel = mysqlTable('employee_attendances', {
     .autoincrement(),
   employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   attendanceDate: date('attendance_date').notNull(),
   inTime: varchar('in_time', { length: 10 }),
   outTime: varchar('out_time', { length: 10 }),
@@ -586,6 +586,12 @@ export const salaryComponentsModel = mysqlTable('salary_components', {
   salaryComponentId: int('salary_component_id').primaryKey().autoincrement(),
   componentCode: varchar('component_code', { length: 20 }).notNull(),
   componentName: text('component_name').notNull(),
+  calculationType: mysqlEnum('calculation_type', [
+    'Fixed',
+    'Percentage',
+    'Formula',
+  ]).notNull(),
+  amount: double('amount'),
   percentage: double('percentage'),
   formulaExpression: varchar('formula_expression', { length: 255 }),
   taxable: boolean('taxable').notNull().default(false),
@@ -636,12 +642,12 @@ export const salaryStructureDetailsModel = mysqlTable(
     salaryStructureId: int('salary_structure_master_id')
       .notNull()
       .references(() => salaryStructureMasterModel.salaryStructureId, {
-        onDelete: 'cascade',
+        onDelete: 'restrict',
       }),
     salaryComponentId: int('salary_component_id')
       .notNull()
       .references(() => salaryComponentsModel.salaryComponentId, {
-        onDelete: 'cascade',
+        onDelete: 'restrict',
       }),
     amount: double('amount').notNull(),
     percentage: double('percentage'),
@@ -665,15 +671,15 @@ export const employeeSalaryComponentsModel = mysqlTable(
       .autoincrement(),
     employeeId: int('employee_id')
       .notNull()
-      .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
     salaryComponentId: int('salary_component_id')
       .notNull()
       .references(() => salaryComponentsModel.salaryComponentId, {
-        onDelete: 'cascade',
+        onDelete: 'restrict',
       }),
     employeeLoneId: int('employee_lone_id').references(
       () => employeeLoneModel.employeeLoneId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     salaryMonth: mysqlEnum('salary_month', [
       'January',
@@ -722,12 +728,12 @@ export const salaryModel = mysqlTable('salary', {
   salaryYear: int('salary_year').notNull(),
   employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   departmentId: int('department_id')
-    .references(() => departmentModel.departmentId, { onDelete: 'cascade' })
+    .references(() => departmentModel.departmentId, { onDelete: 'restrict' })
     .notNull(),
   designationId: int('designation_id')
-    .references(() => designationModel.designationId, { onDelete: 'cascade' })
+    .references(() => designationModel.designationId, { onDelete: 'restrict' })
     .notNull(),
   basicSalary: double('basic_salary').notNull(),
   grossSalary: double('gross_salary').notNull(),
@@ -746,7 +752,7 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   employeeLoneName: text('employee_lone_name').notNull(),
   employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   amount: double('amount').notNull(),
   perMonth: int('per_month').notNull(),
   loneDate: date('lone_date').notNull(),
