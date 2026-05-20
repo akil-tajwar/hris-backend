@@ -133,7 +133,7 @@ export async function getUserPermissions(userId: number) {
 
 export const requirePermission = (req: Request, permission: string) => {
   // console.log('this is current user',req.user)
-  console.log('Is permission',req.user?.hasPermission(permission))
+  // console.log('Is permission',req.user?.hasPermission(permission))
   if (!req.user?.hasPermission(permission)) {
     throw new Error('Forbidden');
   }

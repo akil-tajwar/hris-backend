@@ -34,6 +34,11 @@ export const createEmployeeController = async (req: Request, res: Response) => {
           ? JSON.parse(item.employeeDetails)
           : item.employeeDetails
 
+      const userData =
+        typeof item.userData === 'string'
+          ? JSON.parse(item.userData)
+          : item.userData
+
       // 📸 Photo
       if (files?.photoUrl?.[0]) {
         employeeDetails.photoUrl = `${baseUrl}${files.photoUrl[0].filename}`
@@ -49,7 +54,10 @@ export const createEmployeeController = async (req: Request, res: Response) => {
       }
 
       // 🔁 Create employee (MUST await)
-      const employee = await createEmployee(employeeDetails)
+      const employee = await createEmployee({
+        employeeData: employeeDetails,
+        userData,
+      })
       results.push(employee)
     }
 
@@ -115,7 +123,6 @@ export const updateEmployeeController = async (req: Request, res: Response) => {
     })
   }
 }
-
 
 /* ================================
    GET ALL EMPLOYEES
