@@ -12,6 +12,7 @@ import workStationRoutes from './workStation.routes'
 import costCenterRoutes from './costCenter.routes'
 import employmentTypeRoutes from './employmentTypes.routes'
 import weekDayRoutes from './weekdays.routes'
+import employeePreboardingRoutes from './employeePreboarding.routes'
 import employeeRoutes from './employees.routes'
 import shiftRoutes from './shifts.routes'
 import holidayRoutes from './holidays.routes'
@@ -42,6 +43,7 @@ router.use('/workStations', workStationRoutes)
 router.use('/costCenters', costCenterRoutes)
 router.use('/employmentTypes', employmentTypeRoutes)
 router.use('/weekDays', weekDayRoutes)
+router.use('/employeePreboarding', employeePreboardingRoutes)
 router.use('/employees', employeeRoutes)
 router.use('/shift', shiftRoutes)
 router.use('/holidays', holidayRoutes)
@@ -50,10 +52,7 @@ router.use('/leavePolicy', leavePolicyRoutes)
 router.use('/employeeAttendances', employeeAttendanceRoutes)
 router.use('/salaryComponents', salaryComponentsRoutes)
 router.use('/salaryStructures', salaryStructureRoutes)
-router.use(
-  '/employeeSalaryComponents',
-  employeeSalaryComponentsRoutes
-)
+router.use('/employeeSalaryComponents', employeeSalaryComponentsRoutes)
 router.use('/salary', salaryRoutes)
 router.use('/employeeLones', employeeLoneRoutes)
 router.use('/employeeLeaves', employeeLeaveroutes)

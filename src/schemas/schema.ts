@@ -240,13 +240,34 @@ export const costCenterModel = mysqlTable('cost_centers', {
   ),
 })
 
-export const reportingAuthorityModel = mysqlTable('reporting_authorities', {
-  reportingAuthorityId: int('reporting_authority_id')
-    .primaryKey()
-    .autoincrement(),
-  reportingAuthorityName: varchar('reporting_authority_name', {
-    length: 100,
-  }).notNull(),
+export const employeePreboardingModel = mysqlTable('employee_preboarding', {
+  preboardingId: int('preboarding_id').primaryKey().autoincrement(),
+  preboardNo: varchar('preboard_no', { length: 20 }).notNull().unique(),
+  fullName: varchar('full_name', { length: 100 }).notNull(),
+  gender: mysqlEnum('gender', ['Male', 'Female']).notNull(),
+  dob: date('dob').notNull(),
+  personalEmail: varchar('personal_email', { length: 100 }).notNull(),
+  personalPhone: varchar('personal_phone', { length: 20 }).notNull(),
+  tentativeJoiningDate: date('tentative_joining_date').notNull(),
+  companyId: int('company_id').references(() => companyModel.companyId),
+  departmentId: int('department_id').references(
+    () => departmentModel.departmentId
+  ),
+  designationId: int('designation_id').references(
+    () => designationModel.designationId
+  ),
+  reportingAuthorityId: int('reporting_authority_id').references(
+    () => employeeModel.employeeId
+  ),
+  employmentTypeId: int('employment_type_id').references(
+    () => employmentTypeModel.employmentTypeId
+  ),
+  salaryStructureMasterId: int('salary_structure_master_id').references(
+    () => salaryStructureMasterModel.salaryStructureMasterId
+  ),
+  offeredSalary: double('offered_salary'),
+  probationMonths: int('probation_months'),
+  status: varchar('status', { length: 50 }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -611,27 +632,32 @@ export const salaryComponentsModel = mysqlTable('salary_components', {
   ),
 })
 
-export const salaryStructureMasterModel = mysqlTable('salary_structure_master', {
-  salaryStructureId: int('salary_structure_master_id').primaryKey().autoincrement(),
-  structureName: varchar('structure_name', { length: 100 }).notNull(),
-  structureCode: varchar('structure_code', { length: 20 }),
-  companyId: int('company_id')
-    .references(() => companyModel.companyId)
-    .notNull(),
-  structureType: mysqlEnum('structure_type', [
-    'Earning',
-    'Deduction',
-  ]).notNull(),
-  effectiveFrom: date('effective_from').notNull(),
-  effectiveTo: date('effective_to'),
-  active: boolean('active').notNull().default(true),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
+export const salaryStructureMasterModel = mysqlTable(
+  'salary_structure_master',
+  {
+    salaryStructureMasterId: int('salary_structure_master_id')
+      .primaryKey()
+      .autoincrement(),
+    structureName: varchar('structure_name', { length: 100 }).notNull(),
+    structureCode: varchar('structure_code', { length: 20 }),
+    companyId: int('company_id')
+      .references(() => companyModel.companyId)
+      .notNull(),
+    structureType: mysqlEnum('structure_type', [
+      'Earning',
+      'Deduction',
+    ]).notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    active: boolean('active').notNull().default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const salaryStructureDetailsModel = mysqlTable(
   'salary_structure_details',
@@ -639,9 +665,9 @@ export const salaryStructureDetailsModel = mysqlTable(
     salaryStructureDetailId: int('salary_structure_detail_id')
       .primaryKey()
       .autoincrement(),
-    salaryStructureId: int('salary_structure_master_id')
+    salaryStructureMasterId: int('salary_structure_master_id')
       .notNull()
-      .references(() => salaryStructureMasterModel.salaryStructureId, {
+      .references(() => salaryStructureMasterModel.salaryStructureMasterId, {
         onDelete: 'restrict',
       }),
     salaryComponentId: int('salary_component_id')
@@ -855,6 +881,36 @@ export const departmentRelations = relations(departmentModel, ({ one }) => ({
   }),
 }))
 
+export const employeePreboardingRelations = relations(
+  employeePreboardingModel,
+  ({ one }) => ({
+    company: one(companyModel, {
+      fields: [employeePreboardingModel.companyId],
+      references: [companyModel.companyId],
+    }),
+    department: one(departmentModel, {
+      fields: [employeePreboardingModel.departmentId],
+      references: [departmentModel.departmentId],
+    }),
+    designation: one(designationModel, {
+      fields: [employeePreboardingModel.designationId],
+      references: [designationModel.designationId],
+    }),
+    reportingAuthority: one(employeeModel, {
+      fields: [employeePreboardingModel.reportingAuthorityId],
+      references: [employeeModel.employeeId],
+    }),
+    employmentType: one(employmentTypeModel, {
+      fields: [employeePreboardingModel.employmentTypeId],
+      references: [employmentTypeModel.employmentTypeId],
+    }),
+    salaryStructure: one(salaryStructureMasterModel, {
+      fields: [employeePreboardingModel.salaryStructureMasterId],
+      references: [salaryStructureMasterModel.salaryStructureMasterId],
+    }),
+  })
+)
+
 export const employeeRelations = relations(employeeModel, ({ one }) => ({
   department: one(departmentModel, {
     fields: [employeeModel.departmentId],
@@ -992,10 +1048,11 @@ export type Division = typeof divisionModel.$inferSelect
 export type NewDivision = typeof divisionModel.$inferInsert
 export type CostCenter = typeof costCenterModel.$inferSelect
 export type NewCostCenter = typeof costCenterModel.$inferInsert
-export type ReportingAuthority = typeof reportingAuthorityModel.$inferSelect
-export type NewReportingAuthority = typeof reportingAuthorityModel.$inferInsert
 export type EmploymentType = typeof employmentTypeModel.$inferSelect
 export type NewEmploymentType = typeof employmentTypeModel.$inferInsert
+export type EmployeePreboarding = typeof employeePreboardingModel.$inferSelect
+export type NewEmployeePreboarding =
+  typeof employeePreboardingModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect
 export type NewEmployee = typeof employeeModel.$inferInsert
 export type WeekDay = typeof weekDayModel.$inferSelect
