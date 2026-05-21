@@ -1,49 +1,17 @@
-// leave-policy.service.ts
-
-import { and, eq, inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   companyModel,
   leavePolicyDetailsModel,
   leavePolicyMasterModel,
   leaveTypeModel,
+  NewLeavePolicyDetails,
+  NewLeavePolicyMaster,
 } from '../schemas'
 
-type LeavePolicyMasterInput = {
-  leavePolicyMasterId?: number
-  companyId: number
-  companyName?: string | null
-  policyName: string
-  effectiveFrom: Date
-  effectiveTo?: Date | null
-  description?: string | null
-  active: boolean
-  createdBy: number
-  createdAt?: Date | null
-  updatedBy?: number | null
-  updatedAt?: Date | null
-}
-
-type LeavePolicyDetailsInput = {
-  leavePolicyDetailsId?: number
-  leavePolicyMasterId: number
-  leaveTypeId: number
-  leaveTypeName?: string | null
-  yearlyAllocation: number
-  accrualFrequency: 'Monthly' | 'Quarterly' | 'Yearly'
-  accrualRate: number
-  maxBalanceAllowed: number
-  carryForwardLimit: number
-  active: boolean
-  createdBy: number
-  createdAt?: Date | null
-  updatedBy?: number | null
-  updatedAt?: Date | null
-}
-
 type LeavePolicyInput = {
-  leavePolicyMaster: LeavePolicyMasterInput
-  leavePolicyDetails: LeavePolicyDetailsInput[]
+  leavePolicyMaster: NewLeavePolicyMaster
+  leavePolicyDetails: NewLeavePolicyDetails[]
 }
 
 const toDate = (value: Date | string) => {
@@ -169,7 +137,7 @@ export const getAllLeavePoliciesService = async (): Promise<
 
   // group details by master id
   const groupedDetails = details.reduce<
-    Record<number, LeavePolicyDetailsInput[]>
+    Record<number, NewLeavePolicyDetails[]>
   >((acc, item) => {
     const key = item.leavePolicyMasterId
 

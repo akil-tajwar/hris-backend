@@ -14,7 +14,7 @@ import {
 ========================= */
 
 type SalaryStructureMasterInput = {
-  salaryStructureId?: number
+  salaryStructureMasterId?: number
   structureName: string
   structureCode?: string | null
   companyId: number
@@ -31,7 +31,7 @@ type SalaryStructureMasterInput = {
 
 type SalaryStructureDetailsInput = {
   salaryStructureDetailId?: number
-  salaryStructureId: number
+  salaryStructureMasterId: number
   salaryComponentId: number
   salaryComponentName?: string | null
   amount: number
@@ -84,17 +84,17 @@ export const createSalaryStructureService = async (
         })
         .$returningId()
 
-      if (!created?.salaryStructureId) {
+      if (!created?.salaryStructureMasterId) {
         throw new Error('Failed to create salary structure')
       }
 
-      const insertId = created.salaryStructureId
+      const insertId = created.salaryStructureMasterId
 
       // insert details
       if (data.salaryStructureDetails?.length) {
         await tx.insert(salaryStructureDetailsModel).values(
           data.salaryStructureDetails.map((item) => ({
-            salaryStructureId: insertId,
+            salaryStructureMasterId: insertId,
             salaryComponentId: item.salaryComponentId,
             amount: item.amount,
             percentage: item.percentage,
@@ -108,7 +108,7 @@ export const createSalaryStructureService = async (
 
       return {
         success: true,
-        salaryStructureId: insertId,
+        salaryStructureMasterId: insertId,
       }
     })
   } catch (error: any) {
@@ -140,8 +140,8 @@ export const getAllSalaryStructuresService = async () => {
       .select({
         salaryStructureDetailId:
           salaryStructureDetailsModel.salaryStructureDetailId,
-        salaryStructureId:
-          salaryStructureDetailsModel.salaryStructureId,
+        salaryStructureMasterId:
+          salaryStructureDetailsModel.salaryStructureMasterId,
         salaryComponentId:
           salaryStructureDetailsModel.salaryComponentId,
         salaryComponentName:
@@ -164,16 +164,16 @@ export const getAllSalaryStructuresService = async () => {
       )
 
     const grouped = details.reduce((acc: any, item: any) => {
-      if (!acc[item.salaryStructureId]) {
-        acc[item.salaryStructureId] = []
+      if (!acc[item.salaryStructureMasterId]) {
+        acc[item.salaryStructureMasterId] = []
       }
-      acc[item.salaryStructureId].push(item)
+      acc[item.salaryStructureMasterId].push(item)
       return acc
     }, {})
 
     return masters.map((m) => ({
       salaryStructureMaster: m,
-      salaryStructureDetails: grouped[m.salaryStructureId] || [],
+      salaryStructureDetails: grouped[m.salaryStructureMasterId] || [],
     }))
   } catch (error: any) {
     console.error('GET ALL ERROR:', error)
@@ -187,12 +187,12 @@ export const getAllSalaryStructuresService = async () => {
 ========================= */
 
 export const getSalaryStructureByIdService = async (
-  salaryStructureId: number
+  salaryStructureMasterId: number
 ) => {
   try {
     const [master] = await db
       .select({
-        salaryStructureId: salaryStructureMasterModel.salaryStructureId,
+        salaryStructureMasterId: salaryStructureMasterModel.salaryStructureMasterId,
         structureName: salaryStructureMasterModel.structureName,
         structureCode: salaryStructureMasterModel.structureCode,
         companyId: salaryStructureMasterModel.companyId,
@@ -216,8 +216,8 @@ export const getSalaryStructureByIdService = async (
       )
       .where(
         eq(
-          salaryStructureMasterModel.salaryStructureId,
-          salaryStructureId
+          salaryStructureMasterModel.salaryStructureMasterId,
+          salaryStructureMasterId
         )
       )
 
@@ -227,8 +227,8 @@ export const getSalaryStructureByIdService = async (
       .select({
         salaryStructureDetailId:
           salaryStructureDetailsModel.salaryStructureDetailId,
-        salaryStructureId:
-          salaryStructureDetailsModel.salaryStructureId,
+        salaryStructureMasterId:
+          salaryStructureDetailsModel.salaryStructureMasterId,
         salaryComponentId:
           salaryStructureDetailsModel.salaryComponentId,
         salaryComponentName:
@@ -260,8 +260,8 @@ export const getSalaryStructureByIdService = async (
       )
       .where(
         eq(
-          salaryStructureDetailsModel.salaryStructureId,
-          salaryStructureId
+          salaryStructureDetailsModel.salaryStructureMasterId,
+          salaryStructureMasterId
         )
       )
 
@@ -271,7 +271,7 @@ export const getSalaryStructureByIdService = async (
     }
   } catch (error: any) {
     console.error('SERVICE ERROR getSalaryStructureById:', {
-      salaryStructureId,
+      salaryStructureMasterId,
       error,
     })
 
@@ -286,7 +286,7 @@ export const getSalaryStructureByIdService = async (
 ========================= */
 
 export const updateSalaryStructureService = async (
-  salaryStructureId: number,
+  salaryStructureMasterId: number,
   data: SalaryStructureInput
 ) => {
   return await db.transaction(async (tx) => {
@@ -304,7 +304,7 @@ export const updateSalaryStructureService = async (
         updatedBy: data.salaryStructureMaster.updatedBy,
       })
       .where(
-        eq(salaryStructureMasterModel.salaryStructureId, salaryStructureId)
+        eq(salaryStructureMasterModel.salaryStructureMasterId, salaryStructureMasterId)
       )
 
     const incomingDetailIds = data.salaryStructureDetails
@@ -318,7 +318,7 @@ export const updateSalaryStructureService = async (
       })
       .from(salaryStructureDetailsModel)
       .where(
-        eq(salaryStructureDetailsModel.salaryStructureId, salaryStructureId)
+        eq(salaryStructureDetailsModel.salaryStructureMasterId, salaryStructureMasterId)
       )
 
     const existingIds = existingDetails.map(
@@ -365,7 +365,7 @@ export const updateSalaryStructureService = async (
       } else {
         // insert
         await tx.insert(salaryStructureDetailsModel).values({
-          salaryStructureId,
+          salaryStructureMasterId,
           salaryComponentId: item.salaryComponentId,
           amount: item.amount,
           percentage: item.percentage,
@@ -386,19 +386,19 @@ export const updateSalaryStructureService = async (
 ========================= */
 
 export const deleteSalaryStructureService = async (
-  salaryStructureId: number
+  salaryStructureMasterId: number
 ) => {
   return await db.transaction(async (tx) => {
     await tx
       .delete(salaryStructureDetailsModel)
       .where(
-        eq(salaryStructureDetailsModel.salaryStructureId, salaryStructureId)
+        eq(salaryStructureDetailsModel.salaryStructureMasterId, salaryStructureMasterId)
       )
 
     await tx
       .delete(salaryStructureMasterModel)
       .where(
-        eq(salaryStructureMasterModel.salaryStructureId, salaryStructureId)
+        eq(salaryStructureMasterModel.salaryStructureMasterId, salaryStructureMasterId)
       )
 
     return true

@@ -28,10 +28,10 @@ export const userModel = mysqlTable('users', {
   password: varchar('PASSWORD', { length: 255 }).notNull(),
   active: boolean('active').notNull().default(true),
   roleId: int('role_id').references(() => roleModel.roleId, {
-    onDelete: 'set null',
+    onDelete: 'restrict',
   }),
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-    onDelete: 'set null',
+    onDelete: 'restrict',
   }),
   email: varchar('email', { length: 50 }).notNull().unique(),
   isPasswordResetRequired: boolean('is_password_reset_required').default(true),
@@ -85,7 +85,7 @@ export const customerModel = mysqlTable('customers', {
   address: text('address'),
   isActive: boolean('is_active').default(false),
   companyId: int('company_id').references(() => companyModel.companyId, {
-    onDelete: 'set null',
+    onDelete: 'restrict',
   }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -102,23 +102,23 @@ export const departmentModel: MySqlTableWithColumns<any> = mysqlTable(
     departmentName: varchar('department_name', { length: 50 }).notNull(),
     departmentCode: varchar('department_code', { length: 20 }),
     divisionId: int('division_id').references(() => divisionModel.divisionId, {
-      onDelete: 'cascade',
+      onDelete: 'restrict',
     }),
     parentDepartmentId: int('parent_department_id').references(
       () => departmentModel.departmentId,
       {
-        onDelete: 'set null',
+        onDelete: 'restrict',
       }
     ),
     costCenterId: int('cost_center_id').references(
       () => costCenterModel.costCenterId,
       {
-        onDelete: 'set null',
+        onDelete: 'restrict',
       }
     ),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
@@ -185,14 +185,14 @@ export const businessUnitsModel: MySqlTableWithColumns<any> = mysqlTable(
   {
     businessUnitId: int('business_unit_id').primaryKey().autoincrement(),
     companyId: int('company_id')
-      .references(() => companyModel.companyId, { onDelete: 'cascade' })
+      .references(() => companyModel.companyId, { onDelete: 'restrict' })
       .notNull(),
     unitName: varchar('unit_name', { length: 100 }).notNull(),
     unitCode: varchar('unit_code', { length: 50 }),
     description: text('description'),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
@@ -213,11 +213,11 @@ export const divisionModel: MySqlTableWithColumns<any> = mysqlTable(
     description: text('description'),
     businessUnitId: int('business_unit_id').references(
       () => businessUnitsModel.businessUnitId,
-      { onDelete: 'cascade' }
+      { onDelete: 'restrict' }
     ),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
@@ -240,21 +240,6 @@ export const costCenterModel = mysqlTable('cost_centers', {
   ),
 })
 
-export const reportingAuthorityModel = mysqlTable('reporting_authorities', {
-  reportingAuthorityId: int('reporting_authority_id')
-    .primaryKey()
-    .autoincrement(),
-  reportingAuthorityName: varchar('reporting_authority_name', {
-    length: 100,
-  }).notNull(),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
 export const employmentTypeModel = mysqlTable('employment_types', {
   employmentTypeId: int('employment_type_id').primaryKey().autoincrement(),
   employmentTypeName: varchar('employment_type_name', { length: 50 }).notNull(),
@@ -265,6 +250,102 @@ export const employmentTypeModel = mysqlTable('employment_types', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
+
+export const checklistMasterModel = mysqlTable('checklist_master', {
+  checklistMasterId: int('checklist_master_id').primaryKey().autoincrement(),
+  checklistName: varchar('checklist_name', { length: 100 }).notNull(),
+  heading: varchar('heading', { length: 255 }),
+  responsibleEmployeeId: int('responsible_employee_id').references(
+    () => employeeModel.employeeId
+  ),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const checklistDetailsModel = mysqlTable('checklist_details', {
+  checklistDetailsId: int('checklist_details_id').primaryKey().autoincrement(),
+  checklistDetailsName: varchar('checklist_details_name', {
+    length: 255,
+  }).notNull(),
+  checklistMasterId: int('checklist_master_id').references(
+    () => checklistMasterModel.checklistMasterId
+  ),
+  responsibleEmployeeId: int('responsible_employee_id').references(
+    () => employeeModel.employeeId
+  ),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeePreboardingModel = mysqlTable('employee_preboarding', {
+  preboardingId: int('preboarding_id').primaryKey().autoincrement(),
+  preboardNo: varchar('preboard_no', { length: 20 }).notNull().unique(),
+  fullName: varchar('full_name', { length: 100 }).notNull(),
+  gender: mysqlEnum('gender', ['Male', 'Female']).notNull(),
+  dob: date('dob').notNull(),
+  personalEmail: varchar('personal_email', { length: 100 }).notNull(),
+  personalPhone: varchar('personal_phone', { length: 20 }).notNull(),
+  tentativeJoiningDate: date('tentative_joining_date').notNull(),
+  companyId: int('company_id').references(() => companyModel.companyId),
+  departmentId: int('department_id').references(
+    () => departmentModel.departmentId
+  ),
+  designationId: int('designation_id').references(
+    () => designationModel.designationId
+  ),
+  reportingAuthorityId: int('reporting_authority_id').references(
+    () => employeeModel.employeeId
+  ),
+  employmentTypeId: int('employment_type_id').references(
+    () => employmentTypeModel.employmentTypeId
+  ),
+  salaryStructureMasterId: int('salary_structure_master_id').references(
+    () => salaryStructureMasterModel.salaryStructureMasterId
+  ),
+  offeredSalary: double('offered_salary'),
+  probationMonths: int('probation_months'),
+  status: varchar('status', { length: 50 }),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeePreboardingChecklistModel = mysqlTable(
+  'employee_preboarding_checklists',
+  {
+    employeePreboardingChecklistId: int('employee_preboarding_checklist_id')
+      .primaryKey()
+      .autoincrement(),
+    preboardingId: int('preboarding_id').references(
+      () => employeePreboardingModel.preboardingId
+    ),
+    checklistDetailsId: int('checklist_details_id').references(
+      () => checklistDetailsModel.checklistDetailsId
+    ),
+    responsibleEmployeeId: int('responsible_employee_id').references(
+      () => employeeModel.employeeId
+    ),
+    completionDate: date('completion_date'),
+    status: boolean('status').notNull().default(false),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const employeeModel = mysqlTable('employees', {
   employeeId: int('employee_id').primaryKey().autoincrement(),
@@ -411,11 +492,11 @@ export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
   shiftId: int('shift_id')
     .notNull()
     .references(() => shiftModel.shiftId, {
-      onDelete: 'cascade',
+      onDelete: 'restrict',
     }),
   weekDayId: int('week_day_id')
     .notNull()
-    .references(() => weekDayModel.weekDayId, { onDelete: 'cascade' }),
+    .references(() => weekDayModel.weekDayId, { onDelete: 'restrict' }),
   dayType: mysqlEnum('day_type', ['FullDay', 'HalfDay', 'Weekend']).notNull(),
   startTime: varchar('start_time', { length: 10 }).notNull(),
   endTime: varchar('end_time', { length: 10 }).notNull(),
@@ -566,7 +647,7 @@ export const employeeAttendanceModel = mysqlTable('employee_attendances', {
     .autoincrement(),
   employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   attendanceDate: date('attendance_date').notNull(),
   inTime: varchar('in_time', { length: 10 }),
   outTime: varchar('out_time', { length: 10 }),
@@ -586,6 +667,12 @@ export const salaryComponentsModel = mysqlTable('salary_components', {
   salaryComponentId: int('salary_component_id').primaryKey().autoincrement(),
   componentCode: varchar('component_code', { length: 20 }).notNull(),
   componentName: text('component_name').notNull(),
+  calculationType: mysqlEnum('calculation_type', [
+    'Fixed',
+    'Percentage',
+    'Formula',
+  ]).notNull(),
+  amount: double('amount'),
   percentage: double('percentage'),
   formulaExpression: varchar('formula_expression', { length: 255 }),
   taxable: boolean('taxable').notNull().default(false),
@@ -605,27 +692,32 @@ export const salaryComponentsModel = mysqlTable('salary_components', {
   ),
 })
 
-export const salaryStructureMasterModel = mysqlTable('salary_structure_master', {
-  salaryStructureId: int('salary_structure_master_id').primaryKey().autoincrement(),
-  structureName: varchar('structure_name', { length: 100 }).notNull(),
-  structureCode: varchar('structure_code', { length: 20 }),
-  companyId: int('company_id')
-    .references(() => companyModel.companyId)
-    .notNull(),
-  structureType: mysqlEnum('structure_type', [
-    'Earning',
-    'Deduction',
-  ]).notNull(),
-  effectiveFrom: date('effective_from').notNull(),
-  effectiveTo: date('effective_to'),
-  active: boolean('active').notNull().default(true),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
+export const salaryStructureMasterModel = mysqlTable(
+  'salary_structure_master',
+  {
+    salaryStructureMasterId: int('salary_structure_master_id')
+      .primaryKey()
+      .autoincrement(),
+    structureName: varchar('structure_name', { length: 100 }).notNull(),
+    structureCode: varchar('structure_code', { length: 20 }),
+    companyId: int('company_id')
+      .references(() => companyModel.companyId)
+      .notNull(),
+    structureType: mysqlEnum('structure_type', [
+      'Earning',
+      'Deduction',
+    ]).notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    active: boolean('active').notNull().default(true),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const salaryStructureDetailsModel = mysqlTable(
   'salary_structure_details',
@@ -633,15 +725,15 @@ export const salaryStructureDetailsModel = mysqlTable(
     salaryStructureDetailId: int('salary_structure_detail_id')
       .primaryKey()
       .autoincrement(),
-    salaryStructureId: int('salary_structure_master_id')
+    salaryStructureMasterId: int('salary_structure_master_id')
       .notNull()
-      .references(() => salaryStructureMasterModel.salaryStructureId, {
-        onDelete: 'cascade',
+      .references(() => salaryStructureMasterModel.salaryStructureMasterId, {
+        onDelete: 'restrict',
       }),
     salaryComponentId: int('salary_component_id')
       .notNull()
       .references(() => salaryComponentsModel.salaryComponentId, {
-        onDelete: 'cascade',
+        onDelete: 'restrict',
       }),
     amount: double('amount').notNull(),
     percentage: double('percentage'),
@@ -665,15 +757,15 @@ export const employeeSalaryComponentsModel = mysqlTable(
       .autoincrement(),
     employeeId: int('employee_id')
       .notNull()
-      .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
     salaryComponentId: int('salary_component_id')
       .notNull()
       .references(() => salaryComponentsModel.salaryComponentId, {
-        onDelete: 'cascade',
+        onDelete: 'restrict',
       }),
     employeeLoneId: int('employee_lone_id').references(
       () => employeeLoneModel.employeeLoneId,
-      { onDelete: 'set null' }
+      { onDelete: 'restrict' }
     ),
     salaryMonth: mysqlEnum('salary_month', [
       'January',
@@ -722,12 +814,12 @@ export const salaryModel = mysqlTable('salary', {
   salaryYear: int('salary_year').notNull(),
   employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   departmentId: int('department_id')
-    .references(() => departmentModel.departmentId, { onDelete: 'cascade' })
+    .references(() => departmentModel.departmentId, { onDelete: 'restrict' })
     .notNull(),
   designationId: int('designation_id')
-    .references(() => designationModel.designationId, { onDelete: 'cascade' })
+    .references(() => designationModel.designationId, { onDelete: 'restrict' })
     .notNull(),
   basicSalary: double('basic_salary').notNull(),
   grossSalary: double('gross_salary').notNull(),
@@ -746,7 +838,7 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   employeeLoneName: text('employee_lone_name').notNull(),
   employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   amount: double('amount').notNull(),
   perMonth: int('per_month').notNull(),
   loneDate: date('lone_date').notNull(),
@@ -848,6 +940,78 @@ export const departmentRelations = relations(departmentModel, ({ one }) => ({
     references: [employeeModel.employeeId],
   }),
 }))
+
+export const employeePreboardingRelations = relations(
+  employeePreboardingModel,
+  ({ one }) => ({
+    company: one(companyModel, {
+      fields: [employeePreboardingModel.companyId],
+      references: [companyModel.companyId],
+    }),
+    department: one(departmentModel, {
+      fields: [employeePreboardingModel.departmentId],
+      references: [departmentModel.departmentId],
+    }),
+    designation: one(designationModel, {
+      fields: [employeePreboardingModel.designationId],
+      references: [designationModel.designationId],
+    }),
+    reportingAuthority: one(employeeModel, {
+      fields: [employeePreboardingModel.reportingAuthorityId],
+      references: [employeeModel.employeeId],
+    }),
+    employmentType: one(employmentTypeModel, {
+      fields: [employeePreboardingModel.employmentTypeId],
+      references: [employmentTypeModel.employmentTypeId],
+    }),
+    salaryStructure: one(salaryStructureMasterModel, {
+      fields: [employeePreboardingModel.salaryStructureMasterId],
+      references: [salaryStructureMasterModel.salaryStructureMasterId],
+    }),
+  })
+)
+
+export const checklistMasterRelations = relations(
+  checklistMasterModel,
+  ({ one }) => ({
+    responsibleEmployee: one(employeeModel, {
+      fields: [checklistMasterModel.responsibleEmployeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
+export const checklistDetailsRelations = relations(
+  checklistDetailsModel,
+  ({ one }) => ({
+    checklistMaster: one(checklistMasterModel, {
+      fields: [checklistDetailsModel.checklistMasterId],
+      references: [checklistMasterModel.checklistMasterId],
+    }),
+    responsibleEmployee: one(employeeModel, {
+      fields: [checklistDetailsModel.responsibleEmployeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
+export const employeePreboardingChecklistRelations = relations(
+  employeePreboardingChecklistModel,
+  ({ one }) => ({
+    preboarding: one(employeePreboardingModel, {
+      fields: [employeePreboardingChecklistModel.preboardingId],
+      references: [employeePreboardingModel.preboardingId],
+    }),
+    checklistDetails: one(checklistDetailsModel, {
+      fields: [employeePreboardingChecklistModel.checklistDetailsId],
+      references: [checklistDetailsModel.checklistDetailsId],
+    }),
+    responsibleEmployee: one(employeeModel, {
+      fields: [employeePreboardingChecklistModel.responsibleEmployeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
 
 export const employeeRelations = relations(employeeModel, ({ one }) => ({
   department: one(departmentModel, {
@@ -986,10 +1150,19 @@ export type Division = typeof divisionModel.$inferSelect
 export type NewDivision = typeof divisionModel.$inferInsert
 export type CostCenter = typeof costCenterModel.$inferSelect
 export type NewCostCenter = typeof costCenterModel.$inferInsert
-export type ReportingAuthority = typeof reportingAuthorityModel.$inferSelect
-export type NewReportingAuthority = typeof reportingAuthorityModel.$inferInsert
 export type EmploymentType = typeof employmentTypeModel.$inferSelect
 export type NewEmploymentType = typeof employmentTypeModel.$inferInsert
+export type EmployeePreboarding = typeof employeePreboardingModel.$inferSelect
+export type NewEmployeePreboarding =
+  typeof employeePreboardingModel.$inferInsert
+export type ChecklistMaster = typeof checklistMasterModel.$inferSelect
+export type NewChecklistMaster = typeof checklistMasterModel.$inferInsert
+export type ChecklistDetails = typeof checklistDetailsModel.$inferSelect
+export type NewChecklistDetails = typeof checklistDetailsModel.$inferInsert
+export type EmployeePreboardingChecklist =
+  typeof employeePreboardingChecklistModel.$inferSelect
+export type NewEmployeePreboardingChecklist =
+  typeof employeePreboardingChecklistModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect
 export type NewEmployee = typeof employeeModel.$inferInsert
 export type WeekDay = typeof weekDayModel.$inferSelect

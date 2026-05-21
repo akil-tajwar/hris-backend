@@ -17,6 +17,7 @@ import {
 import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
 import { hashPassword, validatePassword } from './utils/password.utils'
+import { getCache, setCache } from '../middlewares/cache'
 
 //CREATE
 export const createEmployee = async (input: {
@@ -196,11 +197,22 @@ export const updateEmployee = async (
 
 //GET ALL EMPLOYEES
 export const getAllEmployees = async () => {
+  const CACHE_KEY = 'employees:all'
+
+  // 1️⃣ CHECK CACHE FIRST
+  const cachedData = await getCache(CACHE_KEY)
+
+  if (cachedData) {
+    console.log('⚡ Redis HIT')
+    return cachedData
+  }
+
+  console.log('🐢 MySQL QUERY (CACHE MISS)')
+
   const reportingAuthority = alias(employeeModel, 'reportingAuthority')
 
-  return await db
+  const data = await db
     .select({
-      // Employee Basic Information
       employeeId: employeeModel.employeeId,
       empCode: employeeModel.empCode,
       empFullName: employeeModel.empFullName,
@@ -215,30 +227,25 @@ export const getAllEmployees = async () => {
       city: employeeModel.city,
       zipCode: employeeModel.zipCode,
 
-      // Contact Information
       workEmail: employeeModel.workEmail,
       privateEmail: employeeModel.privateEmail,
       homePhone: employeeModel.homePhone,
       personalPhone: employeeModel.personalPhone,
       officialPhone: employeeModel.officialPhone,
 
-      // Address Information
       presentAddress: employeeModel.presentAddress,
       permanentAddress: employeeModel.permanentAddress,
 
-      // Emergency Contact
       emergencyContactName: employeeModel.emergencyContactName,
       emergencyContactPhone: employeeModel.emergencyContactPhone,
       emergencyContactRelation: employeeModel.emergencyContactRelation,
 
-      // Personal Information
       maritalStatus: employeeModel.maritalStatus,
       photoUrl: employeeModel.photoUrl,
       cvUrl: employeeModel.cvUrl,
       religion: employeeModel.religion,
       bloodGroup: employeeModel.bloodGroup,
 
-      // Qualification Information
       qualification: employeeModel.qualification,
       instituteName: employeeModel.instituteName,
       subjectName: employeeModel.subjectName,
@@ -247,15 +254,12 @@ export const getAllEmployees = async () => {
       result: employeeModel.result,
       certificateUrl: employeeModel.certificateUrl,
 
-      // Employment Information
       basicSalary: employeeModel.basicSalary,
       isActive: employeeModel.isActive,
 
-      // Dependents Information
       dependentsName: employeeModel.dependentsName,
       dependentRelation: employeeModel.dependentRelation,
 
-      // Foreign Keys (IDs)
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
@@ -266,7 +270,6 @@ export const getAllEmployees = async () => {
       costCenterId: employeeModel.costCenterId,
       reportingAuthorityId: employeeModel.reportingAuthorityId,
 
-      // Related Names
       departmentName: departmentModel.departmentName,
       designationName: designationModel.designationName,
       employmentTypeName: employmentTypeModel.employmentTypeName,
@@ -278,64 +281,49 @@ export const getAllEmployees = async () => {
       endTime: shiftModel.endTime,
       costCenterName: costCenterModel.costCenterName,
 
-      // ✅ SELF JOIN (Reporting Authority)
       reportingAuthorityName: reportingAuthority.empFullName,
 
-      // Audit Fields
       createdBy: employeeModel.createdBy,
       createdAt: employeeModel.createdAt,
       updatedBy: employeeModel.updatedBy,
       updatedAt: employeeModel.updatedAt,
     })
     .from(employeeModel)
-
-    // Department
     .leftJoin(
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
-
-    // Designation
     .leftJoin(
       designationModel,
       eq(employeeModel.designationId, designationModel.designationId)
     )
-
-    // Employment Type
     .leftJoin(
       employmentTypeModel,
       eq(employeeModel.employmentTypeId, employmentTypeModel.employmentTypeId)
     )
-
-    // Company
     .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
-
-    // Work Station
     .leftJoin(
       workStationModel,
       eq(employeeModel.workStationId, workStationModel.workStationId)
     )
-
-    // Division
     .leftJoin(
       divisionModel,
       eq(employeeModel.divisionId, divisionModel.divisionId)
     )
-
-    // Cost Center
     .leftJoin(
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
-
-    // Shift
     .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
-
-    // 🔥 SELF JOIN (Reporting Authority = Employee Table)
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
     )
+
+  // 2️⃣ SAVE TO REDIS
+  await setCache(CACHE_KEY, data, 300)
+
+  return data
 }
 
 //GET EMPLOYEE BY ID (WITH WEEKENDS)
