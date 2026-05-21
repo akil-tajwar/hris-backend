@@ -4,6 +4,9 @@ import {
   getEmployeePreboarding,
   updateEmployeePreboarding,
   deleteEmployeePreboarding,
+  assignChecklistToPreboardingService,
+  updateAssignedChecklistService,
+  getAssignedChecklistService,
 } from '../services/employeePreboarding.service'
 
 import { requirePermission } from '../services/utils/jwt.utils'
@@ -89,5 +92,69 @@ export const deleteEmployeePreboardingController = async (
     })
   } catch (err) {
     next(err)
+  }
+}
+
+// assign checklist to preboarding employee
+export const assignChecklistToPreboardingController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    await assignChecklistToPreboardingService(req.body)
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Checklist assigned successfully',
+    })
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || error,
+    })
+  }
+}
+
+// update assigned checklist for preboarding employee
+export const updateAssignedChecklistController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    await updateAssignedChecklistService(req.body)
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Checklist updated successfully',
+    })
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || error,
+    })
+  }
+}
+
+// GET by preboarding employee checklists preboardingId
+export const getAssignedChecklistController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { preboardingId } = req.params
+
+    const data = await getAssignedChecklistService(
+      Number(preboardingId)
+    )
+
+    res.status(200).json({
+      status: 'success',
+      data,
+    })
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || error,
+    })
   }
 }

@@ -7,6 +7,8 @@ import {
   employmentTypeModel,
   salaryStructureMasterModel,
   companyModel,
+  employeePreboardingChecklistModel,
+  NewEmployeePreboardingChecklist,
 } from '../schemas'
 
 import { aliasedTable, desc, eq } from 'drizzle-orm'
@@ -151,4 +153,58 @@ export const deleteEmployeePreboarding = async (id: number) => {
   await db
     .delete(employeePreboardingModel)
     .where(eq(employeePreboardingModel.preboardingId, id))
+}
+
+// assign checklist to preboarding employee
+export const assignChecklistToPreboardingService = async (
+  data: NewEmployeePreboardingChecklist[]
+) => {
+  const values = data.map((item) => ({
+    preboardingId: item.preboardingId,
+    checklistDetailsId: item.checklistDetailsId,
+    responsibleEmployeeId: item.responsibleEmployeeId || null,
+    completionDate: item.completionDate ? new Date(item.completionDate) : null,
+    status: item.status,
+    createdBy: item.createdBy,
+  }))
+
+  await db.insert(employeePreboardingChecklistModel).values(values)
+
+  return true
+}
+
+// edit bulk checklist
+export const updateAssignedChecklistService = async (
+  data: NewEmployeePreboardingChecklist[]
+) => {
+  for (const item of data) {
+    await db
+      .update(employeePreboardingChecklistModel)
+      .set({
+        responsibleEmployeeId: item.responsibleEmployeeId || null,
+
+        completionDate: item.completionDate
+          ? new Date(item.completionDate)
+          : null,
+
+        status: item.status,
+        updatedBy: item.updatedBy,
+      })
+      .where(
+        eq(
+          employeePreboardingChecklistModel.employeePreboardingChecklistId,
+          item.employeePreboardingChecklistId!
+        )
+      )
+  }
+
+  return true
+}
+
+// get by preboarding employee
+export const getAssignedChecklistService = async (preboardingId: number) => {
+  return await db
+    .select()
+    .from(employeePreboardingChecklistModel)
+    .where(eq(employeePreboardingChecklistModel.preboardingId, preboardingId))
 }
