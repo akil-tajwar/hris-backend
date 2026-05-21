@@ -38,7 +38,7 @@ export const generateAccessToken = (payload: TokenPayload): string|undefined => 
 
 export const verifyAccessToken = (token: string):TokenPayload => {
   try {
-    console.log('before Varification',token,'payload',JWT_SECRET)
+    // console.log('before Varification',token,'payload',JWT_SECRET)
     return jwt.verify(token,JWT_SECRET) as TokenPayload;
   } catch (error) {
     console.error(error)

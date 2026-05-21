@@ -10,7 +10,7 @@ export const authenticateUser = async (
   try {
     const authHeader = req.headers.authorization;
     const token = extractTokenFromHeader(authHeader);
-    console.log(token);
+    // console.log(token);
     const decoded = verifyAccessToken(token) ;
   
     const permissions = await getUserPermissions(decoded.userId);
@@ -24,7 +24,7 @@ export const authenticateUser = async (
       hasRole: (role: number) => decoded.role === role,
     };
     // console.log("🚀 ~ authenticateUser ~ req.user:", req.user)
-    console.log('permissions',permissions)
+    // console.log('permissions',permissions)
     next();
   } catch (error) {
     console.error(error)

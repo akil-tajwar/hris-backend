@@ -240,6 +240,17 @@ export const costCenterModel = mysqlTable('cost_centers', {
   ),
 })
 
+export const employmentTypeModel = mysqlTable('employment_types', {
+  employmentTypeId: int('employment_type_id').primaryKey().autoincrement(),
+  employmentTypeName: varchar('employment_type_name', { length: 50 }).notNull(),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const employeePreboardingModel = mysqlTable('employee_preboarding', {
   preboardingId: int('preboarding_id').primaryKey().autoincrement(),
   preboardNo: varchar('preboard_no', { length: 20 }).notNull().unique(),
@@ -276,9 +287,30 @@ export const employeePreboardingModel = mysqlTable('employee_preboarding', {
   ),
 })
 
-export const employmentTypeModel = mysqlTable('employment_types', {
-  employmentTypeId: int('employment_type_id').primaryKey().autoincrement(),
-  employmentTypeName: varchar('employment_type_name', { length: 50 }).notNull(),
+export const checklistMasterModel = mysqlTable('checklist_master', {
+  checklistMasterId: int('checklist_master_id').primaryKey().autoincrement(),
+  checklistName: varchar('checklist_name', { length: 100 }).notNull(),
+  heading: varchar('heading', { length: 255 }),
+  responsibleEmployeeId: int('responsible_employee_id').references(
+    () => employeeModel.employeeId
+  ),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const checklistDetailsModel = mysqlTable('checklist_details', {
+  checklistDetailsId: int('checklist_details_id').primaryKey().autoincrement(),
+  checklistDetailsName: varchar('checklist_details_name', { length: 255 }).notNull(),
+  checklistMasterId: int('checklist_master_id').references(
+    () => checklistMasterModel.checklistMasterId
+  ),
+  responsibleEmployeeId: int('responsible_employee_id').references(
+    () => employeeModel.employeeId
+  ),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -911,6 +943,24 @@ export const employeePreboardingRelations = relations(
   })
 )
 
+export const checklistMasterRelations = relations(checklistMasterModel, ({ one }) => ({
+  responsibleEmployee: one(employeeModel, {
+    fields: [checklistMasterModel.responsibleEmployeeId],
+    references: [employeeModel.employeeId],
+  }),
+}))
+
+export const checklistDetailsRelations = relations(checklistDetailsModel, ({ one }) => ({
+  checklistMaster: one(checklistMasterModel, {
+    fields: [checklistDetailsModel.checklistMasterId],
+    references: [checklistMasterModel.checklistMasterId],
+  }),
+  responsibleEmployee: one(employeeModel, {
+    fields: [checklistDetailsModel.responsibleEmployeeId],
+    references: [employeeModel.employeeId],
+  }),
+}))
+
 export const employeeRelations = relations(employeeModel, ({ one }) => ({
   department: one(departmentModel, {
     fields: [employeeModel.departmentId],
@@ -1053,6 +1103,10 @@ export type NewEmploymentType = typeof employmentTypeModel.$inferInsert
 export type EmployeePreboarding = typeof employeePreboardingModel.$inferSelect
 export type NewEmployeePreboarding =
   typeof employeePreboardingModel.$inferInsert
+export type ChecklistMaster = typeof checklistMasterModel.$inferSelect
+export type NewChecklistMaster = typeof checklistMasterModel.$inferInsert
+export type ChecklistDetails = typeof checklistDetailsModel.$inferSelect
+export type NewChecklistDetails = typeof checklistDetailsModel.$inferInsert
 export type Employee = typeof employeeModel.$inferSelect
 export type NewEmployee = typeof employeeModel.$inferInsert
 export type WeekDay = typeof weekDayModel.$inferSelect
