@@ -147,10 +147,7 @@ export const getAssignedChecklistController = async (
       Number(preboardingId)
     )
 
-    res.status(200).json({
-      status: 'success',
-      data,
-    })
+    res.status(200).json(data)
   } catch (error: any) {
     res.status(500).json({
       status: 'error',
