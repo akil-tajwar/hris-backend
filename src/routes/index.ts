@@ -15,6 +15,7 @@ import weekDayRoutes from './weekdays.routes'
 import employeePreboardingRoutes from './employeePreboarding.routes'
 import checklistRoutes from './checklist.routes'
 import employeeRoutes from './employees.routes'
+import notificationRoutes from './notification.routes'
 import shiftRoutes from './shifts.routes'
 import holidayRoutes from './holidays.routes'
 import leaveTypeRoutes from './leaveTypes.routes'
@@ -46,6 +47,7 @@ router.use('/weekDays', weekDayRoutes)
 router.use('/employeePreboarding', employeePreboardingRoutes)
 router.use('/checklists', checklistRoutes)
 router.use('/employees', employeeRoutes)
+router.use('/notifications', notificationRoutes)
 router.use('/shift', shiftRoutes)
 router.use('/holidays', holidayRoutes)
 router.use('/leaveTypes', leaveTypeRoutes)
