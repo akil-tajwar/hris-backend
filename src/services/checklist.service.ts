@@ -7,6 +7,8 @@ import {
   NewChecklistMaster,
   NewChecklistDetails,
 } from '../schemas'
+import { sendToUser } from '../middlewares/sse'
+import { notifyEmployee } from '../middlewares/notifyEmployee'
 
 type ChecklistInput = {
   checklistMaster: NewChecklistMaster
@@ -15,8 +17,7 @@ type ChecklistInput = {
 
 export const createChecklistService = async (data: ChecklistInput) => {
   try {
-    return await db.transaction(async (tx) => {
-      // insert master
+    const result = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(checklistMasterModel)
         .values({
@@ -33,7 +34,6 @@ export const createChecklistService = async (data: ChecklistInput) => {
 
       const insertId = created.checklistMasterId
 
-      // insert details
       if (data.checklistDetails?.length) {
         await tx.insert(checklistDetailsModel).values(
           data.checklistDetails.map((item) => ({
@@ -48,8 +48,22 @@ export const createChecklistService = async (data: ChecklistInput) => {
       return {
         success: true,
         checklistMasterId: insertId,
+        responsibleEmployeeId: data.checklistMaster.responsibleEmployeeId,
       }
     })
+
+    // 🔥 NOTIFICATION (OUTSIDE TX)
+    if (result.responsibleEmployeeId) {
+      await notifyEmployee(
+        result.responsibleEmployeeId,
+        "You've been assigned a checklist",
+        {
+          checklistMasterId: result.checklistMasterId,
+        }
+      )
+    }
+
+    return result
   } catch (error: any) {
     console.error('Checklist Create Error:', error)
 
@@ -63,6 +77,90 @@ export const createChecklistService = async (data: ChecklistInput) => {
 
     throw new Error(error?.message || 'Failed to create checklist')
   }
+}
+
+export const updateChecklistService = async (
+  checklistMasterId: number,
+  data: ChecklistInput
+) => {
+  const result = await db.transaction(async (tx) => {
+    await tx
+      .update(checklistMasterModel)
+      .set({
+        checklistName: data.checklistMaster.checklistName,
+        heading: data.checklistMaster.heading,
+        responsibleEmployeeId: data.checklistMaster.responsibleEmployeeId,
+        updatedBy: data.checklistMaster.updatedBy,
+      })
+      .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
+
+    const incomingDetailIds = data.checklistDetails
+      .map((item) => item.checklistDetailsId)
+      .filter((id): id is number => typeof id === 'number')
+
+    const existingDetails = await tx
+      .select({
+        checklistDetailsId: checklistDetailsModel.checklistDetailsId,
+      })
+      .from(checklistDetailsModel)
+      .where(eq(checklistDetailsModel.checklistMasterId, checklistMasterId))
+
+    const existingIds = existingDetails.map((item) => item.checklistDetailsId)
+
+    const deleteIds = existingIds.filter(
+      (id) => !incomingDetailIds.includes(id)
+    )
+
+    if (deleteIds.length > 0) {
+      await tx
+        .delete(checklistDetailsModel)
+        .where(inArray(checklistDetailsModel.checklistDetailsId, deleteIds))
+    }
+
+    for (const item of data.checklistDetails) {
+      if (item.checklistDetailsId) {
+        await tx
+          .update(checklistDetailsModel)
+          .set({
+            checklistDetailsName: item.checklistDetailsName,
+            responsibleEmployeeId: item.responsibleEmployeeId,
+            updatedBy: item.updatedBy,
+          })
+          .where(
+            eq(
+              checklistDetailsModel.checklistDetailsId,
+              item.checklistDetailsId
+            )
+          )
+      } else {
+        await tx.insert(checklistDetailsModel).values({
+          checklistMasterId,
+          checklistDetailsName: item.checklistDetailsName,
+          responsibleEmployeeId: item.responsibleEmployeeId,
+          createdBy: item.createdBy,
+        })
+      }
+    }
+
+    return {
+      success: true,
+      checklistMasterId,
+      responsibleEmployeeId: data.checklistMaster.responsibleEmployeeId,
+    }
+  })
+
+  // 🔥 NOTIFICATION (OUTSIDE TX)
+  if (result.responsibleEmployeeId) {
+    await notifyEmployee(
+      result.responsibleEmployeeId,
+      'Your assigned checklist has been modified',
+      {
+        checklistMasterId,
+      }
+    )
+  }
+
+  return result
 }
 
 export const getAllChecklistsService = async (): Promise<ChecklistInput[]> => {
@@ -181,104 +279,6 @@ export const getChecklistByIdService = async (checklistMasterId: number) => {
     checklistMaster: master,
     checklistDetails: details,
   }
-}
-
-export const updateChecklistService = async (
-  checklistMasterId: number,
-  data: ChecklistInput
-) => {
-  console.log('Update Service Called with:', {
-    checklistMasterId,
-    masterData: data.checklistMaster,
-    detailsData: data.checklistDetails
-  });
-
-  return await db.transaction(async (tx) => {
-    try {
-      // update master
-      console.log('Updating master...');
-      await tx
-        .update(checklistMasterModel)
-        .set({
-          checklistName: data.checklistMaster.checklistName,
-          heading: data.checklistMaster.heading,
-          responsibleEmployeeId: data.checklistMaster.responsibleEmployeeId,
-          updatedBy: data.checklistMaster.updatedBy,
-        })
-        .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
-      
-      console.log('Master updated successfully');
-
-      const incomingDetailIds = data.checklistDetails
-        .map((item) => item.checklistDetailsId)
-        .filter((id): id is number => typeof id === 'number')
-
-      console.log('Incoming detail IDs:', incomingDetailIds);
-
-      const existingDetails = await tx
-        .select({
-          checklistDetailsId: checklistDetailsModel.checklistDetailsId,
-        })
-        .from(checklistDetailsModel)
-        .where(eq(checklistDetailsModel.checklistMasterId, checklistMasterId))
-
-      const existingIds = existingDetails.map((item) => item.checklistDetailsId)
-      console.log('Existing detail IDs:', existingIds);
-
-      const deleteIds = existingIds.filter(
-        (id) => !incomingDetailIds.includes(id)
-      )
-      console.log('IDs to delete:', deleteIds);
-
-      // delete removed details
-      if (deleteIds.length > 0) {
-        await tx
-          .delete(checklistDetailsModel)
-          .where(inArray(checklistDetailsModel.checklistDetailsId, deleteIds))
-        console.log('Details deleted successfully');
-      }
-
-      // insert/update details
-      for (const item of data.checklistDetails) {
-        console.log('Processing detail item:', item);
-        
-        if (item.checklistDetailsId) {
-          // update
-          console.log(`Updating detail with ID: ${item.checklistDetailsId}`);
-          await tx
-            .update(checklistDetailsModel)
-            .set({
-              checklistDetailsName: item.checklistDetailsName,
-              responsibleEmployeeId: item.responsibleEmployeeId,
-              updatedBy: item.updatedBy,
-            })
-            .where(
-              eq(
-                checklistDetailsModel.checklistDetailsId,
-                item.checklistDetailsId
-              )
-            )
-          console.log(`Detail ${item.checklistDetailsId} updated successfully`);
-        } else {
-          // insert
-          console.log('Inserting new detail');
-          await tx.insert(checklistDetailsModel).values({
-            checklistMasterId,
-            checklistDetailsName: item.checklistDetailsName,
-            responsibleEmployeeId: item.responsibleEmployeeId,
-            createdBy: item.createdBy,
-          })
-          console.log('New detail inserted successfully');
-        }
-      }
-
-      console.log('Update transaction completed successfully');
-      return true
-    } catch (error) {
-      console.error('Transaction error:', error);
-      throw error;
-    }
-  })
 }
 
 export const deleteChecklistService = async (checklistMasterId: number) => {

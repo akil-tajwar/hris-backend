@@ -18,12 +18,14 @@ import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
 import { hashPassword, validatePassword } from './utils/password.utils'
 import { getCache, setCache } from '../middlewares/cache'
+import { redis } from '../middlewares/redis'
 
 //CREATE
 export const createEmployee = async (input: {
   employeeData: NewEmployee
   userData: NewUser
 }) => {
+  const CACHE_KEY = 'employees:all'
   return await db.transaction(async (tx) => {
     const { employeeData, userData } = input
 
@@ -40,6 +42,7 @@ export const createEmployee = async (input: {
 
     // 2️⃣ Validate + hash password
     validatePassword(userData.password)
+
     const hashedPassword = await hashPassword(userData.password)
 
     // 3️⃣ Create user
@@ -55,7 +58,7 @@ export const createEmployee = async (input: {
 
     const userId = Number(userInsertResult[0].insertId)
 
-    // 4️⃣ Create employee (attach userId)
+    // 4️⃣ Create employee
     const employeeInsertResult = await tx.insert(employeeModel).values({
       empCode: employeeData.empCode,
       empFullName: employeeData.empFullName,
@@ -80,7 +83,9 @@ export const createEmployee = async (input: {
       permanentAddress: employeeData.permanentAddress ?? null,
 
       emergencyContactName: employeeData.emergencyContactName ?? null,
+
       emergencyContactPhone: employeeData.emergencyContactPhone ?? null,
+
       emergencyContactRelation: employeeData.emergencyContactRelation ?? null,
 
       maritalStatus: employeeData.maritalStatus ?? null,
@@ -118,7 +123,12 @@ export const createEmployee = async (input: {
 
     const employeeId = Number(employeeInsertResult[0].insertId)
 
-    // 5️⃣ Return full employee
+    // 5️⃣ Clear Redis cache
+    await redis.del(CACHE_KEY)
+
+    console.log('🗑️ Employee cache cleared')
+
+    // 6️⃣ Return created employee
     const [employee] = await tx
       .select()
       .from(employeeModel)
@@ -138,17 +148,23 @@ export const createEmployee = async (input: {
   })
 }
 
-// UPDATE
+// ======================================================
+// UPDATE EMPLOYEE
+// ======================================================
+
 export const updateEmployee = async (
   employeeId: number,
   data: Partial<NewEmployee>
 ) => {
+  const CACHE_KEY = 'employees:all'
   return await db.transaction(async (tx) => {
     const existing = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })
 
-    if (!existing) throw new Error('Employee not found')
+    if (!existing) {
+      throw new Error('Employee not found')
+    }
 
     const normalizeFk = (val: any) =>
       val === 0 || val === '' || val === undefined ? null : val
@@ -182,11 +198,18 @@ export const updateEmployee = async (
 
     updateData.updatedAt = new Date()
 
+    // 1️⃣ Update employee
     await tx
       .update(employeeModel)
       .set(updateData)
       .where(eq(employeeModel.employeeId, employeeId))
 
+    // 2️⃣ Clear Redis cache
+    await redis.del(CACHE_KEY)
+
+    console.log('🗑️ Employee cache cleared')
+
+    // 3️⃣ Return updated employee
     const updatedEmployee = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })

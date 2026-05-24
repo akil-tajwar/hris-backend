@@ -350,6 +350,7 @@ export const employeePreboardingChecklistModel = mysqlTable(
 export const employeeModel = mysqlTable('employees', {
   employeeId: int('employee_id').primaryKey().autoincrement(),
   empCode: varchar('emp_code', { length: 10 }).notNull().unique(),
+  userId: int('user_id').references(() => userModel.userId),
   empFullName: varchar('emp_full_name', { length: 100 }).notNull(),
   empShortName: varchar('emp_short_name', { length: 20 }),
   dob: date('dob').notNull(),
@@ -437,6 +438,17 @@ export const employeeModel = mysqlTable('employees', {
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const notificationsModel = mysqlTable('notifications', {
+  notificationId: int('notification_id').primaryKey().autoincrement(),
+  employeeId: int('employee_id').notNull().references(() => employeeModel.employeeId),
+  notification: varchar('notification', { length: 255 }).notNull(),
+  isRead: boolean('is_read').notNull().default(false),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').default(
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
