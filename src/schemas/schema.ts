@@ -258,6 +258,7 @@ export const checklistMasterModel = mysqlTable('checklist_master', {
   responsibleEmployeeId: int('responsible_employee_id').references(
     () => employeeModel.employeeId
   ),
+  isComplete: boolean('is_complete').notNull().default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),

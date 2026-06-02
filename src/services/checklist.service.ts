@@ -172,6 +172,7 @@ export const getAllChecklistsService = async (): Promise<ChecklistInput[]> => {
       heading: checklistMasterModel.heading,
       responsibleEmployeeId: checklistMasterModel.responsibleEmployeeId,
       responsibleEmployeeName: employeeModel.empFullName,
+      userId: employeeModel.userId,
       createdBy: checklistMasterModel.createdBy,
       createdAt: checklistMasterModel.createdAt,
       updatedBy: checklistMasterModel.updatedBy,
@@ -293,4 +294,33 @@ export const deleteChecklistService = async (checklistMasterId: number) => {
 
     return true
   })
+}
+
+export const completeChecklist = async (
+  checklistMasterId: number
+) => {
+  const existing = await db
+    .select()
+    .from(checklistMasterModel)
+    .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
+    .limit(1)
+
+  if (!existing.length) {
+    throw new Error('Checklist not found')
+  }
+
+  await db
+    .update(checklistMasterModel)
+    .set({
+      isComplete: true,
+    })
+    .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
+
+  const [updated] = await db
+    .select()
+    .from(checklistMasterModel)
+    .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
+    .limit(1)
+
+  return updated
 }
