@@ -40,10 +40,10 @@ export const getAllSalaryStructuresController = async (
 
     const result = await getAllSalaryStructuresService();
 
-    return res.status(200).json(result);
+    res.status(200).json(result);
   } catch (error: any) {
     // Extract the message string so JSON serialization doesn't wipe it out
-    return res.status(500).json({
+    res.status(500).json({
       status: 'error',
       message: error instanceof Error ? error.message : 'An unknown error occurred',
     });
@@ -60,7 +60,7 @@ export const getSalaryStructureByIdController = async (
     const { id } = req.params
 
     if (!id || isNaN(Number(id))) {
-      return res.status(400).json({
+      res.status(400).json({
         status: 'error',
         message: 'Invalid salary structure id',
       })
@@ -69,13 +69,13 @@ export const getSalaryStructureByIdController = async (
     const result = await getSalaryStructureByIdService(Number(id))
 
     if (!result) {
-      return res.status(404).json({
+      res.status(404).json({
         status: 'error',
         message: 'Salary structure not found',
       })
     }
 
-    return res.status(200).json({
+    res.status(200).json({
       status: 'success',
       data: result,
     })

