@@ -13,6 +13,8 @@ import {
   shiftModel,
   NewUser,
   userModel,
+  employeeLeaveAssignmentModel,
+  employeeSalaryStructureModel,
 } from '../schemas'
 import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
@@ -22,14 +24,21 @@ import { redis } from '../middlewares/redis'
 
 //CREATE
 export const createEmployee = async (input: {
-  employeeData: NewEmployee
+  employeeData: NewEmployee & {
+    leavePolicies?: number[]
+    salaryStructures?: number[]
+  }
   userData: NewUser
 }) => {
   const CACHE_KEY = 'employees:all'
+
   return await db.transaction(async (tx) => {
     const { employeeData, userData } = input
 
-    // 1️⃣ Check duplicate username
+    const leavePolicies = employeeData.leavePolicies ?? []
+    const salaryStructures = employeeData.salaryStructures ?? []
+
+    // 1. Check duplicate username
     const existingUser = await tx
       .select()
       .from(userModel)
@@ -37,19 +46,18 @@ export const createEmployee = async (input: {
       .limit(1)
 
     if (existingUser.length > 0) {
-      throw BadRequestError('Username already registered, Please Try Another')
+      throw BadRequestError('Username already registered')
     }
 
-    // 2️⃣ Validate + hash password
+    // 2. Password
     validatePassword(userData.password)
-
     const hashedPassword = await hashPassword(userData.password)
 
-    // 3️⃣ Create user
+    // 3. Create user
     const userInsertResult = await tx.insert(userModel).values({
       username: userData.username,
       password: hashedPassword,
-      active: userData.active ? true : false,
+      active: userData.active ?? true,
       isPasswordResetRequired: true,
       roleId: userData.roleId,
       tenantId: userData.tenantId,
@@ -58,77 +66,39 @@ export const createEmployee = async (input: {
 
     const userId = Number(userInsertResult[0].insertId)
 
-    // 4️⃣ Create employee
+    // 4. Create employee
     const employeeInsertResult = await tx.insert(employeeModel).values({
-      empCode: employeeData.empCode,
-      empFullName: employeeData.empFullName,
-      empShortName: employeeData.empShortName ?? null,
-      dob: employeeData.dob,
-      doj: employeeData.doj,
-      doc: employeeData.doc ?? null,
-      gender: employeeData.gender,
-      nationalIdNo: employeeData.nationalIdNo ?? null,
-      nationality: employeeData.nationality ?? null,
-      country: employeeData.country ?? null,
-      city: employeeData.city ?? null,
-      zipCode: employeeData.zipCode ?? null,
-
-      workEmail: employeeData.workEmail ?? null,
-      privateEmail: employeeData.privateEmail ?? null,
-      homePhone: employeeData.homePhone ?? null,
-      personalPhone: employeeData.personalPhone ?? null,
-      officialPhone: employeeData.officialPhone,
-
-      presentAddress: employeeData.presentAddress,
-      permanentAddress: employeeData.permanentAddress ?? null,
-
-      emergencyContactName: employeeData.emergencyContactName ?? null,
-
-      emergencyContactPhone: employeeData.emergencyContactPhone ?? null,
-
-      emergencyContactRelation: employeeData.emergencyContactRelation ?? null,
-
-      maritalStatus: employeeData.maritalStatus ?? null,
-      photoUrl: employeeData.photoUrl ?? null,
-      cvUrl: employeeData.cvUrl ?? null,
-      religion: employeeData.religion ?? null,
-      bloodGroup: employeeData.bloodGroup ?? null,
-
-      qualification: employeeData.qualification,
-      instituteName: employeeData.instituteName ?? null,
-      subjectName: employeeData.subjectName ?? null,
-      startDate: employeeData.startDate ?? null,
-      endDate: employeeData.endDate ?? null,
-      result: employeeData.result ?? null,
-      certificateUrl: employeeData.certificateUrl ?? null,
-
-      basicSalary: employeeData.basicSalary,
-      isActive: employeeData.isActive ?? true,
-
-      dependentsName: employeeData.dependentsName ?? null,
-      dependentRelation: employeeData.dependentRelation ?? null,
-
-      departmentId: employeeData.departmentId,
-      designationId: employeeData.designationId,
-      employmentTypeId: employeeData.employmentTypeId,
-      shiftId: employeeData.shiftId,
-      companyId: employeeData.companyId,
-      workStationId: employeeData.workStationId,
-      divisionId: employeeData.divisionId,
-      costCenterId: employeeData.costCenterId,
-      reportingAuthorityId: employeeData.reportingAuthorityId,
-
-      createdBy: employeeData.createdBy,
+      ...employeeData,
+      userId,
     })
 
     const employeeId = Number(employeeInsertResult[0].insertId)
 
-    // 5️⃣ Clear Redis cache
+    // 5. Leave Policies mapping
+    if (leavePolicies.length > 0) {
+      await tx.insert(employeeLeaveAssignmentModel).values(
+        leavePolicies.map((id) => ({
+          employeeId,
+          leavePolicyMasterId: id,
+          effectiveFrom: new Date(),
+          createdBy: employeeData.createdBy,
+        }))
+      )
+    }
+
+    // 6. Salary Structures mapping
+    if (salaryStructures.length > 0) {
+      await tx.insert(employeeSalaryStructureModel).values(
+        salaryStructures.map((id) => ({
+          employeeId,
+          salaryStructureMasterId: id,
+          createdBy: employeeData.createdBy,
+        }))
+      )
+    }
+
     await redis.del(CACHE_KEY)
 
-    console.log('🗑️ Employee cache cleared')
-
-    // 6️⃣ Return created employee
     const [employee] = await tx
       .select()
       .from(employeeModel)
@@ -148,68 +118,95 @@ export const createEmployee = async (input: {
   })
 }
 
-// ======================================================
 // UPDATE EMPLOYEE
-// ======================================================
-
 export const updateEmployee = async (
   employeeId: number,
-  data: Partial<NewEmployee>
+  data: Partial<NewEmployee> & {
+    leavePolicies?: number[]
+    salaryStructures?: number[]
+  }
 ) => {
   const CACHE_KEY = 'employees:all'
+
   return await db.transaction(async (tx) => {
     const existing = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })
 
-    if (!existing) {
-      throw new Error('Employee not found')
-    }
+    if (!existing) throw new Error('Employee not found')
 
-    const normalizeFk = (val: any) =>
-      val === 0 || val === '' || val === undefined ? null : val
+    const { leavePolicies, salaryStructures, ...employeeData } = data
 
-    const normalizeValue = (val: any) =>
-      val === '' || val === undefined ? null : val
+    const fkFields = [
+      'departmentId',
+      'designationId',
+      'employmentTypeId',
+      'shiftId',
+      'companyId',
+      'workStationId',
+      'divisionId',
+      'costCenterId',
+      'reportingAuthorityId',
+    ]
 
     const updateData: any = {}
 
-    Object.entries(data).forEach(([key, value]) => {
-      const fkFields = [
-        'departmentId',
-        'designationId',
-        'employmentTypeId',
-        'shiftId',
-        'companyId',
-        'workStationId',
-        'divisionId',
-        'costCenterId',
-        'reportingAuthorityId',
-      ]
-
+    Object.entries(employeeData).forEach(([key, value]) => {
       if (fkFields.includes(key)) {
-        updateData[key] = normalizeFk(value)
+        updateData[key] =
+          value === 0 || value === '' || value === undefined ? null : value
       } else if (key === 'isActive') {
         updateData[key] = value ? 1 : 0
       } else {
-        updateData[key] = normalizeValue(value)
+        updateData[key] = value === '' || value === undefined ? null : value
       }
     })
 
     updateData.updatedAt = new Date()
 
-    // 1️⃣ Update employee
+    // 1. update employee
     await tx
       .update(employeeModel)
       .set(updateData)
       .where(eq(employeeModel.employeeId, employeeId))
 
-    // 2️⃣ Clear Redis cache
+    // 2. update leave policies (replace strategy)
+    if (leavePolicies !== undefined) {
+      await tx
+        .delete(employeeLeaveAssignmentModel)
+        .where(eq(employeeLeaveAssignmentModel.employeeId, employeeId))
+
+      if (leavePolicies.length > 0) {
+        await tx.insert(employeeLeaveAssignmentModel).values(
+          leavePolicies.map((id) => ({
+            employeeId,
+            leavePolicyMasterId: id,
+            effectiveFrom: new Date(),
+            createdBy: employeeData.updatedBy ?? employeeData.createdBy ?? 0,
+          }))
+        )
+      }
+    }
+
+    // 3. update salary structures
+    if (salaryStructures !== undefined) {
+      await tx
+        .delete(employeeSalaryStructureModel)
+        .where(eq(employeeSalaryStructureModel.employeeId, employeeId))
+
+      if (salaryStructures.length > 0) {
+        await tx.insert(employeeSalaryStructureModel).values(
+          salaryStructures.map((id) => ({
+            employeeId,
+            salaryStructureMasterId: id,
+            createdBy: employeeData.updatedBy ?? employeeData.createdBy ?? 0,
+          }))
+        )
+      }
+    }
+
     await redis.del(CACHE_KEY)
 
-    console.log('🗑️ Employee cache cleared')
-
-    // 3️⃣ Return updated employee
     const updatedEmployee = await tx.query.employeeModel.findFirst({
       where: eq(employeeModel.employeeId, employeeId),
     })

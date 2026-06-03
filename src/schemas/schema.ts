@@ -446,7 +446,9 @@ export const employeeModel = mysqlTable('employees', {
 
 export const notificationsModel = mysqlTable('notifications', {
   notificationId: int('notification_id').primaryKey().autoincrement(),
-  employeeId: int('employee_id').notNull().references(() => employeeModel.employeeId),
+  employeeId: int('employee_id')
+    .notNull()
+    .references(() => employeeModel.employeeId),
   notification: varchar('notification', { length: 255 }).notNull(),
   isRead: boolean('is_read').notNull().default(false),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -762,6 +764,7 @@ export const salaryStructureDetailsModel = mysqlTable(
   }
 )
 
+//for storing an employees salary data for a particular month and year based on the salary components assigned to them either through salary structure or individually
 export const employeeSalaryComponentsModel = mysqlTable(
   'employee_salary_components',
   {
@@ -799,6 +802,30 @@ export const employeeSalaryComponentsModel = mysqlTable(
     isAuthorized: boolean('is_authorized').notNull().default(false),
     isSkipped: boolean('is_skipped').notNull().default(false),
     isSalaryGiven: boolean('is_salary_given').notNull().default(false),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+//for assigning salary structure to an employee
+export const employeeSalaryStructureModel = mysqlTable(
+  'employee_salary_structure',
+  {
+    employeeSalaryStructureId: int('employee_salary_structure_id')
+      .primaryKey()
+      .autoincrement(),
+    employeeId: int('employee_id')
+      .notNull()
+      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+    salaryStructureMasterId: int('salary_structure_master_id')
+      .notNull()
+      .references(() => salaryStructureMasterModel.salaryStructureMasterId, {
+        onDelete: 'restrict',
+      }),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
