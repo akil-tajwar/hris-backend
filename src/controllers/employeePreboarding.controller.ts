@@ -7,6 +7,7 @@ import {
   assignChecklistToPreboardingService,
   updateAssignedChecklistService,
   getAssignedChecklistService,
+  getPreboardingById,
 } from '../services/employeePreboarding.service'
 
 import { requirePermission } from '../services/utils/jwt.utils'
@@ -144,6 +145,27 @@ export const getAssignedChecklistController = async (
     const { preboardingId } = req.params
 
     const data = await getAssignedChecklistService(
+      Number(preboardingId)
+    )
+
+    res.status(200).json(data)
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || error,
+    })
+  }
+}
+
+// GET preboarding employee by id
+export const getPreboardingByIdController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { preboardingId } = req.params
+
+    const data = await getPreboardingById(
       Number(preboardingId)
     )
 

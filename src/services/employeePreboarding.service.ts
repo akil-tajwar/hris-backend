@@ -201,10 +201,22 @@ export const updateAssignedChecklistService = async (
   return true
 }
 
-// get by preboarding employee
+// get checklist by preboarding employee
 export const getAssignedChecklistService = async (preboardingId: number) => {
   return await db
     .select()
     .from(employeePreboardingChecklistModel)
     .where(eq(employeePreboardingChecklistModel.preboardingId, preboardingId))
+}
+
+// get preboarding employee by id
+export const getPreboardingById = async (
+  preboardingId: number
+) => {
+  const data = await db
+    .select()
+    .from(employeePreboardingModel)
+    .where(eq(employeePreboardingModel.preboardingId, preboardingId))
+
+  return data[0] || null
 }

@@ -7,6 +7,7 @@ import {
   assignChecklistToPreboardingController,
   updateAssignedChecklistController,
   getAssignedChecklistController,
+  getPreboardingByIdController,
 } from '../controllers/employeePreboarding.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
@@ -27,9 +28,13 @@ router.delete(
 router.post('/assign', authenticateUser, assignChecklistToPreboardingController)
 router.patch('/edit', authenticateUser, updateAssignedChecklistController)
 router.get(
-  '/get/:preboardingId',
+  '/getChecklists/:preboardingId',
   authenticateUser,
   getAssignedChecklistController
+)
+router.get(
+  '/getPreboarding/:preboardingId',
+  getPreboardingByIdController
 )
 
 export default router
