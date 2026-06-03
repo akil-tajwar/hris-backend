@@ -76,22 +76,27 @@ export const getEmployeePreboarding = async () => {
       updatedAt: employeePreboardingModel.updatedAt,
 
       // Company
-      companyId: companyModel.companyId,
+      companyId: employeePreboardingModel.companyId,
       companyName: companyModel.companyName,
 
       // Department
+      departmentId: employeePreboardingModel.departmentId,
       departmentName: departmentModel.departmentName,
 
       // Designation
+      designationId: employeePreboardingModel.designationId,
       designationName: designationModel.designationName,
 
       // Employment Type
+      employmentTypeId: employeePreboardingModel.employmentTypeId,
       employmentTypeName: employmentTypeModel.employmentTypeName,
 
       // Salary Structure
+      salaryStructureMasterId: employeePreboardingModel.salaryStructureMasterId,
       salaryStructureName: salaryStructureMasterModel.structureName,
 
       // Reporting Authority (Employee)
+      reportingAuthorityId: employeePreboardingModel.reportingAuthorityId,
       reportingEmpCode: reportingEmployee.empCode,
       reportingEmpFullName: reportingEmployee.empFullName,
     })
@@ -210,9 +215,7 @@ export const getAssignedChecklistService = async (preboardingId: number) => {
 }
 
 // get preboarding employee by id
-export const getPreboardingById = async (
-  preboardingId: number
-) => {
+export const getPreboardingById = async (preboardingId: number) => {
   const data = await db
     .select()
     .from(employeePreboardingModel)
