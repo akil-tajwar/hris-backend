@@ -459,6 +459,70 @@ export const notificationsModel = mysqlTable('notifications', {
   ),
 })
 
+export const assetCategoryModel = mysqlTable('asset_categories', {
+  assetCategoryId: int('asset_category_id').autoincrement().primaryKey(),
+  categoryName: varchar('category_name', {
+    length: 100,
+  }).notNull(),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const assetsModel = mysqlTable('assets', {
+  assetId: int('asset_id').autoincrement().primaryKey(),
+  assetCode: varchar('asset_code', { length: 50 }).notNull(),
+  assetName: varchar('asset_name', { length: 200 }).notNull(),
+  categoryId: int('category_id')
+    .notNull()
+    .references(() => assetCategoryModel.assetCategoryId),
+  serialNumber: varchar('serial_number', { length: 100 }),
+  purchaseDate: date('purchase_date'),
+  purchaseValue: double('purchase_value', {
+    precision: 18,
+    scale: 2,
+  }),
+  currentStatus: mysqlEnum('current_status', [
+    'AVAILABLE',
+    'ASSIGNED',
+    'REPAIR',
+    'LOST',
+    'SCRAPPED',
+  ]).default('AVAILABLE'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const assetTransactionsModel = mysqlTable('asset_transactions', {
+  assetTransactionId: int('asset_transaction_id').autoincrement().primaryKey(),
+  assetId: int('asset_id').notNull(),
+  employeeId: int('employee_id').notNull(),
+  transactionType: mysqlEnum('transaction_type', [
+    'ISSUE',
+    'RETURN',
+    'TRANSFER',
+    'LOST',
+    'DAMAGE',
+    'REPLACEMENT',
+  ]).notNull(),
+  transactionDate: date('transaction_date').notNull(),
+  remarks: text('remarks'),
+  approvedBy: int('approved_by'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const shiftModel = mysqlTable('shift', {
   shiftId: int('shift_id').primaryKey().autoincrement(),
   companyId: int('company_id')
@@ -1037,6 +1101,16 @@ export const checklistDetailsRelations = relations(
   })
 )
 
+export const employeeChecklistDetailsRelations = relations(
+  checklistDetailsModel,
+  ({ one }) => ({
+    responsibleEmployee: one(employeeModel, {
+      fields: [checklistDetailsModel.responsibleEmployeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
 export const employeePreboardingChecklistRelations = relations(
   employeePreboardingChecklistModel,
   ({ one }) => ({
@@ -1161,6 +1235,100 @@ export const loneRelations = relations(employeeLoneModel, ({ one }) => ({
   }),
 }))
 
+export const salaryStructureDetailsRelations = relations(
+  salaryStructureDetailsModel,
+  ({ one }) => ({
+    salaryStructureMaster: one(salaryStructureMasterModel, {
+      fields: [salaryStructureDetailsModel.salaryStructureMasterId],
+      references: [salaryStructureMasterModel.salaryStructureMasterId],
+    }),
+    salaryComponent: one(salaryComponentsModel, {
+      fields: [salaryStructureDetailsModel.salaryComponentId],
+      references: [salaryComponentsModel.salaryComponentId],
+    }),
+  })
+)
+
+export const employeeSalaryStructureRelations = relations(
+  employeeSalaryStructureModel,
+  ({ one }) => ({
+    employee: one(employeeModel, {
+      fields: [employeeSalaryStructureModel.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+    salaryStructureMaster: one(salaryStructureMasterModel, {
+      fields: [employeeSalaryStructureModel.salaryStructureMasterId],
+      references: [salaryStructureMasterModel.salaryStructureMasterId],
+    }),
+  })
+)
+
+export const leavePolicyDetailsRelations = relations(
+  leavePolicyDetailsModel,
+  ({ one }) => ({
+    leavePolicyMaster: one(leavePolicyMasterModel, {
+      fields: [leavePolicyDetailsModel.leavePolicyMasterId],
+      references: [leavePolicyMasterModel.leavePolicyMasterId],
+    }),
+    leaveType: one(leaveTypeModel, {
+      fields: [leavePolicyDetailsModel.leaveTypeId],
+      references: [leaveTypeModel.leaveTypeId],
+    }),
+  })
+)
+
+export const employeeLeaveAssignmentRelations = relations(
+  employeeLeaveAssignmentModel,
+  ({ one }) => ({
+    employee: one(employeeModel, {
+      fields: [employeeLeaveAssignmentModel.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+    leavePolicyMaster: one(leavePolicyMasterModel, {
+      fields: [employeeLeaveAssignmentModel.leavePolicyMasterId],
+      references: [leavePolicyMasterModel.leavePolicyMasterId],
+    }),
+  })
+)
+
+export const leaveTypeRelations = relations(leaveTypeModel, ({ one }) => ({
+  company: one(companyModel, {
+    fields: [leaveTypeModel.companyId],
+    references: [companyModel.companyId],
+  }),
+}))
+
+export const leavePolicyMasterRelations = relations(
+  leavePolicyMasterModel,
+  ({ one }) => ({
+    company: one(companyModel, {
+      fields: [leavePolicyMasterModel.companyId],
+      references: [companyModel.companyId],
+    }),
+  })
+)
+
+export const assetRelations = relations(assetsModel, ({ one }) => ({
+  category: one(assetCategoryModel, {
+    fields: [assetsModel.categoryId],
+    references: [assetCategoryModel.assetCategoryId],
+  }),
+}))
+
+export const assetTransactionsRelations = relations(
+  assetTransactionsModel,
+  ({ one }) => ({
+    asset: one(assetsModel, {
+      fields: [assetTransactionsModel.assetId],
+      references: [assetsModel.assetId],
+    }),
+    employee: one(employeeModel, {
+      fields: [assetTransactionsModel.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
 // ========================
 // Types (unchanged)
 // ========================
@@ -1235,3 +1403,21 @@ export type Salary = typeof salaryModel.$inferSelect
 export type NewSalary = typeof salaryModel.$inferInsert
 export type Lone = typeof employeeLoneModel.$inferSelect
 export type NewLone = typeof employeeLoneModel.$inferInsert
+export type SalaryStructureMaster =
+  typeof salaryStructureMasterModel.$inferSelect
+export type NewSalaryStructureMaster =
+  typeof salaryStructureMasterModel.$inferInsert
+export type SalaryStructureDetails =
+  typeof salaryStructureDetailsModel.$inferSelect
+export type NewSalaryStructureDetails =
+  typeof salaryStructureDetailsModel.$inferInsert
+export type EmployeeSalaryStructure =
+  typeof employeeSalaryStructureModel.$inferSelect
+export type NewEmployeeSalaryStructure =
+  typeof employeeSalaryStructureModel.$inferInsert
+export type AssetCategory = typeof assetCategoryModel.$inferSelect
+export type NewAssetCategory = typeof assetCategoryModel.$inferInsert
+export type Asset = typeof assetsModel.$inferSelect
+export type NewAsset = typeof assetsModel.$inferInsert
+export type AssetTransaction = typeof assetTransactionsModel.$inferSelect
+export type NewAssetTransaction = typeof assetTransactionsModel.$inferInsert
