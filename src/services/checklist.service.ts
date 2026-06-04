@@ -7,7 +7,6 @@ import {
   NewChecklistMaster,
   NewChecklistDetails,
 } from '../schemas'
-import { sendToUser } from '../middlewares/sse'
 import { notifyEmployee } from '../middlewares/notifyEmployee'
 
 type ChecklistInput = {
@@ -294,33 +293,4 @@ export const deleteChecklistService = async (checklistMasterId: number) => {
 
     return true
   })
-}
-
-export const completeChecklist = async (
-  checklistMasterId: number
-) => {
-  const existing = await db
-    .select()
-    .from(checklistMasterModel)
-    .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
-    .limit(1)
-
-  if (!existing.length) {
-    throw new Error('Checklist not found')
-  }
-
-  await db
-    .update(checklistMasterModel)
-    .set({
-      isComplete: true,
-    })
-    .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
-
-  const [updated] = await db
-    .select()
-    .from(checklistMasterModel)
-    .where(eq(checklistMasterModel.checklistMasterId, checklistMasterId))
-    .limit(1)
-
-  return updated
 }

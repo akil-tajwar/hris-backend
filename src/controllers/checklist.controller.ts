@@ -2,7 +2,6 @@
 
 import { Request, Response } from 'express'
 import {
-  completeChecklist,
   createChecklistService,
   deleteChecklistService,
   getAllChecklistsService,
@@ -115,35 +114,6 @@ export const deleteChecklistController = async (
     res.status(500).json({
       status: 'error',
       message: error.message || error,
-    })
-  }
-}
-
-export const completeChecklistController = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    const checklistMasterId = Number(req.params.checklistMasterId)
-
-    if (isNaN(checklistMasterId)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid checklistMasterId',
-      })
-    }
-
-    const result = await completeChecklist(checklistMasterId)
-
-    res.status(200).json({
-      success: true,
-      message: 'Checklist marked as completed',
-      data: result,
-    })
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Internal server error',
     })
   }
 }

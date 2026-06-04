@@ -7,6 +7,9 @@ import {
   assignChecklistToPreboardingController,
   updateAssignedChecklistController,
   getAssignedChecklistController,
+  getPreboardingByIdController,
+  completeEmployeePreboardingChecklistController,
+  getAssignedChecklistByUserController,
 } from '../controllers/employeePreboarding.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
@@ -15,7 +18,7 @@ const router = Router()
 router.post('/create', authenticateUser, createEmployeePreboardingController)
 router.get('/getAll', authenticateUser, getEmployeePreboardingController)
 router.patch(
-  '/edit/:employeePreboardingId',
+  '/edit/:preboardingId',
   authenticateUser,
   updateEmployeePreboardingController
 )
@@ -27,9 +30,24 @@ router.delete(
 router.post('/assign', authenticateUser, assignChecklistToPreboardingController)
 router.patch('/edit', authenticateUser, updateAssignedChecklistController)
 router.get(
-  '/get/:preboardingId',
+  '/getChecklists/:preboardingId',
   authenticateUser,
   getAssignedChecklistController
+)
+router.get(
+  '/getPreboarding/:preboardingId',
+  authenticateUser,
+  getPreboardingByIdController
+)
+router.get(
+  '/getAssignedChecklistsByUser/:userId',
+  authenticateUser,
+  getAssignedChecklistByUserController
+)
+router.patch(
+  '/completeChecklist',
+  authenticateUser,
+  completeEmployeePreboardingChecklistController
 )
 
 export default router
