@@ -15,6 +15,7 @@ import {
   userModel,
   employeeLeaveAssignmentModel,
   employeeSalaryStructureModel,
+  employeePreboardingModel,
 } from '../schemas'
 import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
@@ -25,6 +26,7 @@ import { redis } from '../middlewares/redis'
 //CREATE
 export const createEmployee = async (input: {
   employeeData: NewEmployee & {
+    preboardingId: number
     leavePolicies?: number[]
     salaryStructures?: number[]
   }
@@ -73,6 +75,19 @@ export const createEmployee = async (input: {
     })
 
     const employeeId = Number(employeeInsertResult[0].insertId)
+
+    // 4.1 Update preboarding if exists
+    if (
+      employeeData.preboardingId !== null &&
+      employeeData.preboardingId !== undefined
+    ) {
+      await tx
+        .update(employeePreboardingModel)
+        .set({
+          isConfirmed: true,
+        })
+        .where(eq(employeePreboardingModel.preboardingId, employeeData.preboardingId))
+    }
 
     // 5. Leave Policies mapping
     if (leavePolicies.length > 0) {

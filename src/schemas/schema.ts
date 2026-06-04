@@ -313,6 +313,7 @@ export const employeePreboardingModel = mysqlTable('employee_preboarding', {
   ),
   offeredSalary: double('offered_salary'),
   probationMonths: int('probation_months'),
+  isConfirmed: boolean('is_confirmed').notNull().default(false),
   status: varchar('status', { length: 50 }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -338,6 +339,7 @@ export const employeePreboardingChecklistModel = mysqlTable(
       () => employeeModel.employeeId
     ),
     completionDate: date('completion_date'),
+    isComplete: boolean('is_complete').notNull().default(false),
     status: boolean('status').notNull().default(false),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),

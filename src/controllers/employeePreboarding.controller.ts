@@ -8,6 +8,8 @@ import {
   updateAssignedChecklistService,
   getAssignedChecklistService,
   getPreboardingById,
+  completeEmployeePreboardingChecklist,
+  getAssignedChecklistByUserService,
 } from '../services/employeePreboarding.service'
 
 import { requirePermission } from '../services/utils/jwt.utils'
@@ -59,6 +61,10 @@ export const updateEmployeePreboardingController = async (
     requirePermission(req, 'edit_employee_preboarding')
 
     const { preboardingId } = req.params
+    console.log(
+      '🚀 ~ updateEmployeePreboardingController ~ preboardingId:',
+      preboardingId
+    )
 
     const result = await updateEmployeePreboarding({
       preboardingId: Number(preboardingId),
@@ -83,9 +89,9 @@ export const deleteEmployeePreboardingController = async (
   try {
     requirePermission(req, 'delete_employee_preboarding')
 
-    const { preboardingId } = req.params
+    const { employeePreboardingId } = req.params
 
-    await deleteEmployeePreboarding(Number(preboardingId))
+    await deleteEmployeePreboarding(Number(employeePreboardingId))
 
     res.json({
       status: 'success',
@@ -144,9 +150,25 @@ export const getAssignedChecklistController = async (
   try {
     const { preboardingId } = req.params
 
-    const data = await getAssignedChecklistService(
-      Number(preboardingId)
-    )
+    const data = await getAssignedChecklistService(Number(preboardingId))
+
+    res.status(200).json(data)
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || error,
+    })
+  }
+}
+
+export const getAssignedChecklistByUserController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { userId } = req.params
+
+    const data = await getAssignedChecklistByUserService(Number(userId))
 
     res.status(200).json(data)
   } catch (error: any) {
@@ -165,15 +187,50 @@ export const getPreboardingByIdController = async (
   try {
     const { preboardingId } = req.params
 
-    const data = await getPreboardingById(
-      Number(preboardingId)
-    )
+    const data = await getPreboardingById(Number(preboardingId))
 
     res.status(200).json(data)
   } catch (error: any) {
     res.status(500).json({
       status: 'error',
       message: error.message || error,
+    })
+  }
+}
+
+export const completeEmployeePreboardingChecklistController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { employeePreboardingChecklistId, completionDate } = req.body
+
+    if (
+      !employeePreboardingChecklistId ||
+      isNaN(Number(employeePreboardingChecklistId))
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid employeePreboardingChecklistId',
+      })
+    }
+
+    const result = await completeEmployeePreboardingChecklist({
+      employeePreboardingChecklistId: Number(
+        employeePreboardingChecklistId
+      ),
+      completionDate,
+    })
+
+    res.status(200).json({
+      success: true,
+      message: 'Checklist marked as completed',
+      data: result,
+    })
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
     })
   }
 }
