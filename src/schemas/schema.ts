@@ -488,7 +488,7 @@ export const assetsModel = mysqlTable('assets', {
   currentStatus: mysqlEnum('current_status', [
     'AVAILABLE',
     'ASSIGNED',
-    'REPAIR',
+    'DAMAGE',
     'LOST',
     'SCRAPPED',
   ]).default('AVAILABLE'),
@@ -502,8 +502,10 @@ export const assetsModel = mysqlTable('assets', {
 
 export const assetTransactionsModel = mysqlTable('asset_transactions', {
   assetTransactionId: int('asset_transaction_id').autoincrement().primaryKey(),
-  assetId: int('asset_id').notNull(),
-  employeeId: int('employee_id').notNull(),
+  assetId: int('asset_id')
+    .notNull()
+    .references(() => assetsModel.assetId),
+  employeeId: int('employee_id'),
   transactionType: mysqlEnum('transaction_type', [
     'ISSUE',
     'RETURN',
@@ -1417,7 +1419,7 @@ export type NewEmployeeSalaryStructure =
   typeof employeeSalaryStructureModel.$inferInsert
 export type AssetCategory = typeof assetCategoryModel.$inferSelect
 export type NewAssetCategory = typeof assetCategoryModel.$inferInsert
-export type Asset = typeof assetsModel.$inferSelect
-export type NewAsset = typeof assetsModel.$inferInsert
+export type Assets = typeof assetsModel.$inferSelect
+export type NewAssets = typeof assetsModel.$inferInsert
 export type AssetTransaction = typeof assetTransactionsModel.$inferSelect
 export type NewAssetTransaction = typeof assetTransactionsModel.$inferInsert

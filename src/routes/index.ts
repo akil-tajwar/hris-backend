@@ -29,6 +29,7 @@ import employeeLeaveroutes from './employeeLeaves.routes'
 import reportRoutes from './reports.routes'
 import dashboardRoutes from './dashboard.routes'
 import assetCategoryRoutes from './assetCategory.routes'
+import assetsRoutes from './assets.routes'
 
 const router = Router()
 
@@ -62,5 +63,6 @@ router.use('/employeeLeaves', employeeLeaveroutes)
 router.use('/reports', reportRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/assetCategory', assetCategoryRoutes)
+router.use('/assets', assetsRoutes)
 
 export default router
