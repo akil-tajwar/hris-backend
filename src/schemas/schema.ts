@@ -1417,7 +1417,7 @@ export type NewEmployeeSalaryStructure =
   typeof employeeSalaryStructureModel.$inferInsert
 export type AssetCategory = typeof assetCategoryModel.$inferSelect
 export type NewAssetCategory = typeof assetCategoryModel.$inferInsert
-export type Asset = typeof assetsModel.$inferSelect
-export type NewAsset = typeof assetsModel.$inferInsert
+export type Assets = typeof assetsModel.$inferSelect
+export type NewAssets = typeof assetsModel.$inferInsert
 export type AssetTransaction = typeof assetTransactionsModel.$inferSelect
 export type NewAssetTransaction = typeof assetTransactionsModel.$inferInsert
