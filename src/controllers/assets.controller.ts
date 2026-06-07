@@ -5,6 +5,8 @@ import {
   getAssetById,
   updateAsset,
   deleteAsset,
+  createAssetTransaction,
+  getLatestAssetTransactions,
 } from '../services/assets.service'
 import { requirePermission } from '../services/utils/jwt.utils'
 
@@ -98,6 +100,38 @@ export const deleteAssetController = async (
       status: 'success',
       message: 'Asset deleted',
     })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const createAssetTransactionController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    requirePermission(req, 'assign_asset')
+
+    const result = await createAssetTransaction(req.body)
+
+    res.status(200).json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getLatestAssetTransactionsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    requirePermission(req, 'view_assigned_asset')
+
+    const transactions = await getLatestAssetTransactions()
+
+    res.json(transactions)
   } catch (err) {
     next(err)
   }

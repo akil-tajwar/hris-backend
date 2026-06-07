@@ -5,12 +5,16 @@ import { db } from '../config/database'
 import { BadRequestError } from './utils/errors.utils'
 
 export const createAssetCategory = async (
-  assetCategoryData: NewAssetCategory
+  assetCategoryData: Omit<NewAssetCategory, 'createdAt' | 'updatedAt'>
 ) => {
   try {
     const [newAssetCategory] = await db
       .insert(assetCategoryModel)
-      .values(assetCategoryData)
+      .values({
+        ...assetCategoryData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
       .execute()
     return newAssetCategory
   } catch (error) {
@@ -28,11 +32,17 @@ export const getAllAssetCategories = async () => {
 
 export const updateAssetCategory = async (
   assetCategoryId: number,
-  assetCategoryData: Partial<NewAssetCategory>
+  assetCategoryData: Partial<Omit<NewAssetCategory, 'createdAt' | 'updatedAt'>>
 ) => {
+  // Remove any timestamp fields that might be in the update data
+  const { createdAt, updatedAt, ...cleanData } = assetCategoryData as any;
+  
   const [updatedAssetCategory] = await db
     .update(assetCategoryModel)
-    .set(assetCategoryData)
+    .set({ 
+      ...cleanData, 
+      updatedAt: new Date()  // Only update this timestamp
+    })
     .where(eq(assetCategoryModel.assetCategoryId, assetCategoryId))
     .execute()
 
