@@ -16,6 +16,8 @@ import {
   employeeLeaveAssignmentModel,
   employeeSalaryStructureModel,
   employeePreboardingModel,
+  salaryStructureMasterModel,
+  leavePolicyMasterModel,
 } from '../schemas'
 import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
@@ -86,7 +88,9 @@ export const createEmployee = async (input: {
         .set({
           isConfirmed: true,
         })
-        .where(eq(employeePreboardingModel.preboardingId, employeeData.preboardingId))
+        .where(
+          eq(employeePreboardingModel.preboardingId, employeeData.preboardingId)
+        )
     }
 
     // 5. Leave Policies mapping
@@ -304,6 +308,8 @@ export const getAllEmployees = async () => {
       divisionId: employeeModel.divisionId,
       costCenterId: employeeModel.costCenterId,
       reportingAuthorityId: employeeModel.reportingAuthorityId,
+      leavePolicyMasterId: employeeModel.leavePolicyMasterId,
+      salaryStructureMasterId: employeeModel.salaryStructureMasterId,
 
       departmentName: departmentModel.departmentName,
       designationName: designationModel.designationName,
@@ -315,8 +321,9 @@ export const getAllEmployees = async () => {
       startTime: shiftModel.startTime,
       endTime: shiftModel.endTime,
       costCenterName: costCenterModel.costCenterName,
-
       reportingAuthorityName: reportingAuthority.empFullName,
+      leavePolicyName: leavePolicyMasterModel.policyName,
+      salaryStructureName: salaryStructureMasterModel.structureName,
 
       createdBy: employeeModel.createdBy,
       createdAt: employeeModel.createdAt,
@@ -353,6 +360,20 @@ export const getAllEmployees = async () => {
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
+    )
+    .leftJoin(
+      leavePolicyMasterModel,
+      eq(
+        employeeModel.leavePolicyMasterId,
+        leavePolicyMasterModel.leavePolicyMasterId
+      )
+    )
+    .leftJoin(
+      salaryStructureMasterModel,
+      eq(
+        employeeModel.salaryStructureMasterId,
+        salaryStructureMasterModel.salaryStructureMasterId
+      )
     )
 
   // 2️⃣ SAVE TO REDIS
@@ -432,6 +453,8 @@ export const getEmployeeById = async (employeeId: number) => {
       divisionId: employeeModel.divisionId,
       costCenterId: employeeModel.costCenterId,
       reportingAuthorityId: employeeModel.reportingAuthorityId,
+      leavePolicyMasterId: employeeModel.leavePolicyMasterId,
+      salaryStructureMasterId: employeeModel.salaryStructureMasterId,
 
       // Names
       departmentName: departmentModel.departmentName,
@@ -442,6 +465,8 @@ export const getEmployeeById = async (employeeId: number) => {
       divisionName: divisionModel.divisionName,
       shiftName: shiftModel.shiftName,
       costCenterName: costCenterModel.costCenterName,
+      leavePolicyName: leavePolicyMasterModel.policyName,
+      salaryStructureName: salaryStructureMasterModel.structureName,
 
       // Self join
       reportingAuthorityName: reportingAuthority.empFullName,
@@ -483,6 +508,20 @@ export const getEmployeeById = async (employeeId: number) => {
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
+    )
+    .leftJoin(
+      leavePolicyMasterModel,
+      eq(
+        employeeModel.leavePolicyMasterId,
+        leavePolicyMasterModel.leavePolicyMasterId
+      )
+    )
+    .leftJoin(
+      salaryStructureMasterModel,
+      eq(
+        employeeModel.salaryStructureMasterId,
+        salaryStructureMasterModel.salaryStructureMasterId
+      )
     )
     .limit(1)
 

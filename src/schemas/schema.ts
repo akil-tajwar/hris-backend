@@ -3,6 +3,7 @@ import {
   boolean,
   date,
   double,
+  json,
   MySqlTableWithColumns,
 } from 'drizzle-orm/mysql-core'
 import {
@@ -437,6 +438,12 @@ export const employeeModel = mysqlTable('employees', {
   costCenterId: int('cost_center_id')
     .references(() => costCenterModel.costCenterId)
     .notNull(),
+    salaryStructureMasterId: int('salary_structure_master_id').references(
+      () => salaryStructureMasterModel.salaryStructureMasterId
+    ),
+    leavePolicyMasterId: int('leave_policy_master_id').references(
+      () => leavePolicyMasterModel.leavePolicyMasterId
+    ),
   reportingAuthorityId: int('reporting_authority_id'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -445,6 +452,211 @@ export const employeeModel = mysqlTable('employees', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
+
+export const employeeLifecycleEvents = mysqlTable('employee_lifecycle_events', {
+  employeeLifeCycleId: int('employee_life_cycle_id')
+    .autoincrement()
+    .primaryKey(),
+  employeeId: int('employee_id')
+    .references(() => employeeModel.employeeId)
+    .notNull(),
+  eventDate: date('event_date').notNull(),
+  employeeEventType: mysqlEnum('employee_event_type', [
+    'JOINING',
+    'PROBATION_START',
+    'PROBATION_EXTEND',
+    'CONFIRMATION',
+
+    'DESIGNATION_CHANGE',
+    'DEPARTMENT_CHANGE',
+    'LOCATION_CHANGE',
+    'REPORTING_MANAGER_CHANGE',
+
+    'EMPLOYMENT_TYPE_CHANGE',
+
+    'SHIFT_CHANGE',
+    'ATTENDANCE_POLICY_CHANGE',
+    'LEAVE_POLICY_CHANGE',
+
+    'SALARY_STRUCTURE_CHANGE',
+    'SALARY_REVISION',
+    'ALLOWANCE_CHANGE',
+
+    'PROMOTION',
+    'DEMOTION',
+    'TRANSFER',
+
+    'WARNING',
+    'SUSPENSION',
+
+    'RESIGNATION',
+    'TERMINATION',
+    'RETIREMENT',
+
+    'REJOIN',
+
+    'ASSET_ASSIGNED',
+    'ASSET_RETURNED',
+  ]),
+
+  effectiveFrom: date('effective_from'),
+  remarks: text('remarks'),
+  performedBy: int('performed_by').references(() => employeeModel.employeeId),
+  approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+  referenceType: varchar('reference_type', {
+    length: 50,
+  }),
+  referenceId: int('reference_id'),
+  oldValue: json('old_value'),
+  newValue: json('new_value'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeeDesignationHistory = mysqlTable(
+  'employee_designation_history',
+  {
+    employeeDesignationHistoryId: int('employee_designation_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    designationId: int('designation_id')
+      .references(() => designationModel.designationId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeDepartmentHistory = mysqlTable(
+  'employee_department_history',
+  {
+    employeeDepartmentHistoryId: int('employee_department_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    departmentId: int('department_id')
+      .references(() => departmentModel.departmentId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeSalaryStructureHistory = mysqlTable(
+  'employee_salary_structure_history',
+  {
+    employeeSalaryStructureHistoryId: int(
+      'employee_salary_structure_history_id'
+    )
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    salaryStructureMasterId: int('salary_structure_master_id').references(
+      () => salaryStructureMasterModel.salaryStructureMasterId
+    ),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeShiftHistory = mysqlTable('employee_shift_history', {
+  employeeShiftHistoryId: int('employee_shift_history_id')
+    .autoincrement()
+    .primaryKey(),
+  employeeId: int('employee_id')
+    .references(() => employeeModel.employeeId)
+    .notNull(),
+  shiftId: int('shift_id').references(() => shiftModel.shiftId),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  changeReason: text('change_reason'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeeLeavePolicyHistory = mysqlTable(
+  'employee_leave_policy_history',
+  {
+    employeeLeavePolicyHistoryId: int('employee_leave_policy_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    leavePolicyId: int('leave_policy_id').references(
+      () => leavePolicyMasterModel.leavePolicyMasterId
+    ),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeEmploymentTypeHistory = mysqlTable(
+  'employee_employment_type_history',
+  {
+    employeeEmploymentTypeHistoryId: int('employee_employment_type_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    employmentTypeId: int('employment_type_id').references(
+      () => employmentTypeModel.employmentTypeId
+    ),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const notificationsModel = mysqlTable('notifications', {
   notificationId: int('notification_id').primaryKey().autoincrement(),
@@ -1206,6 +1418,14 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
   costCenter: one(costCenterModel, {
     fields: [employeeModel.costCenterId],
     references: [costCenterModel.costCenterId],
+  }),
+  SalaryStructure: one(salaryStructureMasterModel, {
+    fields: [employeeModel.salaryStructureMasterId],
+    references: [salaryStructureMasterModel.salaryStructureMasterId],
+  }),
+  LeavePolicy: one(leavePolicyMasterModel, {
+    fields: [employeeModel.leavePolicyMasterId],
+    references: [leavePolicyMasterModel.leavePolicyMasterId],
   }),
 }))
 
