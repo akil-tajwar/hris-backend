@@ -29,8 +29,8 @@ import { redis } from '../middlewares/redis'
 export const createEmployee = async (input: {
   employeeData: NewEmployee & {
     preboardingId: number
-    leavePolicies?: number[]
-    salaryStructures?: number[]
+    leavePolicyMasterId?: number | null
+    salaryStructureMasterId?: number | null
   }
   userData: NewUser
 }) => {
@@ -38,9 +38,6 @@ export const createEmployee = async (input: {
 
   return await db.transaction(async (tx) => {
     const { employeeData, userData } = input
-
-    const leavePolicies = employeeData.leavePolicies ?? []
-    const salaryStructures = employeeData.salaryStructures ?? []
 
     // 1. Check duplicate username
     const existingUser = await tx
@@ -53,7 +50,7 @@ export const createEmployee = async (input: {
       throw BadRequestError('Username already registered')
     }
 
-    // 2. Password
+    // 2. Validate and hash password
     validatePassword(userData.password)
     const hashedPassword = await hashPassword(userData.password)
 
@@ -78,7 +75,7 @@ export const createEmployee = async (input: {
 
     const employeeId = Number(employeeInsertResult[0].insertId)
 
-    // 4.1 Update preboarding if exists
+    // 5. Update preboarding if exists
     if (
       employeeData.preboardingId !== null &&
       employeeData.preboardingId !== undefined
@@ -93,31 +90,10 @@ export const createEmployee = async (input: {
         )
     }
 
-    // 5. Leave Policies mapping
-    if (leavePolicies.length > 0) {
-      await tx.insert(employeeLeaveAssignmentModel).values(
-        leavePolicies.map((id) => ({
-          employeeId,
-          leavePolicyMasterId: id,
-          effectiveFrom: new Date(),
-          createdBy: employeeData.createdBy,
-        }))
-      )
-    }
-
-    // 6. Salary Structures mapping
-    if (salaryStructures.length > 0) {
-      await tx.insert(employeeSalaryStructureModel).values(
-        salaryStructures.map((id) => ({
-          employeeId,
-          salaryStructureMasterId: id,
-          createdBy: employeeData.createdBy,
-        }))
-      )
-    }
-
+    // 6. Clear cache
     await redis.del(CACHE_KEY)
 
+    // 7. Get created employee
     const [employee] = await tx
       .select()
       .from(employeeModel)
@@ -131,7 +107,7 @@ export const createEmployee = async (input: {
         email: userData.email,
         roleId: userData.roleId,
         tenantId: userData.tenantId,
-        active: userData.active,
+        active: userData.active ?? true,
       },
     }
   })
@@ -141,8 +117,8 @@ export const createEmployee = async (input: {
 export const updateEmployee = async (
   employeeId: number,
   data: Partial<NewEmployee> & {
-    leavePolicies?: number[]
-    salaryStructures?: number[]
+    leavePolicyMasterId?: number | null
+    salaryStructureMasterId?: number | null
   }
 ) => {
   const CACHE_KEY = 'employees:all'
@@ -154,7 +130,8 @@ export const updateEmployee = async (
 
     if (!existing) throw new Error('Employee not found')
 
-    const { leavePolicies, salaryStructures, ...employeeData } = data
+    const { leavePolicyMasterId, salaryStructureMasterId, ...employeeData } =
+      data
 
     const fkFields = [
       'departmentId',
@@ -181,6 +158,17 @@ export const updateEmployee = async (
       }
     })
 
+    // 👉 new direct FK fields
+    if (leavePolicyMasterId !== undefined) {
+      updateData.leavePolicyMasterId =
+        leavePolicyMasterId === 0 ? null : leavePolicyMasterId
+    }
+
+    if (salaryStructureMasterId !== undefined) {
+      updateData.salaryStructureMasterId =
+        salaryStructureMasterId === 0 ? null : salaryStructureMasterId
+    }
+
     updateData.updatedAt = new Date()
 
     // 1. update employee
@@ -188,41 +176,6 @@ export const updateEmployee = async (
       .update(employeeModel)
       .set(updateData)
       .where(eq(employeeModel.employeeId, employeeId))
-
-    // 2. update leave policies (replace strategy)
-    if (leavePolicies !== undefined) {
-      await tx
-        .delete(employeeLeaveAssignmentModel)
-        .where(eq(employeeLeaveAssignmentModel.employeeId, employeeId))
-
-      if (leavePolicies.length > 0) {
-        await tx.insert(employeeLeaveAssignmentModel).values(
-          leavePolicies.map((id) => ({
-            employeeId,
-            leavePolicyMasterId: id,
-            effectiveFrom: new Date(),
-            createdBy: employeeData.updatedBy ?? employeeData.createdBy ?? 0,
-          }))
-        )
-      }
-    }
-
-    // 3. update salary structures
-    if (salaryStructures !== undefined) {
-      await tx
-        .delete(employeeSalaryStructureModel)
-        .where(eq(employeeSalaryStructureModel.employeeId, employeeId))
-
-      if (salaryStructures.length > 0) {
-        await tx.insert(employeeSalaryStructureModel).values(
-          salaryStructures.map((id) => ({
-            employeeId,
-            salaryStructureMasterId: id,
-            createdBy: employeeData.updatedBy ?? employeeData.createdBy ?? 0,
-          }))
-        )
-      }
-    }
 
     await redis.del(CACHE_KEY)
 
