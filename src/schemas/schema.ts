@@ -1002,6 +1002,46 @@ export const attendancePolicyWeekendsModel = mysqlTable(
   }
 )
 
+// attendance punches table and attendance daily table 
+// attendance punches table and attendance daily table 
+export const attendancePunches = mysqlTable("attendance_punches", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employee_id")
+    .notNull()
+    .references(() => employeeModel.employeeId, { onDelete: "restrict" }),
+  punchTime: timestamp("punch_time", { mode: "date" }).notNull(), // ✅ mode: "date"
+  punchType: varchar("punch_type", { length: 20 }),
+  deviceId: varchar("device_id", { length: 50 }),
+  source: varchar("source", { length: 50 }),
+  createdBy: int("created_by").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int("updated_by"),
+  updatedAt: timestamp("updated_at", { mode: "date" }).default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const attendanceDaily = mysqlTable("attendance_daily", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employee_id")
+    .notNull()
+    .references(() => employeeModel.employeeId, { onDelete: "restrict" }),
+  attendanceDate: date("attendance_date").notNull(),
+  firstIn: timestamp("first_in", { mode: "date" }),   // ✅ mode: "date"
+  lastOut: timestamp("last_out", { mode: "date" }),   // ✅ mode: "date"
+  workedMinutes: int("worked_minutes"),
+  lateMinutes: int("late_minutes"),
+  earlyOutMinutes: int("early_out_minutes"),
+  overtimeMinutes: int("overtime_minutes"),
+  status: varchar("status", { length: 20 }).notNull(),
+  createdBy: int("created_by").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int("updated_by"),
+  updatedAt: timestamp("updated_at", { mode: "date" }).default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 // ========================
 // Relations (unchanged)
 // ========================
@@ -1396,6 +1436,21 @@ export const attendancePolicyWeekendsRelations = relations(
   })
 )
 
+// Relations for Attendance Punches and Attendance Daily tables
+export const attendancePunchesRelations = relations(attendancePunches, ({ one }) => ({
+  employee: one(employeeModel, {
+    fields: [attendancePunches.employeeId],
+    references: [employeeModel.employeeId],
+  }),
+}))
+
+export const attendanceDailyRelations = relations(attendanceDaily, ({ one }) => ({
+  employee: one(employeeModel, {
+    fields: [attendanceDaily.employeeId],
+    references: [employeeModel.employeeId],
+  }),
+}))
+
 // ========================
 // Types (unchanged)
 // ========================
@@ -1496,3 +1551,9 @@ export type AttendancePolicyWeekend =
   typeof attendancePolicyWeekendsModel.$inferSelect
 export type NewAttendancePolicyWeekend =
   typeof attendancePolicyWeekendsModel.$inferInsert
+
+// Types for Attendance Punches and Attendance Daily
+export type AttendancePunch = typeof attendancePunches.$inferSelect
+export type NewAttendancePunch = typeof attendancePunches.$inferInsert
+export type AttendanceDaily = typeof attendanceDaily.$inferSelect
+export type NewAttendanceDaily = typeof attendanceDaily.$inferInsert
