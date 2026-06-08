@@ -960,6 +960,49 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
 })
 
 // ========================
+// Attendance Policy Tables
+// ========================
+export const attendancePoliciesModel = mysqlTable('attendance_policies', {
+  id: int('id').autoincrement().primaryKey(),
+  code: varchar('code', { length: 50 }).notNull(),
+  name: varchar('name', { length: 150 }).notNull(),
+  graceMinutes: int('grace_minutes').default(0),
+  lateAfterMinutes: int('late_after_minutes').default(0),
+  halfDayAfterMinutes: int('half_day_after_minutes').default(120),
+  absentAfterMinutes: int('absent_after_minutes').default(240),
+  allowOvertime: boolean('allow_overtime').default(false),
+  overtimeAfterMinutes: int('overtime_after_minutes').default(480),
+  maxOvertimeMinutes: int('max_overtime_minutes').default(240),
+  allowCompOff: boolean('allow_comp_off').default(false),
+  isActive: boolean('is_active').default(true),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const attendancePolicyWeekendsModel = mysqlTable(
+  'attendance_policy_weekends',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    policyId: int('policy_id')
+      .notNull()
+      .references(() => attendancePoliciesModel.id, { onDelete: 'restrict' }),
+    weekDayId: int('week_day_id')
+      .notNull()
+      .references(() => weekDayModel.weekDayId, { onDelete: 'restrict' }),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+// ========================
 // Relations (unchanged)
 // ========================
 export const userRelations = relations(userModel, ({ one }) => ({
@@ -1331,6 +1374,28 @@ export const assetTransactionsRelations = relations(
   })
 )
 
+// Relations for Attendance Policy and related tables
+export const attendancePoliciesRelations = relations(
+  attendancePoliciesModel,
+  ({ many }) => ({
+    weekends: many(attendancePolicyWeekendsModel),
+  })
+)
+
+export const attendancePolicyWeekendsRelations = relations(
+  attendancePolicyWeekendsModel,
+  ({ one }) => ({
+    policy: one(attendancePoliciesModel, {
+      fields: [attendancePolicyWeekendsModel.policyId],
+      references: [attendancePoliciesModel.id],
+    }),
+    weekDay: one(weekDayModel, {
+      fields: [attendancePolicyWeekendsModel.weekDayId],
+      references: [weekDayModel.weekDayId],
+    }),
+  })
+)
+
 // ========================
 // Types (unchanged)
 // ========================
@@ -1423,3 +1488,11 @@ export type Assets = typeof assetsModel.$inferSelect
 export type NewAssets = typeof assetsModel.$inferInsert
 export type AssetTransaction = typeof assetTransactionsModel.$inferSelect
 export type NewAssetTransaction = typeof assetTransactionsModel.$inferInsert
+
+// Types for Attendance Policy
+export type AttendancePolicy = typeof attendancePoliciesModel.$inferSelect
+export type NewAttendancePolicy = typeof attendancePoliciesModel.$inferInsert
+export type AttendancePolicyWeekend =
+  typeof attendancePolicyWeekendsModel.$inferSelect
+export type NewAttendancePolicyWeekend =
+  typeof attendancePolicyWeekendsModel.$inferInsert

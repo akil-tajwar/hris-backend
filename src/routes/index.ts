@@ -30,6 +30,7 @@ import reportRoutes from './reports.routes'
 import dashboardRoutes from './dashboard.routes'
 import assetCategoryRoutes from './assetCategory.routes'
 import assetsRoutes from './assets.routes'
+import attendancePolicyRoutes from './attendancePolicy.routes'
 
 const router = Router()
 
@@ -64,5 +65,5 @@ router.use('/reports', reportRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/assetCategory', assetCategoryRoutes)
 router.use('/assets', assetsRoutes)
-
+router.use('/attendancePolicies', attendancePolicyRoutes)
 export default router
