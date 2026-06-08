@@ -1215,7 +1215,6 @@ export const attendancePolicyWeekendsModel = mysqlTable(
 )
 
 // attendance punches table and attendance daily table 
-// attendance punches table and attendance daily table 
 export const attendancePunches = mysqlTable("attendance_punches", {
   id: int("id").autoincrement().primaryKey(),
   employeeId: int("employee_id")
@@ -1656,7 +1655,6 @@ export const attendancePolicyWeekendsRelations = relations(
   })
 )
 
-// Relations for Attendance Punches and Attendance Daily tables
 export const attendancePunchesRelations = relations(attendancePunches, ({ one }) => ({
   employee: one(employeeModel, {
     fields: [attendancePunches.employeeId],
@@ -1771,8 +1769,6 @@ export type AttendancePolicyWeekend =
   typeof attendancePolicyWeekendsModel.$inferSelect
 export type NewAttendancePolicyWeekend =
   typeof attendancePolicyWeekendsModel.$inferInsert
-
-// Types for Attendance Punches and Attendance Daily
 export type AttendancePunch = typeof attendancePunches.$inferSelect
 export type NewAttendancePunch = typeof attendancePunches.$inferInsert
 export type AttendanceDaily = typeof attendanceDaily.$inferSelect
