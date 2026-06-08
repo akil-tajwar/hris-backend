@@ -31,6 +31,8 @@ import dashboardRoutes from './dashboard.routes'
 import assetCategoryRoutes from './assetCategory.routes'
 import assetsRoutes from './assets.routes'
 import attendancePolicyRoutes from './attendancePolicy.routes'
+import attendancePunchRoutes from './attendancePunch.routes'
+import attendanceDailyRoutes from './attendanceDaily.routes'
 
 const router = Router()
 
@@ -66,4 +68,7 @@ router.use('/dashboard', dashboardRoutes)
 router.use('/assetCategory', assetCategoryRoutes)
 router.use('/assets', assetsRoutes)
 router.use('/attendancePolicies', attendancePolicyRoutes)
+router.use('/attendancePunches', attendancePunchRoutes)
+router.use('/attendanceDaily', attendanceDailyRoutes)
+
 export default router
