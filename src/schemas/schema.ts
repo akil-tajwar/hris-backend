@@ -438,12 +438,12 @@ export const employeeModel = mysqlTable('employees', {
   costCenterId: int('cost_center_id')
     .references(() => costCenterModel.costCenterId)
     .notNull(),
-    salaryStructureMasterId: int('salary_structure_master_id').references(
-      () => salaryStructureMasterModel.salaryStructureMasterId
-    ),
-    leavePolicyMasterId: int('leave_policy_master_id').references(
-      () => leavePolicyMasterModel.leavePolicyMasterId
-    ),
+  salaryStructureMasterId: int('salary_structure_master_id').references(
+    () => salaryStructureMasterModel.salaryStructureMasterId
+  ),
+  leavePolicyMasterId: int('leave_policy_master_id').references(
+    () => leavePolicyMasterModel.leavePolicyMasterId
+  ),
   reportingAuthorityId: int('reporting_authority_id'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -452,6 +452,155 @@ export const employeeModel = mysqlTable('employees', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
+
+export const employeeDesignationHistoryModel = mysqlTable(
+  'employee_designation_history',
+  {
+    employeeDesignationHistoryId: int('employee_designation_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    designationId: int('designation_id')
+      .references(() => designationModel.designationId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeDepartmentHistoryModel = mysqlTable(
+  'employee_department_history',
+  {
+    employeeDepartmentHistoryId: int('employee_department_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    departmentId: int('department_id')
+      .references(() => departmentModel.departmentId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeSalaryStructureHistoryModel = mysqlTable(
+  'employee_salary_structure_history',
+  {
+    employeeSalaryStructureHistoryId: int(
+      'employee_salary_structure_history_id'
+    )
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    salaryStructureId: int('salary_structure_id')
+      .references(() => salaryStructureMasterModel.salaryStructureMasterId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeShiftHistoryModel = mysqlTable('employee_shift_history', {
+  employeeShiftHistoryId: int('employee_shift_history_id')
+    .autoincrement()
+    .primaryKey(),
+  employeeId: int('employee_id')
+    .references(() => employeeModel.employeeId)
+    .notNull(),
+  shiftId: int('shift_id')
+    .references(() => shiftModel.shiftId)
+    .notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  changeReason: text('change_reason'),
+  approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeeLeavePolicyHistoryModel = mysqlTable(
+  'employee_leave_policy_history',
+  {
+    employeeLeavePolicyHistoryId: int('employee_leave_policy_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    leavePolicyId: int('leave_policy_id')
+      .references(() => leavePolicyMasterModel.leavePolicyMasterId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
+export const employeeEmploymentTypeHistoryModel = mysqlTable(
+  'employee_employment_type_history',
+  {
+    employeeEmploymentTypeHistoryId: int('employee_employment_type_history_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    employmentTypeId: int('employment_type_id')
+      .references(() => employmentTypeModel.employmentTypeId)
+      .notNull(),
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    changeReason: text('change_reason'),
+    approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const employeeLifecycleEvents = mysqlTable('employee_lifecycle_events', {
   employeeLifeCycleId: int('employee_life_cycle_id')
@@ -1214,41 +1363,45 @@ export const attendancePolicyWeekendsModel = mysqlTable(
   }
 )
 
-// attendance punches table and attendance daily table 
-export const attendancePunches = mysqlTable("attendance_punches", {
-  id: int("id").autoincrement().primaryKey(),
-  employeeId: int("employee_id")
+// attendance punches table and attendance daily table
+export const attendancePunches = mysqlTable('attendance_punches', {
+  id: int('id').autoincrement().primaryKey(),
+  employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: "restrict" }),
-  punchTime: timestamp("punch_time", { mode: "date" }).notNull(), // ✅ mode: "date"
-  punchType: varchar("punch_type", { length: 20 }),
-  deviceId: varchar("device_id", { length: 50 }),
-  source: varchar("source", { length: 50 }),
-  createdBy: int("created_by").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int("updated_by"),
-  updatedAt: timestamp("updated_at", { mode: "date" }).default(
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  punchTime: timestamp('punch_time', { mode: 'date' }).notNull(), // ✅ mode: "date"
+  punchType: varchar('punch_type', { length: 20 }),
+  deviceId: varchar('device_id', { length: 50 }),
+  source: varchar('source', { length: 50 }),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).default(
+    sql`CURRENT_TIMESTAMP`
+  ),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).default(
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
 
-export const attendanceDaily = mysqlTable("attendance_daily", {
-  id: int("id").autoincrement().primaryKey(),
-  employeeId: int("employee_id")
+export const attendanceDaily = mysqlTable('attendance_daily', {
+  id: int('id').autoincrement().primaryKey(),
+  employeeId: int('employee_id')
     .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: "restrict" }),
-  attendanceDate: date("attendance_date").notNull(),
-  firstIn: timestamp("first_in", { mode: "date" }),   // ✅ mode: "date"
-  lastOut: timestamp("last_out", { mode: "date" }),   // ✅ mode: "date"
-  workedMinutes: int("worked_minutes"),
-  lateMinutes: int("late_minutes"),
-  earlyOutMinutes: int("early_out_minutes"),
-  overtimeMinutes: int("overtime_minutes"),
-  status: varchar("status", { length: 20 }).notNull(),
-  createdBy: int("created_by").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int("updated_by"),
-  updatedAt: timestamp("updated_at", { mode: "date" }).default(
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  attendanceDate: date('attendance_date').notNull(),
+  firstIn: timestamp('first_in', { mode: 'date' }), // ✅ mode: "date"
+  lastOut: timestamp('last_out', { mode: 'date' }), // ✅ mode: "date"
+  workedMinutes: int('worked_minutes'),
+  lateMinutes: int('late_minutes'),
+  earlyOutMinutes: int('early_out_minutes'),
+  overtimeMinutes: int('overtime_minutes'),
+  status: varchar('status', { length: 20 }).notNull(),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).default(
+    sql`CURRENT_TIMESTAMP`
+  ),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).default(
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
@@ -1655,19 +1808,25 @@ export const attendancePolicyWeekendsRelations = relations(
   })
 )
 
-export const attendancePunchesRelations = relations(attendancePunches, ({ one }) => ({
-  employee: one(employeeModel, {
-    fields: [attendancePunches.employeeId],
-    references: [employeeModel.employeeId],
-  }),
-}))
+export const attendancePunchesRelations = relations(
+  attendancePunches,
+  ({ one }) => ({
+    employee: one(employeeModel, {
+      fields: [attendancePunches.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
 
-export const attendanceDailyRelations = relations(attendanceDaily, ({ one }) => ({
-  employee: one(employeeModel, {
-    fields: [attendanceDaily.employeeId],
-    references: [employeeModel.employeeId],
-  }),
-}))
+export const attendanceDailyRelations = relations(
+  attendanceDaily,
+  ({ one }) => ({
+    employee: one(employeeModel, {
+      fields: [attendanceDaily.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
 
 // ========================
 // Types (unchanged)
