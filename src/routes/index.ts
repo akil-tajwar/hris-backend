@@ -33,6 +33,7 @@ import assetsRoutes from './assets.routes'
 import attendancePolicyRoutes from './attendancePolicy.routes'
 import attendancePunchRoutes from './attendancePunch.routes'
 import attendanceDailyRoutes from './attendanceDaily.routes'
+import csvImportRoutes from './csvImport.routes'
 
 const router = Router()
 
@@ -70,5 +71,6 @@ router.use('/assets', assetsRoutes)
 router.use('/attendancePolicies', attendancePolicyRoutes)
 router.use('/attendancePunches', attendancePunchRoutes)
 router.use('/attendanceDaily', attendanceDailyRoutes)
+router.use('/csv', csvImportRoutes)
 
 export default router
