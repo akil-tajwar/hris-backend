@@ -6,6 +6,7 @@ import {
   NewAssets,
   employeeModel,
   assetTransactionsModel,
+  employeeLifecycleEventsModel,
 } from '../schemas'
 import { and, desc, eq, sql } from 'drizzle-orm'
 
@@ -149,107 +150,219 @@ const assetStatusRules: Record<
   REPLACEMENT: { status: 'SCRAPPED', clearEmployee: true },
 }
 
+class AssetTransactionError extends Error {
+  code: string
+  context?: any
+
+  constructor(message: string, code: string, context?: any) {
+    super(message)
+    this.name = 'AssetTransactionError'
+    this.code = code
+    this.context = context
+  }
+}
+
+//assign asset
 export const createAssetTransaction = async (data: {
   assetId: number
   employeeId?: number
   transactionType: keyof typeof assetStatusRules
+  transactionDate: string
   remarks?: string
   approvedBy?: number
   createdBy: number
 }) => {
-  return await db.transaction(async (tx) => {
-    // 1. Get asset
-    const [asset] = await tx
-      .select()
-      .from(assetsModel)
-      .where(eq(assetsModel.assetId, data.assetId))
+  const toMySqlDate = (d: Date) => d.toISOString().split('T')[0]
 
-    if (!asset) {
-      throw new Error('Asset not found')
-    }
+  const step = (name: string, extra?: any) => {
+    console.log(`🧩 [createAssetTransaction:${name}]`, extra ?? '')
+  }
 
-    const rule = assetStatusRules[data.transactionType]
+  try {
+    step('START', data)
 
-    if (!rule) {
-      throw new Error('Invalid transaction type')
-    }
+    return await db.transaction(async (tx) => {
+      // 1. Get asset
+      step('FETCH_ASSET', { assetId: data.assetId })
 
-    // 2. If asset is already assigned, find current holder
-    let currentHolder: { fullName: string; employeeCode: string } | null = null
-
-    if (asset.currentStatus === 'ASSIGNED') {
-      const [holder] = await tx
-        .select({
-          fullName: employeeModel.empFullName,
-          employeeCode: employeeModel.empCode,
-        })
-        .from(assetTransactionsModel)
-        .innerJoin(
-          employeeModel,
-          eq(employeeModel.employeeId, assetTransactionsModel.employeeId)
-        )
-        .where(
-          and(
-            eq(assetTransactionsModel.assetId, data.assetId),
-            eq(assetTransactionsModel.transactionType, 'ISSUE')
-          )
-        )
-        .orderBy(desc(assetTransactionsModel.transactionDate))
-        .limit(1)
-
-      currentHolder = holder || null
-    }
-
-    // 3. Block invalid ISSUE on already assigned asset
-    if (
-      data.transactionType === 'ISSUE' &&
-      asset.currentStatus === 'ASSIGNED'
-    ) {
-      if (currentHolder) {
-        throw new Error(
-          `this asset is already assigned to ${currentHolder.fullName}-${currentHolder.employeeCode}`
-        )
-      } else {
-        throw new Error('Asset is already assigned')
-      }
-    }
-
-    // 4. Validate employee if required
-    if (!rule.clearEmployee && data.employeeId) {
-      const [employee] = await tx
+      const [asset] = await tx
         .select()
-        .from(employeeModel)
-        .where(eq(employeeModel.employeeId, data.employeeId))
+        .from(assetsModel)
+        .where(eq(assetsModel.assetId, data.assetId))
 
-      if (!employee) {
-        throw new Error('Employee not found')
+      if (!asset) {
+        throw new AssetTransactionError('Asset not found', 'ASSET_NOT_FOUND', {
+          assetId: data.assetId,
+        })
       }
-    }
 
-    // 5. Insert transaction
-    await tx.insert(assetTransactionsModel).values({
-      assetId: data.assetId,
-      employeeId: rule.clearEmployee ? null : (data.employeeId ?? null),
-      transactionType: data.transactionType,
-      transactionDate: new Date(),
-      remarks: data.remarks,
-      approvedBy: data.approvedBy,
-      createdBy: data.createdBy,
+      const rule = assetStatusRules[data.transactionType]
+
+      if (!rule) {
+        throw new AssetTransactionError(
+          'Invalid transaction type',
+          'INVALID_TRANSACTION_TYPE',
+          { transactionType: data.transactionType }
+        )
+      }
+
+      // 2. Current holder
+      let currentHolder: any = null
+
+      if (asset.currentStatus === 'ASSIGNED') {
+        step('FETCH_CURRENT_HOLDER')
+
+        const [holder] = await tx
+          .select({
+            fullName: employeeModel.empFullName,
+            employeeCode: employeeModel.empCode,
+          })
+          .from(assetTransactionsModel)
+          .innerJoin(
+            employeeModel,
+            eq(employeeModel.employeeId, assetTransactionsModel.employeeId)
+          )
+          .where(
+            and(
+              eq(assetTransactionsModel.assetId, data.assetId),
+              eq(assetTransactionsModel.transactionType, 'ISSUE')
+            )
+          )
+          .orderBy(desc(assetTransactionsModel.transactionDate))
+          .limit(1)
+
+        currentHolder = holder || null
+      }
+
+      // 3. Block invalid issue
+      if (
+        data.transactionType === 'ISSUE' &&
+        asset.currentStatus === 'ASSIGNED'
+      ) {
+        throw new AssetTransactionError(
+          'Asset already assigned',
+          'ASSET_ALREADY_ASSIGNED',
+          { currentHolder }
+        )
+      }
+
+      // 4. Validate employee (FIXED logic clarity)
+      if (!rule.clearEmployee) {
+        step('VALIDATE_EMPLOYEE', { employeeId: data.employeeId })
+
+        if (!data.employeeId) {
+          throw new AssetTransactionError(
+            'Employee required for this transaction',
+            'EMPLOYEE_REQUIRED'
+          )
+        }
+
+        const [employee] = await tx
+          .select()
+          .from(employeeModel)
+          .where(eq(employeeModel.employeeId, data.employeeId))
+
+        if (!employee) {
+          throw new AssetTransactionError(
+            'Employee not found',
+            'EMPLOYEE_NOT_FOUND',
+            { employeeId: data.employeeId }
+          )
+        }
+      }
+
+      // 5. Validate date
+      step('VALIDATE_DATE', data.transactionDate)
+
+      const transactionDate = new Date(data.transactionDate)
+
+      if (Number.isNaN(transactionDate.getTime())) {
+        throw new AssetTransactionError(
+          'Invalid transaction date',
+          'INVALID_DATE',
+          { transactionDate: data.transactionDate }
+        )
+      }
+
+      // 6. Insert transaction
+      step('INSERT_TRANSACTION')
+
+      const [inserted] = await tx
+        .insert(assetTransactionsModel)
+        .values({
+          assetId: data.assetId,
+          employeeId: rule.clearEmployee ? null : (data.employeeId ?? null),
+          transactionType: data.transactionType,
+          transactionDate,
+          remarks: data.remarks,
+          approvedBy: data.approvedBy,
+          createdBy: data.createdBy,
+        })
+        .$returningId()
+
+      const transactionId = inserted.assetTransactionId
+
+      // 7. Update asset
+      step('UPDATE_ASSET_STATUS', rule.status)
+
+      await tx
+        .update(assetsModel)
+        .set({ currentStatus: rule.status })
+        .where(eq(assetsModel.assetId, data.assetId))
+
+      // 8. Lifecycle mapping
+      const lifecycleMap: Record<string, string> = {
+        ISSUE: 'ASSET_ASSIGNED',
+        RETURN: 'ASSET_RETURNED',
+      }
+
+      const lifecycleEventType = lifecycleMap[data.transactionType]
+
+      if (lifecycleEventType) {
+        step('INSERT_LIFECYCLE_EVENT')
+
+        await tx.insert(employeeLifecycleEventsModel).values({
+          employeeId: data.employeeId,
+          eventDate: toMySqlDate(new Date()),
+          employeeEventType: lifecycleEventType,
+          effectiveFrom: toMySqlDate(new Date(data.transactionDate)),
+          remarks: data.remarks ?? null,
+
+          performedBy: data.createdBy,
+          approvedBy: data.approvedBy ?? null,
+
+          referenceType: 'ASSET_TRANSACTION',
+          referenceId: transactionId,
+
+          oldValue: asset, // ← pass object, not string
+          newValue: {
+            assetId: data.assetId,
+            employeeId: data.employeeId ?? null,
+            transactionType: data.transactionType,
+          },
+
+          createdBy: data.createdBy,
+        } as any)
+      }
+
+      step('SUCCESS')
+
+      return {
+        success: true,
+        transactionId,
+      }
+    })
+  } catch (err: any) {
+    console.error('❌ Asset Transaction Failed:', {
+      message: err.message,
+      code: err.code,
+      stack: err.stack,
+      input: data,
+      context: err.context,
     })
 
-    // 6. Update asset status
-    await tx
-      .update(assetsModel)
-      .set({
-        currentStatus: rule.status,
-      })
-      .where(eq(assetsModel.assetId, data.assetId))
-
-    return {
-      success: true,
-      message: 'Asset transaction completed successfully',
-    }
-  })
+    throw err
+  }
 }
 
 //shows all asset transactions
