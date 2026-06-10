@@ -412,6 +412,7 @@ export const employeeModel = mysqlTable('employees', {
   certificateUrl: varchar('certificate_url', { length: 255 }),
   basicSalary: double('basic_salary').notNull(),
   isActive: boolean('is_active').notNull().default(true),
+  probationMonths: int('probation_months'),
   dependentsName: varchar('dependents_name', { length: 255 }),
   dependentRelation: varchar('dependent_relation', { length: 50 }),
   departmentId: int('department_id')
@@ -602,7 +603,7 @@ export const employeeEmploymentTypeHistoryModel = mysqlTable(
   }
 )
 
-export const employeeLifecycleEvents = mysqlTable('employee_lifecycle_events', {
+export const employeeLifecycleEventsModel = mysqlTable('employee_lifecycle_events', {
   employeeLifeCycleId: int('employee_life_cycle_id')
     .autoincrement()
     .primaryKey(),
@@ -611,29 +612,25 @@ export const employeeLifecycleEvents = mysqlTable('employee_lifecycle_events', {
     .notNull(),
   eventDate: date('event_date').notNull(),
   employeeEventType: mysqlEnum('employee_event_type', [
-    'JOINING',
-    'PROBATION_START',
-    'PROBATION_EXTEND',
-    'CONFIRMATION',
+    'JOINING', //data insertion process implemented
+    'PROBATION_START', //data insertion process implemented
+    'PROBATION_EXTEND', //data insertion process implemented
+    'CONFIRMATION', //data insertion process implemented
 
-    'DESIGNATION_CHANGE',
-    'DEPARTMENT_CHANGE',
-    'LOCATION_CHANGE',
-    'REPORTING_MANAGER_CHANGE',
+    'DESIGNATION_CHANGE', //data insertion process implemented
+    'DEPARTMENT_CHANGE', //data insertion process implemented
+    'LOCATION_CHANGE',  //data insertion process implemented
+    'REPORTING_AUTHORITY_CHANGE', //data insertion process implemented
 
-    'EMPLOYMENT_TYPE_CHANGE',
+    'EMPLOYMENT_TYPE_CHANGE', //data insertion process implemented
 
-    'SHIFT_CHANGE',
+    'SHIFT_CHANGE', 
     'ATTENDANCE_POLICY_CHANGE',
-    'LEAVE_POLICY_CHANGE',
+    'LEAVE_POLICY_CHANGE', //data insertion process implemented
 
-    'SALARY_STRUCTURE_CHANGE',
+    'SALARY_STRUCTURE_CHANGE', //data insertion process implemented
     'SALARY_REVISION',
     'ALLOWANCE_CHANGE',
-
-    'PROMOTION',
-    'DEMOTION',
-    'TRANSFER',
 
     'WARNING',
     'SUSPENSION',
@@ -644,13 +641,12 @@ export const employeeLifecycleEvents = mysqlTable('employee_lifecycle_events', {
 
     'REJOIN',
 
-    'ASSET_ASSIGNED',
-    'ASSET_RETURNED',
+    'ASSET_ASSIGNED', //data insertion process implemented
+    'ASSET_RETURNED', //data insertion process implemented
   ]),
-
   effectiveFrom: date('effective_from'),
   remarks: text('remarks'),
-  performedBy: int('performed_by').references(() => employeeModel.employeeId),
+  performedBy: int('performed_by').notNull(),
   approvedBy: int('approved_by').references(() => employeeModel.employeeId),
   referenceType: varchar('reference_type', {
     length: 50,
