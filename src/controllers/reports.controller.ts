@@ -14,7 +14,7 @@ export const employeeActivitiesReportController = async (
   try {
     requirePermission(req, 'view_report')
 
-    const employeeId = Number(req.params.employeeId)
+    const employeeId = Number(req.query.employeeId)
 
     if (!employeeId || isNaN(employeeId)) {
       res.status(400).json({
