@@ -425,9 +425,6 @@ export const employeeModel = mysqlTable('employees', {
   employmentTypeId: int('employee_type_id')
     .references(() => employmentTypeModel.employmentTypeId)
     .notNull(),
-  shiftId: int('shift_id')
-    .references(() => shiftModel.shiftId)
-    .notNull(),
   companyId: int('company_id')
     .references(() => companyModel.companyId)
     .notNull(),
@@ -604,65 +601,6 @@ export const employeeEmploymentTypeHistoryModel = mysqlTable(
   }
 )
 
-export const employeeLifecycleEventsModel = mysqlTable('employee_lifecycle_events', {
-  employeeLifeCycleId: int('employee_life_cycle_id')
-    .autoincrement()
-    .primaryKey(),
-  employeeId: int('employee_id')
-    .references(() => employeeModel.employeeId)
-    .notNull(),
-  eventDate: date('event_date').notNull(),
-  employeeEventType: mysqlEnum('employee_event_type', [
-    'JOINING', //data insertion process implemented
-    'PROBATION_START', //data insertion process implemented
-    'PROBATION_EXTEND', //data insertion process implemented
-    'CONFIRMATION', //data insertion process implemented
-
-    'DESIGNATION_CHANGE', //data insertion process implemented
-    'DEPARTMENT_CHANGE', //data insertion process implemented
-    'LOCATION_CHANGE',  //data insertion process implemented
-    'REPORTING_AUTHORITY_CHANGE', //data insertion process implemented
-
-    'EMPLOYMENT_TYPE_CHANGE', //data insertion process implemented
-
-    'SHIFT_CHANGE', 
-    'ATTENDANCE_POLICY_CHANGE',
-    'LEAVE_POLICY_CHANGE', //data insertion process implemented
-
-    'SALARY_STRUCTURE_CHANGE', //data insertion process implemented
-    'SALARY_REVISION',
-    'ALLOWANCE_CHANGE',
-
-    'WARNING',
-    'SUSPENSION',
-
-    'RESIGNATION',
-    'TERMINATION',
-    'RETIREMENT',
-
-    'REJOIN',
-
-    'ASSET_ASSIGNED', //data insertion process implemented
-    'ASSET_RETURNED', //data insertion process implemented
-  ]),
-  effectiveFrom: date('effective_from'),
-  remarks: text('remarks'),
-  performedBy: int('performed_by').notNull(),
-  approvedBy: int('approved_by').references(() => employeeModel.employeeId),
-  referenceType: varchar('reference_type', {
-    length: 50,
-  }),
-  referenceId: int('reference_id'),
-  oldValue: json('old_value'),
-  newValue: json('new_value'),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
 export const employeeDesignationHistory = mysqlTable(
   'employee_designation_history',
   {
@@ -803,6 +741,65 @@ export const employeeEmploymentTypeHistory = mysqlTable(
     ),
   }
 )
+
+export const employeeLifecycleEventsModel = mysqlTable('employee_lifecycle_events', {
+  employeeLifeCycleId: int('employee_life_cycle_id')
+    .autoincrement()
+    .primaryKey(),
+  employeeId: int('employee_id')
+    .references(() => employeeModel.employeeId)
+    .notNull(),
+  eventDate: date('event_date').notNull(),
+  employeeEventType: mysqlEnum('employee_event_type', [
+    'JOINING', //data insertion process implemented
+    'PROBATION_START', //data insertion process implemented
+    'PROBATION_EXTEND', //data insertion process implemented
+    'CONFIRMATION', //data insertion process implemented
+
+    'DESIGNATION_CHANGE', //data insertion process implemented
+    'DEPARTMENT_CHANGE', //data insertion process implemented
+    'LOCATION_CHANGE',  //data insertion process implemented
+    'REPORTING_AUTHORITY_CHANGE', //data insertion process implemented
+
+    'EMPLOYMENT_TYPE_CHANGE', //data insertion process implemented
+
+    'SHIFT_CHANGE', 
+    'ATTENDANCE_POLICY_CHANGE',
+    'LEAVE_POLICY_CHANGE', //data insertion process implemented
+
+    'SALARY_STRUCTURE_CHANGE', //data insertion process implemented
+    'SALARY_REVISION',
+    'ALLOWANCE_CHANGE',
+
+    'WARNING',
+    'SUSPENSION',
+
+    'RESIGNATION',
+    'TERMINATION',
+    'RETIREMENT',
+
+    'REJOIN',
+
+    'ASSET_ASSIGNED', //data insertion process implemented
+    'ASSET_RETURNED', //data insertion process implemented
+  ]),
+  effectiveFrom: date('effective_from'),
+  remarks: text('remarks'),
+  performedBy: int('performed_by').notNull(),
+  approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+  referenceType: varchar('reference_type', {
+    length: 50,
+  }),
+  referenceId: int('reference_id'),
+  oldValue: json('old_value'),
+  newValue: json('new_value'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
 
 export const notificationsModel = mysqlTable('notifications', {
   notificationId: int('notification_id').primaryKey().autoincrement(),
@@ -1608,10 +1605,6 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
   employmentType: one(employmentTypeModel, {
     fields: [employeeModel.employmentTypeId],
     references: [employmentTypeModel.employmentTypeId],
-  }),
-  shift: one(shiftModel, {
-    fields: [employeeModel.shiftId],
-    references: [shiftModel.shiftId],
   }),
   company: one(companyModel, {
     fields: [employeeModel.companyId],
