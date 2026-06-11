@@ -10,18 +10,14 @@ import {
   divisionModel,
   costCenterModel,
   workStationModel,
-  shiftModel,
   NewUser,
   userModel,
-  employeeLeaveAssignmentModel,
-  employeeSalaryStructureModel,
   employeePreboardingModel,
   salaryStructureMasterModel,
   leavePolicyMasterModel,
   employeeDepartmentHistoryModel,
   employeeDesignationHistoryModel,
   employeeEmploymentTypeHistoryModel,
-  employeeShiftHistoryModel,
   employeeLeavePolicyHistoryModel,
   employeeSalaryStructureHistoryModel,
   employeeLifecycleEventsModel,
@@ -120,7 +116,7 @@ export const createEmployee = async (input: {
 
         remarks,
 
-        performedBy: employeeData.employeeId ?? 0,
+        performedBy: employeeData.employeeId ?? null,
         approvedBy: null,
 
         referenceType: 'EMPLOYEE_CREATION',
@@ -132,7 +128,7 @@ export const createEmployee = async (input: {
           employeeType: employmentType.employmentTypeName,
         }),
 
-        createdBy: employeeData.employeeId ?? 0,
+        createdBy: employeeData.createdBy,
       } as any)
     }
 
@@ -205,7 +201,6 @@ export const updateEmployee = async (
       'departmentId',
       'designationId',
       'employmentTypeId',
-      'shiftId',
       'companyId',
       'workStationId',
       'divisionId',
@@ -283,7 +278,7 @@ export const updateEmployee = async (
         referenceId: referenceId ?? null,
         oldValue,
         newValue,
-        createdBy: createdBy ?? null,
+        createdBy: createdBy ?? 5,
       })
     }
 
@@ -302,7 +297,6 @@ export const updateEmployee = async (
     trackChange('departmentId', 'DEPARTMENT_CHANGE')
     trackChange('designationId', 'DESIGNATION_CHANGE')
     trackChange('employmentTypeId', 'EMPLOYMENT_TYPE_CHANGE')
-    trackChange('shiftId', 'SHIFT_CHANGE')
     trackChange('leavePolicyMasterId', 'LEAVE_POLICY_CHANGE')
     trackChange('salaryStructureMasterId', 'SALARY_STRUCTURE_CHANGE')
     trackChange('basicSalary', 'SALARY_REVISION')
@@ -439,18 +433,6 @@ export const updateEmployee = async (
     }
 
     if (
-      updateData.shiftId !== undefined &&
-      updateData.shiftId !== existing.shiftId &&
-      updateData.shiftId !== null
-    ) {
-      await tx.insert(employeeShiftHistoryModel).values({
-        employeeId,
-        shiftId: updateData.shiftId,
-        ...historyMeta,
-      })
-    }
-
-    if (
       updateData.leavePolicyMasterId !== undefined &&
       updateData.leavePolicyMasterId !== existing.leavePolicyMasterId &&
       updateData.leavePolicyMasterId !== null
@@ -567,7 +549,7 @@ export const getAllEmployees = async () => {
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
-      shiftId: employeeModel.shiftId,
+      probationMonths: employeeModel.probationMonths,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
@@ -582,9 +564,6 @@ export const getAllEmployees = async () => {
       companyName: companyModel.companyName,
       workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
-      shiftName: shiftModel.shiftName,
-      startTime: shiftModel.startTime,
-      endTime: shiftModel.endTime,
       costCenterName: costCenterModel.costCenterName,
       reportingAuthorityName: reportingAuthority.empFullName,
       leavePolicyName: leavePolicyMasterModel.policyName,
@@ -621,7 +600,6 @@ export const getAllEmployees = async () => {
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
-    .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
@@ -712,7 +690,7 @@ export const getEmployeeById = async (employeeId: number) => {
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
-      shiftId: employeeModel.shiftId,
+      probationMonths: employeeModel.probationMonths,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
@@ -728,7 +706,6 @@ export const getEmployeeById = async (employeeId: number) => {
       companyName: companyModel.companyName,
       workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
-      shiftName: shiftModel.shiftName,
       costCenterName: costCenterModel.costCenterName,
       leavePolicyName: leavePolicyMasterModel.policyName,
       salaryStructureName: salaryStructureMasterModel.structureName,
@@ -769,7 +746,6 @@ export const getEmployeeById = async (employeeId: number) => {
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
-    .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
