@@ -5,6 +5,7 @@ import {
   double,
   json,
   MySqlTableWithColumns,
+  tinyint,
 } from 'drizzle-orm/mysql-core'
 import {
   mysqlTable,
@@ -1402,6 +1403,27 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
   ),
 })
 
+// table to store the shift allocations for employees, this will help in tracking the shift history of employees and also for attendance and payroll processing
+export const employeeShiftAllocations = mysqlTable(
+  'employee_shift_allocations',
+  {
+    id:               int('id').autoincrement().primaryKey(),
+    employeeId:       int('employee_id').notNull()
+                        .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+    shiftId:          int('shift_id').notNull()
+                        .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
+    effectiveFrom:    date('effective_from', { mode: 'string' }).notNull(),
+    effectiveTo:      date('effective_to',   { mode: 'string' }),
+    remarks:          varchar('remarks', { length: 255 }),
+    approvedBy:       int('approved_by'),
+    createdBy:        int('created_by').notNull(),
+    createdAt:        timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    recurrenceType:   mysqlEnum('recurrence_type', ['weekly', 'monthly']),
+    recurrenceActive: tinyint('recurrence_active').default(0),
+  }
+)
+
+
 // ========================
 // Relations (unchanged)
 // ========================
@@ -1824,6 +1846,25 @@ export const attendanceDailyRelations = relations(
   })
 )
 
+// Relations for employee shift allocations
+export const employeeShiftAllocationsRelations = relations(
+  employeeShiftAllocations,
+  ({ one }) => ({
+    employee: one(employeeModel, {
+      fields: [employeeShiftAllocations.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+    shift: one(shiftModel, {
+      fields: [employeeShiftAllocations.shiftId],
+      references: [shiftModel.shiftId],
+    }),
+    approver: one(employeeModel, {
+      fields: [employeeShiftAllocations.approvedBy],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
 // ========================
 // Types (unchanged)
 // ========================
@@ -1928,3 +1969,9 @@ export type AttendancePunch = typeof attendancePunches.$inferSelect
 export type NewAttendancePunch = typeof attendancePunches.$inferInsert
 export type AttendanceDaily = typeof attendanceDaily.$inferSelect
 export type NewAttendanceDaily = typeof attendanceDaily.$inferInsert
+
+// Types for Employee Shift Allocations
+export type EmployeeShiftAllocation =
+  typeof employeeShiftAllocations.$inferSelect
+export type NewEmployeeShiftAllocation =
+  typeof employeeShiftAllocations.$inferInsert
