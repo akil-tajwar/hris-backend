@@ -52,6 +52,53 @@ const DAY_ORDER: Record<string, number> = {
 }
 
 // ─── Shift-aware week range ───────────────────────────────────────
+// const getShiftWeekRange = async (shiftId: number, fromDate: string) => {
+//   const shiftDays = await db
+//     .select({
+//       day:     weekDayModel.day,
+//       dayType: shiftDayAndWeekDaysModel.dayType,
+//     })
+//     .from(shiftDayAndWeekDaysModel)
+//     .leftJoin(
+//       weekDayModel,
+//       eq(shiftDayAndWeekDaysModel.weekDayId, weekDayModel.weekDayId)
+//     )
+//     .where(eq(shiftDayAndWeekDaysModel.shiftId, shiftId))
+
+//   const workingDays = shiftDays
+//     .filter((d) => d.dayType !== 'Weekend' && d.day)
+//     .map((d) => DAY_ORDER[d.day!])
+//     .sort((a, b) => a - b)
+
+//   if (!workingDays.length) return getNextWeekRange(fromDate)
+
+//   const weekStartDay = workingDays[0]
+//   const weekEndDay   = workingDays[workingDays.length - 1]
+
+//   const [y, m, d] = fromDate.split('-').map(Number)
+//   const date       = new Date(y, m - 1, d)
+//   const currentDow = date.getDay()
+
+//   let daysToAdd = weekStartDay - currentDow
+//   if (daysToAdd <= 0) daysToAdd += 7
+
+//   const start = new Date(y, m - 1, d + daysToAdd)
+//   const weekLength =
+//     weekEndDay >= weekStartDay
+//       ? weekEndDay - weekStartDay
+//       : 7 - weekStartDay + weekEndDay
+//   const end = new Date(
+//     start.getFullYear(),
+//     start.getMonth(),
+//     start.getDate() + weekLength
+//   )
+
+//   return {
+//     effectiveFrom: toDateString(start),
+//     effectiveTo:   toDateString(end),
+//   }
+// }
+// ─── Shift-aware week range ───────────────────────────────────────
 const getShiftWeekRange = async (shiftId: number, fromDate: string) => {
   const shiftDays = await db
     .select({
@@ -79,14 +126,16 @@ const getShiftWeekRange = async (shiftId: number, fromDate: string) => {
   const date       = new Date(y, m - 1, d)
   const currentDow = date.getDay()
 
-  let daysToAdd = weekStartDay - currentDow
-  if (daysToAdd <= 0) daysToAdd += 7
+  let diff = weekStartDay - currentDow
+  if (diff > 0) diff -= 7  // forward হলে পিছিয়ে আসো (current week)
 
-  const start = new Date(y, m - 1, d + daysToAdd)
+  const start = new Date(y, m - 1, d + diff)
+
   const weekLength =
     weekEndDay >= weekStartDay
       ? weekEndDay - weekStartDay
       : 7 - weekStartDay + weekEndDay
+
   const end = new Date(
     start.getFullYear(),
     start.getMonth(),

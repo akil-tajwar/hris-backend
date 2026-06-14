@@ -1,18 +1,51 @@
 import { NextFunction, Request, Response } from 'express'
 import { createInsertSchema } from 'drizzle-zod'
-import { holidayModel } from '../schemas'
+import { holidaysModel } from '../schemas'
 import { requirePermission } from '../services/utils/jwt.utils'
 import {
   createHoliday,
+  createHolidayRange,
   deleteHoliday,
   editHoliday,
   getAllHolidays,
   getHolidayById,
 } from '../services/holidays.service'
+import { z } from 'zod'
+
+// Range schema
+const createHolidayRangeSchema = z.object({
+  calendarId: z.number(),
+  title: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  type: z.string(),
+  isRecurring: z.boolean().optional(),
+  isOptional: z.boolean().optional(),
+  description: z.string().optional(),
+})
+
+export const createHolidayRangeController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    requirePermission(req, 'create_holiday')
+    const rangeData = createHolidayRangeSchema.parse(req.body)
+    const result = await createHolidayRange(rangeData)
+
+    res.status(201).json({
+      status: 'success',
+      ...result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 
 // Schema validation
-const createHolidaySchema = createInsertSchema(holidayModel).omit({
-  holidayId: true,
+const createHolidaySchema = createInsertSchema(holidaysModel).omit({
+  id: true,
 })
 
 const editHolidaySchema = createHolidaySchema.partial()
@@ -25,7 +58,6 @@ export const createHolidayController = async (
   try {
     requirePermission(req, 'create_holiday')
     const holidayData = createHolidaySchema.parse(req.body)
-    console.log("🚀 ~ createHolidayController ~ holidayData:", holidayData)
     const holiday = await createHoliday(holidayData)
 
     res.status(201).json({
@@ -44,7 +76,17 @@ export const getAllHolidaysController = async (
 ) => {
   try {
     requirePermission(req, 'view_holiday')
-    const holidays = await getAllHolidays()
+
+    const calendarId = req.query.calendarId
+      ? Number(req.query.calendarId)
+      : undefined
+    const type = req.query.type ? String(req.query.type) : undefined
+    const isOptional =
+      req.query.isOptional !== undefined
+        ? req.query.isOptional === 'true'
+        : undefined
+
+    const holidays = await getAllHolidays({ calendarId, type, isOptional })
 
     res.status(200).json(holidays)
   } catch (error) {
@@ -85,21 +127,21 @@ export const editHolidayController = async (
   }
 }
 
-export const deleteHolidayController = async (req: Request, res: Response) => {
+export const deleteHolidayController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     requirePermission(req, 'delete_holiday')
-    const holidayId = Number(req.params.id);
-
-    const result = await deleteHoliday(holidayId);
+    const id = Number(req.params.id)
+    const result = await deleteHoliday(id)
 
     res.status(200).json({
       success: true,
       ...result,
-    });
-  } catch (error: any) {
-    res.status(400).json({
-      success: false,
-      message: error.message || "Something went wrong",
-    });
+    })
+  } catch (error) {
+    next(error)
   }
-};
+}
