@@ -246,7 +246,7 @@ export const createAssetTransaction = async (data: {
         )
       }
 
-      // 4. Validate employee (FIXED logic clarity)
+      // 4. Validate employee
       if (!rule.clearEmployee) {
         step('VALIDATE_EMPLOYEE', { employeeId: data.employeeId })
 
@@ -314,6 +314,10 @@ export const createAssetTransaction = async (data: {
       const lifecycleMap: Record<string, string> = {
         ISSUE: 'ASSET_ASSIGNED',
         RETURN: 'ASSET_RETURNED',
+        TRANSFER: 'ASSET_TRANSFERRED',
+        LOST: 'ASSET_LOST',
+        DAMAGE: 'ASSET_DAMAGED',
+        REPLACEMENT: 'ASSET_REPLACED',
       }
 
       const lifecycleEventType = lifecycleMap[data.transactionType]
@@ -321,25 +325,30 @@ export const createAssetTransaction = async (data: {
       if (lifecycleEventType) {
         step('INSERT_LIFECYCLE_EVENT')
 
+        const oldValue = {
+          assetName: asset.assetName,
+        }
+
+        const newValue =
+          data.transactionType === 'ISSUE'
+            ? {
+                assetName: asset.assetName,
+              }
+            : null
+
         await tx.insert(employeeLifecycleEventsModel).values({
-          employeeId: data.employeeId,
+          employeeId: data.employeeId ?? null,
           eventDate: toMySqlDate(new Date()),
           employeeEventType: lifecycleEventType,
           effectiveFrom: toMySqlDate(new Date(data.transactionDate)),
           remarks: data.remarks ?? null,
-
           performedBy: data.createdBy,
           approvedBy: data.approvedBy ?? null,
-
           referenceType: 'ASSET_TRANSACTION',
           referenceId: transactionId,
 
-          oldValue: asset, // ← pass object, not string
-          newValue: {
-            assetId: data.assetId,
-            employeeId: data.employeeId ?? null,
-            transactionType: data.transactionType,
-          },
+          oldValue,
+          newValue,
 
           createdBy: data.createdBy,
         } as any)
