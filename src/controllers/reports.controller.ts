@@ -2,10 +2,40 @@ import { Request, Response } from 'express'
 import { requirePermission } from '../services/utils/jwt.utils'
 import { dailyAttendanceReport, attendanceSummaryReport } from '../services/reports.service'
 import {
+  employeeActivitiesReport,
   employeeAttendanceReport,
   loneReport,
   salaryReport,
 } from '../services/reports.service'
+
+export const employeeActivitiesReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    requirePermission(req, 'view_report')
+
+    const employeeId = Number(req.query.employeeId)
+
+    if (!employeeId || isNaN(employeeId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Valid employeeId is required',
+      })
+    }
+
+    const data = await employeeActivitiesReport(employeeId)
+
+    res.status(200).json(data)
+  } catch (error) {
+    console.error('Employee activity report error:', error)
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch employee activity report',
+    })
+  }
+}
 
 export const employeeAttendanceReportController = async (
   req: Request,

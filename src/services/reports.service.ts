@@ -1,17 +1,141 @@
-import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
+  companyModel,
+  costCenterModel,
   departmentModel,
   designationModel,
+  divisionModel,
   employeeAttendanceModel,
+  employeeLifecycleEventsModel,
   employeeLoneModel,
   employeeModel,
   employeeSalaryComponentsModel,
+  employmentTypeModel,
   salaryComponentsModel,
   salaryModel,
+  workStationModel,
+  attendanceDaily
 } from '../schemas'
 
-import { attendanceDaily } from '../schemas' 
+export const employeeActivitiesReport = async (employeeId: number) => {
+  // Employee Details
+  const [employeeDetails] = await db
+    .select({
+      employeeId: employeeModel.employeeId,
+      empCode: employeeModel.empCode,
+      empFullName: employeeModel.empFullName,
+      empShortName: employeeModel.empShortName,
+
+      dob: employeeModel.dob,
+      doj: employeeModel.doj,
+      doc: employeeModel.doc,
+
+      gender: employeeModel.gender,
+      nationalIdNo: employeeModel.nationalIdNo,
+      nationality: employeeModel.nationality,
+
+      personalPhone: employeeModel.personalPhone,
+      officialPhone: employeeModel.officialPhone,
+      workEmail: employeeModel.workEmail,
+      privateEmail: employeeModel.privateEmail,
+
+      presentAddress: employeeModel.presentAddress,
+      permanentAddress: employeeModel.permanentAddress,
+
+      emergencyContactName: employeeModel.emergencyContactName,
+      emergencyContactPhone: employeeModel.emergencyContactPhone,
+      emergencyContactRelation: employeeModel.emergencyContactRelation,
+
+      maritalStatus: employeeModel.maritalStatus,
+      religion: employeeModel.religion,
+      bloodGroup: employeeModel.bloodGroup,
+
+      qualification: employeeModel.qualification,
+      instituteName: employeeModel.instituteName,
+      subjectName: employeeModel.subjectName,
+      result: employeeModel.result,
+      certificateUrl: employeeModel.certificateUrl,
+
+      basicSalary: employeeModel.basicSalary,
+      probationMonths: employeeModel.probationMonths,
+      isActive: employeeModel.isActive,
+
+      departmentId: departmentModel.departmentId,
+      departmentName: departmentModel.departmentName,
+
+      designationId: designationModel.designationId,
+      designationName: designationModel.designationName,
+
+      employmentTypeId: employmentTypeModel.employmentTypeId,
+      employmentTypeName: employmentTypeModel.employmentTypeName,
+
+      companyId: companyModel.companyId,
+      companyName: companyModel.companyName,
+
+      workStationId: workStationModel.workStationId,
+      workStationName: workStationModel.workStationName,
+
+      divisionId: divisionModel.divisionId,
+      divisionName: divisionModel.divisionName,
+
+      costCenterId: costCenterModel.costCenterId,
+      costCenterName: costCenterModel.costCenterName,
+    })
+    .from(employeeModel)
+    .leftJoin(
+      designationModel,
+      eq(employeeModel.designationId, designationModel.designationId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
+    )
+    .leftJoin(
+      employmentTypeModel,
+      eq(employeeModel.employmentTypeId, employmentTypeModel.employmentTypeId)
+    )
+    .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
+    .leftJoin(
+      workStationModel,
+      eq(employeeModel.workStationId, workStationModel.workStationId)
+    )
+    .leftJoin(
+      divisionModel,
+      eq(employeeModel.divisionId, divisionModel.divisionId)
+    )
+    .leftJoin(
+      costCenterModel,
+      eq(employeeModel.costCenterId, costCenterModel.costCenterId)
+    )
+    .where(eq(employeeModel.employeeId, employeeId))
+  // Employee History with performedBy and approvedBy names
+  const employeeHistory = await db
+    .select({
+      employeeLifeCycleId: employeeLifecycleEventsModel.employeeLifeCycleId,
+      eventDate: employeeLifecycleEventsModel.eventDate,
+      employeeEventType: employeeLifecycleEventsModel.employeeEventType,
+      effectiveFrom: employeeLifecycleEventsModel.effectiveFrom,
+      remarks: employeeLifecycleEventsModel.remarks,
+
+      performedBy: sql<string>`(SELECT username FROM users WHERE user_id = ${employeeLifecycleEventsModel.performedBy})`,
+      approvedBy: sql<string>`(SELECT emp_full_name FROM employees WHERE employee_id = ${employeeLifecycleEventsModel.approvedBy})`,
+
+      referenceType: employeeLifecycleEventsModel.referenceType,
+      referenceId: employeeLifecycleEventsModel.referenceId,
+      oldValue: employeeLifecycleEventsModel.oldValue,
+      newValue: employeeLifecycleEventsModel.newValue,
+      createdAt: employeeLifecycleEventsModel.createdAt,
+    })
+    .from(employeeLifecycleEventsModel)
+    .where(eq(employeeLifecycleEventsModel.employeeId, employeeId))
+    .orderBy(desc(employeeLifecycleEventsModel.eventDate))
+
+  return {
+    employeeDetails,
+    employeeHistory,
+  }
+}
 
 export const employeeAttendanceReport = async (
   fromDate: string,
@@ -136,8 +260,7 @@ export const salaryReport = async (
       employeeId: employeeSalaryComponentsModel.employeeId,
       empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
-      salaryComponentId:
-        employeeSalaryComponentsModel.salaryComponentId,
+      salaryComponentId: employeeSalaryComponentsModel.salaryComponentId,
       componentName: salaryComponentsModel.componentName,
       componentType: salaryComponentsModel.componentType,
       amount: employeeSalaryComponentsModel.amount,
@@ -158,10 +281,7 @@ export const salaryReport = async (
     )
     .innerJoin(
       employeeModel,
-      eq(
-        employeeSalaryComponentsModel.employeeId,
-        employeeModel.employeeId
-      )
+      eq(employeeSalaryComponentsModel.employeeId, employeeModel.employeeId)
     )
     .where(
       and(
@@ -249,8 +369,7 @@ export const loneReport = async (fromDate: string, toDate: string) => {
       // installment data
       employeeSalaryComponentId:
         employeeSalaryComponentsModel.employeeSalaryComponentId,
-      salaryComponentId:
-        employeeSalaryComponentsModel.salaryComponentId,
+      salaryComponentId: employeeSalaryComponentsModel.salaryComponentId,
       salaryMonth: employeeSalaryComponentsModel.salaryMonth,
       salaryYear: employeeSalaryComponentsModel.salaryYear,
       installmentAmount: employeeSalaryComponentsModel.amount,

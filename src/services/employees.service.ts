@@ -10,18 +10,14 @@ import {
   divisionModel,
   costCenterModel,
   workStationModel,
-  shiftModel,
   NewUser,
   userModel,
-  employeeLeaveAssignmentModel,
-  employeeSalaryStructureModel,
   employeePreboardingModel,
   salaryStructureMasterModel,
   leavePolicyMasterModel,
   employeeDepartmentHistoryModel,
   employeeDesignationHistoryModel,
   employeeEmploymentTypeHistoryModel,
-  employeeShiftHistoryModel,
   employeeLeavePolicyHistoryModel,
   employeeSalaryStructureHistoryModel,
   employeeLifecycleEventsModel,
@@ -120,7 +116,7 @@ export const createEmployee = async (input: {
 
         remarks,
 
-        performedBy: employeeData.employeeId ?? 0,
+        performedBy: employeeData.employeeId ?? null,
         approvedBy: null,
 
         referenceType: 'EMPLOYEE_CREATION',
@@ -128,11 +124,10 @@ export const createEmployee = async (input: {
 
         oldValue: null,
         newValue: JSON.stringify({
-          employeeId,
-          employeeType: employmentType.employmentTypeName,
+          employmentType: employmentType.employmentTypeName,
         }),
 
-        createdBy: employeeData.employeeId ?? 0,
+        createdBy: employeeData.createdBy,
       } as any)
     }
 
@@ -173,7 +168,6 @@ export const updateEmployee = async (
   data: Partial<NewEmployee> & {
     leavePolicyMasterId?: number | null
     salaryStructureMasterId?: number | null
-
     effectiveFrom?: Date | string
     effectiveTo?: Date | string | null
     changeReason?: string
@@ -205,7 +199,6 @@ export const updateEmployee = async (
       'departmentId',
       'designationId',
       'employmentTypeId',
-      'shiftId',
       'companyId',
       'workStationId',
       'divisionId',
@@ -243,20 +236,72 @@ export const updateEmployee = async (
     // ===========================
     const historyMeta = {
       effectiveFrom:
-        effectiveFrom !== undefined
-          ? typeof effectiveFrom === 'string'
-            ? new Date(effectiveFrom)
-            : effectiveFrom
-          : new Date(),
+        typeof effectiveFrom === 'string'
+          ? new Date(effectiveFrom)
+          : (effectiveFrom ?? new Date()),
       effectiveTo:
-        effectiveTo !== undefined && effectiveTo !== null
-          ? typeof effectiveTo === 'string'
+        effectiveTo === undefined || effectiveTo === null
+          ? null
+          : typeof effectiveTo === 'string'
             ? new Date(effectiveTo)
-            : effectiveTo
-          : null,
+            : effectiveTo,
       changeReason: changeReason ?? null,
       approvedBy: approvedBy ?? null,
       createdBy: createdBy ?? 0,
+    }
+
+    // ===========================
+    // FK RESOLVER (IMPORTANT PART)
+    // ===========================
+    const resolveName = async (field: string, id: any) => {
+      if (!id) return null
+
+      switch (field) {
+        case 'departmentId': {
+          const row = await tx.query.departmentModel.findFirst({
+            where: eq(departmentModel.departmentId, id),
+          })
+          return row?.departmentName ?? null
+        }
+
+        case 'designationId': {
+          const row = await tx.query.designationModel.findFirst({
+            where: eq(designationModel.designationId, id),
+          })
+          return row?.designationName ?? null
+        }
+
+        case 'employmentTypeId': {
+          const row = await tx.query.employmentTypeModel.findFirst({
+            where: eq(employmentTypeModel.employmentTypeId, id),
+          })
+          return row?.employmentTypeName ?? null
+        }
+
+        case 'leavePolicyMasterId': {
+          const row = await tx.query.leavePolicyMasterModel.findFirst({
+            where: eq(leavePolicyMasterModel.leavePolicyMasterId, id),
+          })
+          return row?.policyName ?? null
+        }
+
+        case 'salaryStructureMasterId': {
+          const row = await tx.query.salaryStructureMasterModel.findFirst({
+            where: eq(salaryStructureMasterModel.salaryStructureMasterId, id),
+          })
+          return row?.structureName ?? null
+        }
+
+        case 'reportingAuthorityId': {
+          const row = await tx.query.employeeModel.findFirst({
+            where: eq(employeeModel.employeeId, id),
+          })
+          return row?.empFullName ?? null
+        }
+
+        default:
+          return id
+      }
     }
 
     // ===========================
@@ -283,196 +328,39 @@ export const updateEmployee = async (
         referenceId: referenceId ?? null,
         oldValue,
         newValue,
-        createdBy: createdBy ?? null,
+        createdBy: createdBy ?? 5,
       })
     }
 
-    const trackChange = (field: string, eventType: any) => {
+    const trackChange = async (field: string, eventType: any) => {
       const oldVal = (existing as any)[field]
       const newVal = (updateData as any)[field]
 
-      if (newVal !== undefined && newVal !== oldVal) {
+      if (newVal === undefined || newVal === oldVal) return
+
+      const isFk = fkFields.includes(field)
+
+      if (isFk) {
+        const oldName = await resolveName(field, oldVal)
+        const newName = await resolveName(field, newVal)
+
+        const cleanKey = field.replace(/Id$/, 'Name')
+
+        pushEvent(eventType, { [cleanKey]: oldName }, { [cleanKey]: newName })
+      } else {
         pushEvent(eventType, { [field]: oldVal }, { [field]: newVal })
       }
     }
 
     // ===========================
-    // BASIC TRACKING
+    // TRACK CHANGES
     // ===========================
-    trackChange('departmentId', 'DEPARTMENT_CHANGE')
-    trackChange('designationId', 'DESIGNATION_CHANGE')
-    trackChange('employmentTypeId', 'EMPLOYMENT_TYPE_CHANGE')
-    trackChange('shiftId', 'SHIFT_CHANGE')
-    trackChange('leavePolicyMasterId', 'LEAVE_POLICY_CHANGE')
-    trackChange('salaryStructureMasterId', 'SALARY_STRUCTURE_CHANGE')
-    trackChange('basicSalary', 'SALARY_REVISION')
-
-    // ===========================
-    // PROBATION CHANGE
-    // ===========================
-    const oldProbation = existing.probationMonths
-    const newProbation = updateData.probationMonths
-
-    if (
-      newProbation !== undefined &&
-      newProbation !== oldProbation &&
-      newProbation !== null
-    ) {
-      pushEvent(
-        'PROBATION_EXTEND',
-        { probationMonths: oldProbation },
-        { probationMonths: newProbation }
-      )
-    }
-
-    // ===========================
-    // EMPLOYMENT TYPE → CONFIRMATION
-    // ===========================
-    let oldEmploymentTypeName: string | undefined
-    let newEmploymentTypeName: string | undefined
-
-    if (existing.employmentTypeId) {
-      const oldType = await tx.query.employmentTypeModel.findFirst({
-        where: eq(
-          employmentTypeModel.employmentTypeId,
-          existing.employmentTypeId
-        ),
-      })
-      oldEmploymentTypeName = oldType?.employmentTypeName
-    }
-
-    if (updateData.employmentTypeId) {
-      const newType = await tx.query.employmentTypeModel.findFirst({
-        where: eq(
-          employmentTypeModel.employmentTypeId,
-          updateData.employmentTypeId
-        ),
-      })
-      newEmploymentTypeName = newType?.employmentTypeName
-    }
-
-    if (
-      newEmploymentTypeName === 'Confirmed' &&
-      oldEmploymentTypeName !== 'Confirmed'
-    ) {
-      pushEvent(
-        'CONFIRMATION',
-        { employmentType: oldEmploymentTypeName },
-        { employmentType: newEmploymentTypeName }
-      )
-    }
-
-    // ===========================
-    // LOCATION CHANGE
-    // ===========================
-    const locationChanged =
-      (updateData.city !== undefined && updateData.city !== existing.city) ||
-      (updateData.country !== undefined &&
-        updateData.country !== existing.country)
-
-    if (locationChanged) {
-      pushEvent(
-        'LOCATION_CHANGE',
-        {
-          city: existing.city,
-          country: existing.country,
-        },
-        {
-          city: updateData.city ?? existing.city,
-          country: updateData.country ?? existing.country,
-        }
-      )
-    }
-
-    // ===========================
-    // REPORTING AUTHORITY CHANGE
-    // ===========================
-    if (
-      updateData.reportingAuthorityId !== undefined &&
-      updateData.reportingAuthorityId !== existing.reportingAuthorityId &&
-      updateData.reportingAuthorityId !== null
-    ) {
-      pushEvent(
-        'REPORTING_AUTHORITY_CHANGE',
-        { reportingAuthorityId: existing.reportingAuthorityId },
-        { reportingAuthorityId: updateData.reportingAuthorityId }
-      )
-    }
-
-    // ===========================
-    // HISTORY TABLE INSERTS
-    // ===========================
-    if (
-      updateData.departmentId !== undefined &&
-      updateData.departmentId !== existing.departmentId &&
-      updateData.departmentId !== null
-    ) {
-      await tx.insert(employeeDepartmentHistoryModel).values({
-        employeeId,
-        departmentId: updateData.departmentId,
-        ...historyMeta,
-      })
-    }
-
-    if (
-      updateData.designationId !== undefined &&
-      updateData.designationId !== existing.designationId &&
-      updateData.designationId !== null
-    ) {
-      await tx.insert(employeeDesignationHistoryModel).values({
-        employeeId,
-        designationId: updateData.designationId,
-        ...historyMeta,
-      })
-    }
-
-    if (
-      updateData.employmentTypeId !== undefined &&
-      updateData.employmentTypeId !== existing.employmentTypeId &&
-      updateData.employmentTypeId !== null
-    ) {
-      await tx.insert(employeeEmploymentTypeHistoryModel).values({
-        employeeId,
-        employmentTypeId: updateData.employmentTypeId,
-        ...historyMeta,
-      })
-    }
-
-    if (
-      updateData.shiftId !== undefined &&
-      updateData.shiftId !== existing.shiftId &&
-      updateData.shiftId !== null
-    ) {
-      await tx.insert(employeeShiftHistoryModel).values({
-        employeeId,
-        shiftId: updateData.shiftId,
-        ...historyMeta,
-      })
-    }
-
-    if (
-      updateData.leavePolicyMasterId !== undefined &&
-      updateData.leavePolicyMasterId !== existing.leavePolicyMasterId &&
-      updateData.leavePolicyMasterId !== null
-    ) {
-      await tx.insert(employeeLeavePolicyHistoryModel).values({
-        employeeId,
-        leavePolicyId: updateData.leavePolicyMasterId,
-        ...historyMeta,
-      })
-    }
-
-    if (
-      updateData.salaryStructureMasterId !== undefined &&
-      updateData.salaryStructureMasterId !== existing.salaryStructureMasterId &&
-      updateData.salaryStructureMasterId !== null
-    ) {
-      await tx.insert(employeeSalaryStructureHistoryModel).values({
-        employeeId,
-        salaryStructureId: updateData.salaryStructureMasterId,
-        ...historyMeta,
-      })
-    }
+    await trackChange('departmentId', 'DEPARTMENT_CHANGE')
+    await trackChange('designationId', 'DESIGNATION_CHANGE')
+    await trackChange('employmentTypeId', 'EMPLOYMENT_TYPE_CHANGE')
+    await trackChange('leavePolicyMasterId', 'LEAVE_POLICY_CHANGE')
+    await trackChange('salaryStructureMasterId', 'SALARY_STRUCTURE_CHANGE')
+    await trackChange('basicSalary', 'SALARY_REVISION')
 
     // ===========================
     // UPDATE EMPLOYEE
@@ -567,6 +455,7 @@ export const getAllEmployees = async () => {
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
+      probationMonths: employeeModel.probationMonths,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
@@ -707,7 +596,7 @@ export const getEmployeeById = async (employeeId: number) => {
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
-      shiftId: employeeModel.shiftId,
+      probationMonths: employeeModel.probationMonths,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
@@ -723,7 +612,6 @@ export const getEmployeeById = async (employeeId: number) => {
       companyName: companyModel.companyName,
       workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
-      shiftName: shiftModel.shiftName,
       costCenterName: costCenterModel.costCenterName,
       leavePolicyName: leavePolicyMasterModel.policyName,
       salaryStructureName: salaryStructureMasterModel.structureName,
@@ -764,7 +652,6 @@ export const getEmployeeById = async (employeeId: number) => {
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
-    .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
