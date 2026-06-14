@@ -1,6 +1,6 @@
 import { Router } from 'express'
 
-import {  attendanceSummaryReportController, dailyAttendanceReportController, employeeAttendanceReportController, loneReportController, salaryReportController } from '../controllers/reports.controller'
+import {  attendanceSummaryReportController, employeeActivitiesReportController, dailyAttendanceReportController, employeeAttendanceReportController, loneReportController, salaryReportController } from '../controllers/reports.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
 const router = Router()
