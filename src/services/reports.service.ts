@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   departmentModel,
@@ -10,6 +10,8 @@ import {
   salaryComponentsModel,
   salaryModel,
 } from '../schemas'
+
+import { attendanceDaily } from '../schemas' 
 
 export const employeeAttendanceReport = async (
   fromDate: string,
@@ -335,4 +337,72 @@ export const loneReport = async (fromDate: string, toDate: string) => {
   }
 
   return Array.from(groupedMap.values())
+}
+
+
+
+// ─── Report 1: Daily Attendance ───────────────────────────────
+export const dailyAttendanceReport = async (date: string) => {
+  return await db
+    .select({
+      employeeId: employeeModel.employeeId,
+      empCode: employeeModel.empCode,
+      employeeName: employeeModel.empFullName,
+      departmentName: departmentModel.departmentName,
+      designationName: designationModel.designationName,
+      attendanceDate: attendanceDaily.attendanceDate,
+      firstIn: attendanceDaily.firstIn,
+      lastOut: attendanceDaily.lastOut,
+      workedMinutes: attendanceDaily.workedMinutes,
+      lateMinutes: attendanceDaily.lateMinutes,
+      earlyOutMinutes: attendanceDaily.earlyOutMinutes,
+      overtimeMinutes: attendanceDaily.overtimeMinutes,
+      status: attendanceDaily.status, // PRESENT / ABSENT / LATE / HALF_DAY
+    })
+    .from(attendanceDaily)
+    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
+    .leftJoin(departmentModel, eq(employeeModel.departmentId, departmentModel.departmentId))
+    .leftJoin(designationModel, eq(employeeModel.designationId, designationModel.designationId))
+   .where(sql`DATE(${attendanceDaily.attendanceDate}) = ${date}`)  // ← এটাই fix
+    .orderBy(employeeModel.empCode)
+}
+
+// ─── Report 2: Attendance Summary (Date Range) ────────────────
+export const attendanceSummaryReport = async (fromDate: string, toDate: string) => {
+  const rows = await db
+    .select({
+      attendanceDate: attendanceDaily.attendanceDate,
+      status: attendanceDaily.status,
+    })
+    .from(attendanceDaily)
+   .where(
+  sql`DATE(${attendanceDaily.attendanceDate}) BETWEEN ${fromDate} AND ${toDate}`
+)
+
+  // Date অনুযায়ী group করো
+  const summaryMap = new Map<string, { present: number; absent: number; late: number; halfDay: number }>()
+
+  for (const row of rows) {
+    const dateKey = (row.attendanceDate as Date).toISOString().split('T')[0]
+    if (!summaryMap.has(dateKey)) {
+      summaryMap.set(dateKey, { present: 0, absent: 0, late: 0, halfDay: 0 })
+    }
+    const entry = summaryMap.get(dateKey)!
+    const s = row.status?.toUpperCase()
+    if (s === 'PRESENT')   entry.present++
+    else if (s === 'ABSENT')    entry.absent++
+    else if (s === 'LATE')      entry.late++
+    else if (s === 'HALF_DAY')  entry.halfDay++
+  }
+
+  return Array.from(summaryMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, counts]) => ({
+      date,
+      present:  counts.present,
+      absent:   counts.absent,
+      late:     counts.late,
+      halfDay:  counts.halfDay,
+      total:    counts.present + counts.absent + counts.late + counts.halfDay,
+    }))
 }

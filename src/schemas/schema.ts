@@ -952,20 +952,52 @@ export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
   ),
 })
 
-export const holidayModel = mysqlTable('holidays', {
-  holidayId: int('holiday_id').primaryKey().autoincrement(),
-  holidayName: varchar('holiday_name', { length: 100 }).notNull(),
-  startDate: date('start_date').notNull(),
-  endDate: date('end_date').notNull(),
-  noOfDays: int('no_of_days').notNull(),
-  description: text('description'),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
+// export const holidayModel = mysqlTable('holidays', {
+//   holidayId: int('holiday_id').primaryKey().autoincrement(),
+//   holidayName: varchar('holiday_name', { length: 100 }).notNull(),
+//   startDate: date('start_date').notNull(),
+//   endDate: date('end_date').notNull(),
+//   noOfDays: int('no_of_days').notNull(),
+//   description: text('description'),
+//   createdBy: int('created_by').notNull(),
+//   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+//   updatedBy: int('updated_by'),
+//   updatedAt: timestamp('updated_at').default(
+//     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+//   ),
+// })
+ 
+export const holidayCalendarModel = mysqlTable('holiday_calendars', {
+  id: int('id').autoincrement().primaryKey(),
+ companyId: int('company_id')
+    .notNull()
+    .references(() => companyModel.companyId, { onDelete: 'restrict' }),
+  year: int('year').notNull(), // e.g. 2026
+  name: varchar('name', { length: 100 }), // e.g. "Bangladesh Holiday Calendar 2026"
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').onUpdateNow(),
 })
+ 
+export const holidaysModel = mysqlTable('holidays', {
+  id: int('id').autoincrement().primaryKey(),
+  calendarId: int('calendar_id')
+    .notNull()
+    .references(() => holidayCalendarModel.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 150 }).notNull(),
+  // e.g. "Eid ul-Fitr", "Independence Day"
+ date: timestamp('date', { mode: 'string' }).notNull(),
+  // actual holiday date
+  type: varchar('type', { length: 50 }).notNull(),
+  // e.g. PUBLIC, RELIGIOUS, NATIONAL, COMPANY, OPTIONAL
+  isRecurring: boolean('is_recurring').default(false),
+  // true → repeats every year (e.g. 21 Feb)
+  isOptional: boolean('is_optional').default(false),
+  // optional leave type holidays
+  description: varchar('description', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
 
 export const leaveTypeModel = mysqlTable('leave_types', {
   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
@@ -1865,6 +1897,21 @@ export const employeeShiftAllocationsRelations = relations(
   })
 )
 
+// Relations for Holiday Calendar and Holidays
+export const holidayCalendarRelations = relations(
+  holidayCalendarModel,
+  ({ many }) => ({
+    holidays: many(holidaysModel),
+  })
+)
+ 
+export const holidaysRelations = relations(holidaysModel, ({ one }) => ({
+  calendar: one(holidayCalendarModel, {
+    fields: [holidaysModel.calendarId],
+    references: [holidayCalendarModel.id],
+  }),
+}))
+
 // ========================
 // Types (unchanged)
 // ========================
@@ -1915,8 +1962,8 @@ export type WeekDay = typeof weekDayModel.$inferSelect
 export type NewWeekDay = typeof weekDayModel.$inferInsert
 export type Shift = typeof shiftModel.$inferSelect
 export type NewShift = typeof shiftModel.$inferInsert
-export type Holiday = typeof holidayModel.$inferSelect
-export type NewHoliday = typeof holidayModel.$inferInsert
+// export type Holiday = typeof holidayModel.$inferSelect
+// export type NewHoliday = typeof holidayModel.$inferInsert
 export type LeaveType = typeof leaveTypeModel.$inferSelect
 export type NewLeaveType = typeof leaveTypeModel.$inferInsert
 export type LeavePolicyMaster = typeof leavePolicyMasterModel.$inferSelect
@@ -1975,3 +2022,9 @@ export type EmployeeShiftAllocation =
   typeof employeeShiftAllocations.$inferSelect
 export type NewEmployeeShiftAllocation =
   typeof employeeShiftAllocations.$inferInsert
+
+
+export type HolidayCalendar = typeof holidayCalendarModel.$inferSelect
+export type NewHolidayCalendar = typeof holidayCalendarModel.$inferInsert
+export type Holiday = typeof holidaysModel.$inferSelect
+export type NewHoliday = typeof holidaysModel.$inferInsert

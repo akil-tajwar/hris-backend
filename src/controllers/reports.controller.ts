@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { requirePermission } from '../services/utils/jwt.utils'
+import { dailyAttendanceReport, attendanceSummaryReport } from '../services/reports.service'
 import {
   employeeAttendanceReport,
   loneReport,
@@ -143,5 +144,50 @@ export const loneReportController = async (req: Request, res: Response) => {
       success: false,
       message: 'Failed to fetch lone report',
     })
+  }
+}
+
+
+
+
+export const dailyAttendanceReportController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // requirePermission(req, 'view_attendance_report')
+    const { date } = req.query
+
+    if (!date) {
+      res.status(400).json({
+        success: false,
+        message: 'date is required (format: YYYY-MM-DD)',
+      })
+      return  // ← return শুধু এখানে, res.status এর আগে না
+    }
+
+    const data = await dailyAttendanceReport(date as string)
+    res.status(200).json({ success: true, data })
+  } catch (error) {
+    console.error('Daily attendance report error:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch daily attendance report' })
+  }
+}
+
+export const attendanceSummaryReportController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // requirePermission(req, 'view_attendance_report')
+    const { fromDate, toDate } = req.query
+
+    if (!fromDate || !toDate) {
+      res.status(400).json({
+        success: false,
+        message: 'fromDate and toDate are required',
+      })
+      return
+    }
+
+    const data = await attendanceSummaryReport(fromDate as string, toDate as string)
+    res.status(200).json({ success: true, data })
+  } catch (error) {
+    console.error('Attendance summary report error:', error)
+    res.status(500).json({ success: false, message: 'Failed to fetch attendance summary' })
   }
 }

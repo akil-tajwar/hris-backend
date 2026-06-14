@@ -8,24 +8,41 @@ import {
   getAttendancePunchesByEmployee,
   deleteAttendancePunch,
 } from '../services/attendancePunch.service'
+import { processAttendanceForDate } from '../services/attendanceProcessing.service'
 
 // ========================
 // ATTENDANCE PUNCHES
 // ========================
 
-export const createAttendancePunchController = async (
-  req: Request,
-  res: Response
-) => {
+// export const createAttendancePunchController = async (
+//   req: Request,
+//   res: Response
+// ) => {
+//   try {
+//     requirePermission(req, 'create_attendance_punch')
+//     const data = await createAttendancePunch(req.body)
+//     res.status(201).json(data)
+//   } catch (error: any) {
+//     console.error('❌ Attendance Punch create error:', error)
+//     res
+//       .status(400)
+//       .json({ success: false, message: error.message || 'Something went wrong' })
+//   }
+// }
+export const createAttendancePunchController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'create_attendance_punch')
     const data = await createAttendancePunch(req.body)
+
+    // ✅ instant process
+    const attendanceDate = new Date(req.body.punchTime)
+      .toISOString()
+      .slice(0, 10)
+    await processAttendanceForDate(attendanceDate)
+
     res.status(201).json(data)
   } catch (error: any) {
-    console.error('❌ Attendance Punch create error:', error)
-    res
-      .status(400)
-      .json({ success: false, message: error.message || 'Something went wrong' })
+    res.status(400).json({ success: false, message: error.message })
   }
 }
 

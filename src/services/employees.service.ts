@@ -567,7 +567,6 @@ export const getAllEmployees = async () => {
       departmentId: employeeModel.departmentId,
       designationId: employeeModel.designationId,
       employmentTypeId: employeeModel.employmentTypeId,
-      shiftId: employeeModel.shiftId,
       companyId: employeeModel.companyId,
       workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
@@ -582,9 +581,6 @@ export const getAllEmployees = async () => {
       companyName: companyModel.companyName,
       workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
-      shiftName: shiftModel.shiftName,
-      startTime: shiftModel.startTime,
-      endTime: shiftModel.endTime,
       costCenterName: costCenterModel.costCenterName,
       reportingAuthorityName: reportingAuthority.empFullName,
       leavePolicyName: leavePolicyMasterModel.policyName,
@@ -621,7 +617,6 @@ export const getAllEmployees = async () => {
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
-    .leftJoin(shiftModel, eq(employeeModel.shiftId, shiftModel.shiftId))
     .leftJoin(
       reportingAuthority,
       eq(employeeModel.reportingAuthorityId, reportingAuthority.employeeId)
