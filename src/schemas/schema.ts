@@ -1362,6 +1362,8 @@ export const attendancePoliciesModel = mysqlTable('attendance_policies', {
   maxOvertimeMinutes: int('max_overtime_minutes').default(240),
   allowCompOff: boolean('allow_comp_off').default(false),
   isActive: boolean('is_active').default(true),
+  holidayCalendarId: int('holiday_calendar_id')
+    .references(() => holidayCalendarModel.id, { onDelete: 'set null' }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1421,7 +1423,16 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
   lateMinutes: int('late_minutes'),
   earlyOutMinutes: int('early_out_minutes'),
   overtimeMinutes: int('overtime_minutes'),
-  status: varchar('status', { length: 20 }).notNull(),
+  // ✅ varchar থেকে enum এ convert
+  status: mysqlEnum('status', [
+    'PRESENT',
+    'ABSENT',
+    'LATE',
+    'HALF_DAY',
+    'HOLIDAY',
+    'WEEKEND',
+    'ON_LEAVE',
+  ]).notNull(),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at', { mode: 'date' }).default(
     sql`CURRENT_TIMESTAMP`
