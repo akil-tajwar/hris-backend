@@ -742,64 +742,67 @@ export const employeeEmploymentTypeHistory = mysqlTable(
   }
 )
 
-export const employeeLifecycleEventsModel = mysqlTable('employee_lifecycle_events', {
-  employeeLifeCycleId: int('employee_life_cycle_id')
-    .autoincrement()
-    .primaryKey(),
-  employeeId: int('employee_id')
-    .references(() => employeeModel.employeeId)
-    .notNull(),
-  eventDate: date('event_date').notNull(),
-  employeeEventType: mysqlEnum('employee_event_type', [
-    'JOINING', //data insertion process implemented
-    'PROBATION_START', //data insertion process implemented
-    'PROBATION_EXTEND', //data insertion process implemented
-    'CONFIRMATION', //data insertion process implemented
+export const employeeLifecycleEventsModel = mysqlTable(
+  'employee_lifecycle_events',
+  {
+    employeeLifeCycleId: int('employee_life_cycle_id')
+      .autoincrement()
+      .primaryKey(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    eventDate: date('event_date').notNull(),
+    employeeEventType: mysqlEnum('employee_event_type', [
+      'JOINING', //data insertion process implemented
+      'PROBATION_START', //data insertion process implemented
+      'PROBATION_EXTEND', //data insertion process implemented
+      'CONFIRMATION', //data insertion process implemented
 
-    'DESIGNATION_CHANGE', //data insertion process implemented
-    'DEPARTMENT_CHANGE', //data insertion process implemented
-    'LOCATION_CHANGE',  //data insertion process implemented
-    'REPORTING_AUTHORITY_CHANGE', //data insertion process implemented
+      'DESIGNATION_CHANGE', //data insertion process implemented
+      'DEPARTMENT_CHANGE', //data insertion process implemented
+      'LOCATION_CHANGE', //data insertion process implemented
+      'REPORTING_AUTHORITY_CHANGE', //data insertion process implemented
 
-    'EMPLOYMENT_TYPE_CHANGE', //data insertion process implemented
+      'EMPLOYMENT_TYPE_CHANGE', //data insertion process implemented
 
-    'SHIFT_CHANGE', 
-    'ATTENDANCE_POLICY_CHANGE',
-    'LEAVE_POLICY_CHANGE', //data insertion process implemented
+      'SHIFT_CHANGE',
+      'ATTENDANCE_POLICY_CHANGE',
+      'LEAVE_POLICY_CHANGE', //data insertion process implemented
 
-    'SALARY_STRUCTURE_CHANGE', //data insertion process implemented
-    'SALARY_REVISION',
-    'ALLOWANCE_CHANGE',
+      'SALARY_STRUCTURE_CHANGE', //data insertion process implemented
+      'SALARY_REVISION',
+      'ALLOWANCE_CHANGE',
 
-    'WARNING',
-    'SUSPENSION',
+      'WARNING',
+      'SUSPENSION',
 
-    'RESIGNATION',
-    'TERMINATION',
-    'RETIREMENT',
+      'RESIGNATION',
+      'TERMINATION',
+      'RETIREMENT',
 
-    'REJOIN',
+      'REJOIN',
 
-    'ASSET_ASSIGNED', //data insertion process implemented
-    'ASSET_RETURNED', //data insertion process implemented
-  ]),
-  effectiveFrom: date('effective_from'),
-  remarks: text('remarks'),
-  performedBy: int('performed_by').notNull(),
-  approvedBy: int('approved_by').references(() => employeeModel.employeeId),
-  referenceType: varchar('reference_type', {
-    length: 50,
-  }),
-  referenceId: int('reference_id'),
-  oldValue: json('old_value'),
-  newValue: json('new_value'),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
+      'ASSET_ASSIGNED', //data insertion process implemented
+      'ASSET_RETURNED', //data insertion process implemented
+    ]),
+    effectiveFrom: date('effective_from'),
+    remarks: text('remarks'),
+    performedBy: int('performed_by').notNull(),
+    approvedBy: int('approved_by').references(() => employeeModel.employeeId),
+    referenceType: varchar('reference_type', {
+      length: 50,
+    }),
+    referenceId: int('reference_id'),
+    oldValue: json('old_value'),
+    newValue: json('new_value'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
 
 export const notificationsModel = mysqlTable('notifications', {
   notificationId: int('notification_id').primaryKey().autoincrement(),
@@ -963,10 +966,10 @@ export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
 //     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
 //   ),
 // })
- 
+
 export const holidayCalendarModel = mysqlTable('holiday_calendars', {
   id: int('id').autoincrement().primaryKey(),
- companyId: int('company_id')
+  companyId: int('company_id')
     .notNull()
     .references(() => companyModel.companyId, { onDelete: 'restrict' }),
   year: int('year').notNull(), // e.g. 2026
@@ -975,7 +978,7 @@ export const holidayCalendarModel = mysqlTable('holiday_calendars', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').onUpdateNow(),
 })
- 
+
 export const holidaysModel = mysqlTable('holidays', {
   id: int('id').autoincrement().primaryKey(),
   calendarId: int('calendar_id')
@@ -983,7 +986,7 @@ export const holidaysModel = mysqlTable('holidays', {
     .references(() => holidayCalendarModel.id, { onDelete: 'cascade' }),
   title: varchar('title', { length: 150 }).notNull(),
   // e.g. "Eid ul-Fitr", "Independence Day"
- date: timestamp('date', { mode: 'string' }).notNull(),
+  date: timestamp('date', { mode: 'string' }).notNull(),
   // actual holiday date
   type: varchar('type', { length: 50 }).notNull(),
   // e.g. PUBLIC, RELIGIOUS, NATIONAL, COMPANY, OPTIONAL
@@ -994,7 +997,6 @@ export const holidaysModel = mysqlTable('holidays', {
   description: varchar('description', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow(),
 })
-
 
 export const leaveTypeModel = mysqlTable('leave_types', {
   leaveTypeId: int('leave_type_id').primaryKey().autoincrement(),
@@ -1110,6 +1112,31 @@ export const employeeLeaveAssignmentModel = mysqlTable(
     ),
   }
 )
+
+export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
+  employeeLeaveApplyId: int('employee_leave_apply_id')
+    .primaryKey()
+    .autoincrement(),
+  employeeId: int('employee_id')
+    .notNull()
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  leavePolicyMasterId: int('leave_policy_master_id')
+    .references(() => leavePolicyMasterModel.leavePolicyMasterId)
+    .notNull(),
+  leavePolicyDetailsId: int('leave_policy_details_id')
+    .references(() => leavePolicyDetailsModel.leavePolicyDetailsId)
+    .notNull(),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  approvedByRepAuth: boolean('approved_by_rep_auth').notNull().default(false),
+  approvedByHr: boolean('approved_by_hr').notNull().default(false),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
 
 export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   employeeAttendanceId: int('employee_attendance_id')
@@ -1436,22 +1463,23 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
 export const employeeShiftAllocations = mysqlTable(
   'employee_shift_allocations',
   {
-    id:               int('id').autoincrement().primaryKey(),
-    employeeId:       int('employee_id').notNull()
-                        .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-    shiftId:          int('shift_id').notNull()
-                        .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
-    effectiveFrom:    date('effective_from', { mode: 'string' }).notNull(),
-    effectiveTo:      date('effective_to',   { mode: 'string' }),
-    remarks:          varchar('remarks', { length: 255 }),
-    approvedBy:       int('approved_by'),
-    createdBy:        int('created_by').notNull(),
-    createdAt:        timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-    recurrenceType:   mysqlEnum('recurrence_type', ['weekly', 'monthly']),
+    id: int('id').autoincrement().primaryKey(),
+    employeeId: int('employee_id')
+      .notNull()
+      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+    shiftId: int('shift_id')
+      .notNull()
+      .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
+    effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
+    effectiveTo: date('effective_to', { mode: 'string' }),
+    remarks: varchar('remarks', { length: 255 }),
+    approvedBy: int('approved_by'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    recurrenceType: mysqlEnum('recurrence_type', ['weekly', 'monthly']),
     recurrenceActive: tinyint('recurrence_active').default(0),
   }
 )
-
 
 // ========================
 // Relations (unchanged)
@@ -1808,6 +1836,24 @@ export const leavePolicyMasterRelations = relations(
   })
 )
 
+export const employeeLeaveApplyRelations = relations(
+  employeeLeaveApplyModel,
+  ({ one }) => ({
+    leavePolicyMaster: one(leavePolicyMasterModel, {
+      fields: [employeeLeaveApplyModel.leavePolicyMasterId],
+      references: [leavePolicyMasterModel.leavePolicyMasterId],
+    }),
+    leavePolicyDetails: one(leavePolicyDetailsModel, {
+      fields: [employeeLeaveApplyModel.leavePolicyDetailsId],
+      references: [leavePolicyDetailsModel.leavePolicyDetailsId],
+    }),
+    employee: one(employeeModel, {
+      fields: [employeeLeaveApplyModel.employeeId],
+      references: [employeeModel.employeeId],
+    }),
+  })
+)
+
 export const assetRelations = relations(assetsModel, ({ one }) => ({
   category: one(assetCategoryModel, {
     fields: [assetsModel.categoryId],
@@ -1897,7 +1943,7 @@ export const holidayCalendarRelations = relations(
     holidays: many(holidaysModel),
   })
 )
- 
+
 export const holidaysRelations = relations(holidaysModel, ({ one }) => ({
   calendar: one(holidayCalendarModel, {
     fields: [holidaysModel.calendarId],
@@ -1955,8 +2001,6 @@ export type WeekDay = typeof weekDayModel.$inferSelect
 export type NewWeekDay = typeof weekDayModel.$inferInsert
 export type Shift = typeof shiftModel.$inferSelect
 export type NewShift = typeof shiftModel.$inferInsert
-// export type Holiday = typeof holidayModel.$inferSelect
-// export type NewHoliday = typeof holidayModel.$inferInsert
 export type LeaveType = typeof leaveTypeModel.$inferSelect
 export type NewLeaveType = typeof leaveTypeModel.$inferInsert
 export type LeavePolicyMaster = typeof leavePolicyMasterModel.$inferSelect
@@ -1967,6 +2011,8 @@ export type EmployeeLeaveAssignment =
   typeof employeeLeaveAssignmentModel.$inferSelect
 export type NewEmployeeLeaveAssignment =
   typeof employeeLeaveAssignmentModel.$inferInsert
+export type EmployeeLeaveApply = typeof employeeLeaveApplyModel.$inferSelect
+export type NewEmployeeLeaveApply = typeof employeeLeaveApplyModel.$inferInsert
 export type EmployeeAttendance = typeof employeeAttendanceModel.$inferSelect
 export type NewEmployeeAttendance = typeof employeeAttendanceModel.$inferInsert
 export type SalaryComponent = typeof salaryComponentsModel.$inferSelect
@@ -2015,7 +2061,6 @@ export type EmployeeShiftAllocation =
   typeof employeeShiftAllocations.$inferSelect
 export type NewEmployeeShiftAllocation =
   typeof employeeShiftAllocations.$inferInsert
-
 
 export type HolidayCalendar = typeof holidayCalendarModel.$inferSelect
 export type NewHolidayCalendar = typeof holidayCalendarModel.$inferInsert
