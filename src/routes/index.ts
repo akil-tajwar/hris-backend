@@ -17,7 +17,7 @@ import checklistRoutes from './checklist.routes'
 import employeeRoutes from './employees.routes'
 import notificationRoutes from './notification.routes'
 import shiftRoutes from './shifts.routes'
-// import holidayRoutes from './holidays.routes'
+import holidayRoutes from './holidays.routes'
 import leaveTypeRoutes from './leaveTypes.routes'
 import leavePolicyRoutes from './leavePolicy.routes'
 import employeeAttendanceRoutes from './employeeAttendances.routes'
@@ -59,7 +59,7 @@ router.use('/checklists', checklistRoutes)
 router.use('/employees', employeeRoutes)
 router.use('/notifications', notificationRoutes)
 router.use('/shift', shiftRoutes)
-// router.use('/holidays', holidayRoutes)
+router.use('/holidays', holidayRoutes)
 router.use('/holidayCalendar', holidayCalendarRoutes)
 router.use ('/holidays', holidaysRoutes) 
 router.use('/leaveTypes', leaveTypeRoutes)
@@ -80,4 +80,5 @@ router.use('/attendanceDaily', attendanceDailyRoutes)
 router.use('/csv', csvImportRoutes)
 router.use('/shiftAllocation', shiftAllocationRoutes)
 router.use('/attendanceProcessing', attendanceProcessingRoutes)
+
 export default router
