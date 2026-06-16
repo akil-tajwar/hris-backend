@@ -1113,6 +1113,22 @@ export const employeeLeaveAssignmentModel = mysqlTable(
   }
 )
 
+export const employeeLeaveBalanceModel = mysqlTable(
+  'employee_leave_balance',
+  {
+    employeeLeaveBalanceId: int('employee_leave_balance_id').primaryKey().autoincrement(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    leaveTypeId: int('leave_type_id')
+      .references(() => leaveTypeModel.leaveTypeId)
+      .notNull(),
+    year: int('year').notNull(),
+    earnedDays: double('earned_days').notNull(),
+    usedDays: double('used_days').notNull().default(0),
+  }
+)
+
 export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
   employeeLeaveApplyId: int('employee_leave_apply_id')
     .primaryKey()
@@ -1120,14 +1136,13 @@ export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-  leavePolicyMasterId: int('leave_policy_master_id')
-    .references(() => leavePolicyMasterModel.leavePolicyMasterId)
-    .notNull(),
-  leavePolicyDetailsId: int('leave_policy_details_id')
-    .references(() => leavePolicyDetailsModel.leavePolicyDetailsId)
+  leaveTypeId: int('leave_type_id')
+    .references(() => leaveTypeModel.leaveTypeId)
     .notNull(),
   effectiveFrom: date('effective_from').notNull(),
   effectiveTo: date('effective_to'),
+  noOfDays: int("no_of_days").notNull(),
+  status: mysqlEnum(['Pending', 'Approved', 'Rejected']).notNull(),
   approvedByRepAuth: boolean('approved_by_rep_auth').notNull().default(false),
   approvedByHr: boolean('approved_by_hr').notNull().default(false),
   createdBy: int('created_by').notNull(),
@@ -1839,13 +1854,9 @@ export const leavePolicyMasterRelations = relations(
 export const employeeLeaveApplyRelations = relations(
   employeeLeaveApplyModel,
   ({ one }) => ({
-    leavePolicyMaster: one(leavePolicyMasterModel, {
-      fields: [employeeLeaveApplyModel.leavePolicyMasterId],
-      references: [leavePolicyMasterModel.leavePolicyMasterId],
-    }),
-    leavePolicyDetails: one(leavePolicyDetailsModel, {
-      fields: [employeeLeaveApplyModel.leavePolicyDetailsId],
-      references: [leavePolicyDetailsModel.leavePolicyDetailsId],
+    leaveType: one (leaveTypeModel, {
+      fields: [employeeLeaveApplyModel.leaveTypeId],
+      references: [leaveTypeModel.leaveTypeId]
     }),
     employee: one(employeeModel, {
       fields: [employeeLeaveApplyModel.employeeId],

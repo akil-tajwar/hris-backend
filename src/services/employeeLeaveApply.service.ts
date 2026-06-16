@@ -6,6 +6,7 @@ import {
   leavePolicyDetailsModel,
   NewEmployeeLeaveApply,
   EmployeeLeaveApply,
+  leaveTypeModel,
 } from '../schemas'
 import { eq } from 'drizzle-orm'
 
@@ -38,15 +39,11 @@ export const getEmployeeLeaveApplications = async () => {
         employeeLeaveApplyModel.employeeLeaveApplyId,
 
       employeeId: employeeLeaveApplyModel.employeeId,
-      employeeName: employeeModel.empFullName,
+      empFullName: employeeModel.empFullName,
       empCode: employeeModel.empCode,
 
-      leavePolicyMasterId:
-        employeeLeaveApplyModel.leavePolicyMasterId,
-      policyName: leavePolicyMasterModel.policyName,
-
-      leavePolicyDetailsId:
-        employeeLeaveApplyModel.leavePolicyDetailsId,
+      leaveTypeId: employeeLeaveApplyModel.leaveTypeId,
+      leaveTypeName: leaveTypeModel.name,
       yearlyAllocation:
         leavePolicyDetailsModel.yearlyAllocation,
       accrualFrequency:
@@ -56,7 +53,8 @@ export const getEmployeeLeaveApplications = async () => {
         employeeLeaveApplyModel.effectiveFrom,
       effectiveTo:
         employeeLeaveApplyModel.effectiveTo,
-
+      noOfDays: employeeLeaveApplyModel.noOfDays,
+      status: employeeLeaveApplyModel.status,
       approvedByRepAuth:
         employeeLeaveApplyModel.approvedByRepAuth,
       approvedByHr:
@@ -83,15 +81,8 @@ export const getEmployeeLeaveApplications = async () => {
     .leftJoin(
       leavePolicyMasterModel,
       eq(
-        employeeLeaveApplyModel.leavePolicyMasterId,
-        leavePolicyMasterModel.leavePolicyMasterId
-      )
-    )
-    .leftJoin(
-      leavePolicyDetailsModel,
-      eq(
-        employeeLeaveApplyModel.leavePolicyDetailsId,
-        leavePolicyDetailsModel.leavePolicyDetailsId
+        employeeLeaveApplyModel.leaveTypeId,
+        leaveTypeModel.leaveTypeId
       )
     )
 }
