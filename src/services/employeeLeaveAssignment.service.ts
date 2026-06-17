@@ -5,8 +5,11 @@ import {
   departmentModel,
   designationModel,
   employeeLeaveAssignmentModel,
+  employeeLeaveBalanceModel,
   employeeModel,
+  leavePolicyDetailsModel,
   leavePolicyMasterModel,
+  leaveTypeModel,
   NewEmployee,
   NewEmployeeLeaveAssignment,
 } from '../schemas'
@@ -14,27 +17,94 @@ import { eq, sql } from 'drizzle-orm'
 
 const toDate = (value: Date | string) => new Date(value)
 
+function calculateAllocatedLeaves(
+  maxDaysPerYear: number,
+  doj: Date,
+  effectiveFrom: Date
+): number {
+  const startDate = doj > effectiveFrom ? doj : effectiveFrom
+  const remainingMonths = 12 - startDate.getMonth()
+
+  return Math.round((maxDaysPerYear / 12) * remainingMonths)
+}
+
 export const createEmployeeLeaveAssignmentService = async (
   data: NewEmployeeLeaveAssignment
 ) => {
-  try {
-    const result = await db.insert(employeeLeaveAssignmentModel).values({
-      employeeId: data.employeeId,
-      leavePolicyMasterId: data.leavePolicyMasterId,
-      effectiveFrom: toDate(data.effectiveFrom),
-      effectiveTo: data.effectiveTo ? toDate(data.effectiveTo) : null,
-      active: data.active,
-      createdBy: data.createdBy,
+  return await db.transaction(async (tx) => {
+    // Create assignment
+    const [assignment] = await tx
+      .insert(employeeLeaveAssignmentModel)
+      .values({
+        employeeId: data.employeeId,
+        leavePolicyMasterId: data.leavePolicyMasterId,
+        effectiveFrom: toDate(data.effectiveFrom),
+        effectiveTo: data.effectiveTo ? toDate(data.effectiveTo) : null,
+        active: data.active,
+        createdBy: data.createdBy,
+      })
+      .$returningId()
+
+    // Get employee
+    const [employee] = await tx
+      .select({
+        doj: employeeModel.doj,
+      })
+      .from(employeeModel)
+      .where(eq(employeeModel.employeeId, data.employeeId))
+
+    if (!employee) {
+      throw new Error('Employee not found')
+    }
+
+    const doj = new Date(employee.doj)
+    const effectiveFrom = new Date(data.effectiveFrom)
+
+    // Get policy details + leave type
+    const policyDetails = await tx
+      .select({
+        leaveTypeId: leavePolicyDetailsModel.leaveTypeId,
+        maxDaysPerYear: leaveTypeModel.maxDaysPerYear,
+      })
+      .from(leavePolicyDetailsModel)
+      .innerJoin(
+        leaveTypeModel,
+        eq(leavePolicyDetailsModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+      )
+      .where(
+        eq(
+          leavePolicyDetailsModel.leavePolicyMasterId,
+          data.leavePolicyMasterId
+        )
+      )
+
+    if (policyDetails.length === 0) {
+      throw new Error('No leave policy details found')
+    }
+
+    const balanceRows = policyDetails.map((detail) => {
+      const earnedDays = calculateAllocatedLeaves(
+        detail.maxDaysPerYear,
+        doj,
+        effectiveFrom
+      )
+
+      return {
+        employeeId: data.employeeId,
+        leaveTypeId: detail.leaveTypeId,
+        year: effectiveFrom.getFullYear(),
+        earnedDays,
+        usedDays: 0,
+      }
     })
+
+    await tx.insert(employeeLeaveBalanceModel).values(balanceRows)
 
     return {
       success: true,
-      data: result,
+      assignmentId: assignment.employeeLeaveAssignmentId,
     }
-  } catch (error) {
-    console.error('Employee Leave Assignment Create Error:', error)
-    throw new Error('Failed to create employee leave assignment')
-  }
+  })
 }
 
 export const updateEmployeeLeaveAssignmentService = async (
