@@ -952,20 +952,26 @@ export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
   ),
 })
 
-// export const holidayModel = mysqlTable('holidays', {
-//   holidayId: int('holiday_id').primaryKey().autoincrement(),
-//   holidayName: varchar('holiday_name', { length: 100 }).notNull(),
-//   startDate: date('start_date').notNull(),
-//   endDate: date('end_date').notNull(),
-//   noOfDays: int('no_of_days').notNull(),
-//   description: text('description'),
-//   createdBy: int('created_by').notNull(),
-//   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-//   updatedBy: int('updated_by'),
-//   updatedAt: timestamp('updated_at').default(
-//     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-//   ),
-// })
+export const employeeShiftAllocations = mysqlTable(
+  'employee_shift_allocations',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    employeeId: int('employee_id')
+      .notNull()
+      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+    shiftId: int('shift_id')
+      .notNull()
+      .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
+    effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
+    effectiveTo: date('effective_to', { mode: 'string' }),
+    remarks: varchar('remarks', { length: 255 }),
+    approvedBy: int('approved_by'),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    recurrenceType: mysqlEnum('recurrence_type', ['weekly', 'monthly']),
+    recurrenceActive: tinyint('recurrence_active').default(0),
+  }
+)
 
 export const holidayCalendarModel = mysqlTable('holiday_calendars', {
   id: int('id').autoincrement().primaryKey(),
@@ -985,15 +991,10 @@ export const holidaysModel = mysqlTable('holidays', {
     .notNull()
     .references(() => holidayCalendarModel.id, { onDelete: 'cascade' }),
   title: varchar('title', { length: 150 }).notNull(),
-  // e.g. "Eid ul-Fitr", "Independence Day"
   date: timestamp('date', { mode: 'string' }).notNull(),
-  // actual holiday date
   type: varchar('type', { length: 50 }).notNull(),
-  // e.g. PUBLIC, RELIGIOUS, NATIONAL, COMPANY, OPTIONAL
   isRecurring: boolean('is_recurring').default(false),
-  // true → repeats every year (e.g. 21 Feb)
   isOptional: boolean('is_optional').default(false),
-  // optional leave type holidays
   description: varchar('description', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow(),
 })
@@ -1113,21 +1114,20 @@ export const employeeLeaveAssignmentModel = mysqlTable(
   }
 )
 
-export const employeeLeaveBalanceModel = mysqlTable(
-  'employee_leave_balance',
-  {
-    employeeLeaveBalanceId: int('employee_leave_balance_id').primaryKey().autoincrement(),
-    employeeId: int('employee_id')
-      .references(() => employeeModel.employeeId)
-      .notNull(),
-    leaveTypeId: int('leave_type_id')
-      .references(() => leaveTypeModel.leaveTypeId)
-      .notNull(),
-    year: int('year').notNull(),
-    earnedDays: double('earned_days').notNull(),
-    usedDays: double('used_days').notNull().default(0),
-  }
-)
+export const employeeLeaveBalanceModel = mysqlTable('employee_leave_balance', {
+  employeeLeaveBalanceId: int('employee_leave_balance_id')
+    .primaryKey()
+    .autoincrement(),
+  employeeId: int('employee_id')
+    .references(() => employeeModel.employeeId)
+    .notNull(),
+  leaveTypeId: int('leave_type_id')
+    .references(() => leaveTypeModel.leaveTypeId)
+    .notNull(),
+  year: int('year').notNull(),
+  earnedDays: double('earned_days').notNull(),
+  usedDays: double('used_days').notNull().default(0),
+})
 
 export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
   employeeLeaveApplyId: int('employee_leave_apply_id')
@@ -1141,32 +1141,10 @@ export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
     .notNull(),
   effectiveFrom: date('effective_from').notNull(),
   effectiveTo: date('effective_to'),
-  noOfDays: int("no_of_days").notNull(),
+  noOfDays: int('no_of_days').notNull(),
   status: mysqlEnum(['Pending', 'Approved', 'Rejected']).notNull(),
   approvedByRepAuth: boolean('approved_by_rep_auth').notNull().default(false),
   approvedByHr: boolean('approved_by_hr').notNull().default(false),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
-export const employeeAttendanceModel = mysqlTable('employee_attendances', {
-  employeeAttendanceId: int('employee_attendance_id')
-    .primaryKey()
-    .autoincrement(),
-  employeeId: int('employee_id')
-    .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-  attendanceDate: date('attendance_date').notNull(),
-  inTime: varchar('in_time', { length: 10 }),
-  outTime: varchar('out_time', { length: 10 }),
-  lateInMinutes: int('late_in_minutes'),
-  earlyOutMinutes: int('early_out_minutes'),
-  isAbsent: boolean('is_absent').notNull().default(false),
-  isLeave: boolean('is_leave').notNull().default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1388,9 +1366,28 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   ),
 })
 
-// ========================
-// Attendance Policy Tables
-// ========================
+export const employeeAttendanceModel = mysqlTable('employee_attendances', {
+  employeeAttendanceId: int('employee_attendance_id')
+    .primaryKey()
+    .autoincrement(),
+  employeeId: int('employee_id')
+    .notNull()
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  attendanceDate: date('attendance_date').notNull(),
+  inTime: varchar('in_time', { length: 10 }),
+  outTime: varchar('out_time', { length: 10 }),
+  lateInMinutes: int('late_in_minutes'),
+  earlyOutMinutes: int('early_out_minutes'),
+  isAbsent: boolean('is_absent').notNull().default(false),
+  isLeave: boolean('is_leave').notNull().default(false),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const attendancePoliciesModel = mysqlTable('attendance_policies', {
   id: int('id').autoincrement().primaryKey(),
   code: varchar('code', { length: 50 }).notNull(),
@@ -1404,8 +1401,10 @@ export const attendancePoliciesModel = mysqlTable('attendance_policies', {
   maxOvertimeMinutes: int('max_overtime_minutes').default(240),
   allowCompOff: boolean('allow_comp_off').default(false),
   isActive: boolean('is_active').default(true),
-  holidayCalendarId: int('holiday_calendar_id')
-    .references(() => holidayCalendarModel.id, { onDelete: 'set null' }),
+  holidayCalendarId: int('holiday_calendar_id').references(
+    () => holidayCalendarModel.id,
+    { onDelete: 'set null' }
+  ),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1484,28 +1483,6 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
-
-// table to store the shift allocations for employees, this will help in tracking the shift history of employees and also for attendance and payroll processing
-export const employeeShiftAllocations = mysqlTable(
-  'employee_shift_allocations',
-  {
-    id: int('id').autoincrement().primaryKey(),
-    employeeId: int('employee_id')
-      .notNull()
-      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-    shiftId: int('shift_id')
-      .notNull()
-      .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
-    effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
-    effectiveTo: date('effective_to', { mode: 'string' }),
-    remarks: varchar('remarks', { length: 255 }),
-    approvedBy: int('approved_by'),
-    createdBy: int('created_by').notNull(),
-    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-    recurrenceType: mysqlEnum('recurrence_type', ['weekly', 'monthly']),
-    recurrenceActive: tinyint('recurrence_active').default(0),
-  }
-)
 
 // ========================
 // Relations (unchanged)
@@ -1865,9 +1842,9 @@ export const leavePolicyMasterRelations = relations(
 export const employeeLeaveApplyRelations = relations(
   employeeLeaveApplyModel,
   ({ one }) => ({
-    leaveType: one (leaveTypeModel, {
+    leaveType: one(leaveTypeModel, {
       fields: [employeeLeaveApplyModel.leaveTypeId],
-      references: [leaveTypeModel.leaveTypeId]
+      references: [leaveTypeModel.leaveTypeId],
     }),
     employee: one(employeeModel, {
       fields: [employeeLeaveApplyModel.employeeId],

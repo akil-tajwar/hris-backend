@@ -6,6 +6,7 @@ import {
   deleteEmployeeLeaveApplyController,
   approveLeaveByRepAuthController,
   approveLeaveByHrController,
+  calculateLeaveDaysController,
 } from '../controllers/employeeLeaveApply.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
@@ -38,5 +39,6 @@ router.delete(
   authenticateUser,
   deleteEmployeeLeaveApplyController
 )
+router.get('/calculate-noOfDays', calculateLeaveDaysController)
 
 export default router

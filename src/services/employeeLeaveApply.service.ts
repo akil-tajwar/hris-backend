@@ -7,13 +7,16 @@ import {
   NewEmployeeLeaveApply,
   EmployeeLeaveApply,
   leaveTypeModel,
+  employeeShiftAllocations,
+  shiftDayAndWeekDaysModel,
+  attendancePoliciesModel,
+  holidaysModel,
+  weekDayModel,
 } from '../schemas'
-import { eq } from 'drizzle-orm'
+import { and, eq, gte, lte } from 'drizzle-orm'
 
 // CREATE
-export const createEmployeeLeaveApply = async (
-  data: NewEmployeeLeaveApply
-) => {
+export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
   const result = await db.insert(employeeLeaveApplyModel).values(data)
 
   const employeeLeaveApplyId = Number(result[0].insertId)
@@ -22,10 +25,7 @@ export const createEmployeeLeaveApply = async (
     .select()
     .from(employeeLeaveApplyModel)
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   return leaveApply
@@ -35,8 +35,7 @@ export const createEmployeeLeaveApply = async (
 export const getEmployeeLeaveApplications = async () => {
   return await db
     .select({
-      employeeLeaveApplyId:
-        employeeLeaveApplyModel.employeeLeaveApplyId,
+      employeeLeaveApplyId: employeeLeaveApplyModel.employeeLeaveApplyId,
 
       employeeId: employeeLeaveApplyModel.employeeId,
       empFullName: employeeModel.empFullName,
@@ -44,46 +43,30 @@ export const getEmployeeLeaveApplications = async () => {
 
       leaveTypeId: employeeLeaveApplyModel.leaveTypeId,
       leaveTypeName: leaveTypeModel.name,
-      yearlyAllocation:
-        leavePolicyDetailsModel.yearlyAllocation,
-      accrualFrequency:
-        leavePolicyDetailsModel.accrualFrequency,
+      yearlyAllocation: leavePolicyDetailsModel.yearlyAllocation,
+      accrualFrequency: leavePolicyDetailsModel.accrualFrequency,
 
-      effectiveFrom:
-        employeeLeaveApplyModel.effectiveFrom,
-      effectiveTo:
-        employeeLeaveApplyModel.effectiveTo,
+      effectiveFrom: employeeLeaveApplyModel.effectiveFrom,
+      effectiveTo: employeeLeaveApplyModel.effectiveTo,
       noOfDays: employeeLeaveApplyModel.noOfDays,
       status: employeeLeaveApplyModel.status,
-      approvedByRepAuth:
-        employeeLeaveApplyModel.approvedByRepAuth,
-      approvedByHr:
-        employeeLeaveApplyModel.approvedByHr,
+      approvedByRepAuth: employeeLeaveApplyModel.approvedByRepAuth,
+      approvedByHr: employeeLeaveApplyModel.approvedByHr,
 
-      createdBy:
-        employeeLeaveApplyModel.createdBy,
-      createdAt:
-        employeeLeaveApplyModel.createdAt,
+      createdBy: employeeLeaveApplyModel.createdBy,
+      createdAt: employeeLeaveApplyModel.createdAt,
 
-      updatedBy:
-        employeeLeaveApplyModel.updatedBy,
-      updatedAt:
-        employeeLeaveApplyModel.updatedAt,
+      updatedBy: employeeLeaveApplyModel.updatedBy,
+      updatedAt: employeeLeaveApplyModel.updatedAt,
     })
     .from(employeeLeaveApplyModel)
     .leftJoin(
       employeeModel,
-      eq(
-        employeeLeaveApplyModel.employeeId,
-        employeeModel.employeeId
-      )
+      eq(employeeLeaveApplyModel.employeeId, employeeModel.employeeId)
     )
     .leftJoin(
       leavePolicyMasterModel,
-      eq(
-        employeeLeaveApplyModel.leaveTypeId,
-        leaveTypeModel.leaveTypeId
-      )
+      eq(employeeLeaveApplyModel.leaveTypeId, leaveTypeModel.leaveTypeId)
     )
 }
 
@@ -96,20 +79,14 @@ export const updateEmployeeLeaveApply = async (
     .update(employeeLeaveApplyModel)
     .set(data)
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   const [updated] = await db
     .select()
     .from(employeeLeaveApplyModel)
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   return updated
@@ -127,20 +104,14 @@ export const approveLeaveByRepAuth = async (
       updatedBy,
     })
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   const [updated] = await db
     .select()
     .from(employeeLeaveApplyModel)
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   return updated
@@ -158,20 +129,14 @@ export const approveLeaveByHr = async (
       updatedBy,
     })
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   const [updated] = await db
     .select()
     .from(employeeLeaveApplyModel)
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
 
   return updated
@@ -184,9 +149,148 @@ export const deleteEmployeeLeaveApply = async (
   await db
     .delete(employeeLeaveApplyModel)
     .where(
-      eq(
-        employeeLeaveApplyModel.employeeLeaveApplyId,
-        employeeLeaveApplyId
-      )
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
+}
+
+//returns noOfDays
+const formatDate = (d: Date) => d.toISOString().split('T')[0]
+
+const getDatesBetween = (from: Date, to: Date) => {
+  const dates: string[] = []
+  const current = new Date(from)
+
+  while (current <= to) {
+    dates.push(formatDate(current))
+    current.setDate(current.getDate() + 1)
+  }
+
+  return dates
+}
+
+const weekdayNames = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+]
+
+// ---------------- SERVICE ----------------
+export const calculateLeaveDaysService = async ({
+  userId,
+  leaveTypeId,
+  fromDate,
+  toDate,
+}: {
+  userId: number
+  leaveTypeId: number
+  fromDate: string
+  toDate: string
+}) => {
+  // 1. Employee
+  const employee = await db
+    .select()
+    .from(employeeModel)
+    .where(eq(employeeModel.userId, userId))
+    .limit(1)
+
+  if (!employee.length) throw new Error('Employee not found')
+
+  const employeeId = employee[0].employeeId
+
+  // 2. Leave Type
+  const leaveType = await db
+    .select()
+    .from(leaveTypeModel)
+    .where(eq(leaveTypeModel.leaveTypeId, leaveTypeId))
+    .limit(1)
+
+  if (!leaveType.length) throw new Error('Leave type not found')
+
+  const sandwichPolicyApplicable =
+    leaveType[0].sandwichPolicyApplicable ?? false
+
+  const allDates = getDatesBetween(new Date(fromDate), new Date(toDate))
+
+  // CASE 1: no sandwich policy
+  if (!sandwichPolicyApplicable) {
+    return allDates.length
+  }
+
+  // ---------------- SHIFT WEEKENDS ----------------
+  const shiftAlloc = await db
+    .select()
+    .from(employeeShiftAllocations)
+    .where(eq(employeeShiftAllocations.employeeId, employeeId))
+    .limit(1)
+
+  let weekendDays: string[] = []
+
+  if (shiftAlloc.length) {
+    const shiftId = shiftAlloc[0].shiftId
+
+    const weekendRows = await db
+      .select({
+        day: weekDayModel.day,
+      })
+      .from(shiftDayAndWeekDaysModel)
+      .innerJoin(
+        weekDayModel,
+        eq(shiftDayAndWeekDaysModel.weekDayId, weekDayModel.weekDayId)
+      )
+      .where(
+        and(
+          eq(shiftDayAndWeekDaysModel.shiftId, shiftId),
+          eq(shiftDayAndWeekDaysModel.dayType, 'Weekend')
+        )
+      )
+
+    weekendDays = weekendRows.map((r) => r.day)
+  }
+
+  // ---------------- HOLIDAYS ----------------
+  const activePolicy = await db
+    .select()
+    .from(attendancePoliciesModel)
+    .where(eq(attendancePoliciesModel.isActive, true))
+    .limit(1)
+
+  const holidaySet = new Set<string>()
+
+  if (activePolicy.length && activePolicy[0].holidayCalendarId) {
+    const holidays = await db
+      .select()
+      .from(holidaysModel)
+      .where(eq(holidaysModel.calendarId, activePolicy[0].holidayCalendarId))
+
+    for (const h of holidays) {
+      const dateOnly = formatDate(new Date(h.date))
+
+      // filter range in JS (avoids timestamp mismatch issues)
+      if (dateOnly >= fromDate && dateOnly <= toDate) {
+        holidaySet.add(dateOnly)
+      }
+    }
+  }
+
+  // ---------------- FINAL CALCULATION ----------------
+  const excluded = new Set<string>()
+
+  for (const dateStr of allDates) {
+    const date = new Date(dateStr)
+
+    const dayName = weekdayNames[date.getDay()]
+
+    const isWeekend = weekendDays.includes(dayName)
+    const isHoliday = holidaySet.has(dateStr)
+
+    if (isWeekend || isHoliday) {
+      excluded.add(dateStr)
+    }
+  }
+
+  return allDates.length - excluded.size
 }

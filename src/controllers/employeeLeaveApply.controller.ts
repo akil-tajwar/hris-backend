@@ -6,6 +6,7 @@ import {
   deleteEmployeeLeaveApply,
   approveLeaveByRepAuth,
   approveLeaveByHr,
+  calculateLeaveDaysService,
 } from '../services/employeeLeaveApply.service'
 import { requirePermission } from '../services/utils/jwt.utils'
 
@@ -142,5 +143,28 @@ export const deleteEmployeeLeaveApplyController = async (
     })
   } catch (err) {
     next(err)
+  }
+}
+
+export const calculateLeaveDaysController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { userId, leaveTypeId, fromDate, toDate } = req.query
+
+    const result = await calculateLeaveDaysService({
+      userId: Number(userId),
+      leaveTypeId: Number(leaveTypeId),
+      fromDate: String(fromDate),
+      toDate: String(toDate),
+    })
+
+    res.status(200).json(result)
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    })
   }
 }
