@@ -1483,6 +1483,56 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
+// ─── attendance_daily_audit table ────────────────────────────────────────────
+// প্রতিবার attendance_daily তে INSERT বা UPDATE হলে এখানে একটা row জমা হবে
+// কে করল, কখন করল, আগে কী ছিল, পরে কী হলো — সব এখানে থাকবে
+
+export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
+  id: int('id').autoincrement().primaryKey(),
+  recordId: int('record_id'), // attendance_daily.id — কোন record change হলো
+  employeeId: int('employee_id').notNull(),
+  attendanceDate: date('attendance_date', { mode: 'string' }).notNull(),
+
+  action: varchar('action', { length: 10 }).notNull(), // 'INSERT' | 'UPDATE'
+  changedBy: int('changed_by'), // কোন userId করল
+  changedAt: timestamp('changed_at').default(sql`CURRENT_TIMESTAMP`),
+
+  // ── আগের value (INSERT এর সময় এগুলো null থাকবে) ──
+  oldStatus: mysqlEnum('old_status', [
+    'PRESENT',
+    'ABSENT',
+    'LATE',
+    'HALF_DAY',
+    'HOLIDAY',
+    'WEEKEND',
+    'ON_LEAVE',
+  ]),
+  oldWorkedMinutes: int('old_worked_minutes'),
+  oldLateMinutes: int('old_late_minutes'),
+  oldEarlyOutMinutes: int('old_early_out_minutes'),
+  oldOvertimeMinutes: int('old_overtime_minutes'),
+  oldFirstIn: timestamp('old_first_in', { mode: 'date' }),
+  oldLastOut: timestamp('old_last_out', { mode: 'date' }),
+
+  // ── নতুন value ──
+  newStatus: mysqlEnum('new_status', [
+    'PRESENT',
+    'ABSENT',
+    'LATE',
+    'HALF_DAY',
+    'HOLIDAY',
+    'WEEKEND',
+    'ON_LEAVE',
+  ]).notNull(),
+  newWorkedMinutes: int('new_worked_minutes').notNull(),
+  newLateMinutes: int('new_late_minutes').notNull(),
+  newEarlyOutMinutes: int('new_early_out_minutes').notNull(),
+  newOvertimeMinutes: int('new_overtime_minutes').notNull(),
+  newFirstIn: timestamp('new_first_in', { mode: 'date' }),
+  newLastOut: timestamp('new_last_out', { mode: 'date' }),
+
+  remark: text('remark'), // optional: কেন manually change করা হলো
+})
 
 // ========================
 // Relations (unchanged)
