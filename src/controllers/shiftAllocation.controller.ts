@@ -11,6 +11,7 @@ import {
   getShiftAllocationById,
   getShiftAllocationsByEmployee,
   deleteShiftAllocation,
+  getEmployeeWeekDaysByUserId,
 } from '../services/shiftAllocation.service'
 
 // ─── CREATE SINGLE ────────────────────────────────────────────────
@@ -203,5 +204,30 @@ export const deleteShiftAllocationController = async (
   } catch (error: any) {
     console.error('❌ Delete Shift Allocation Error:', error)
     res.status(500).json({ success: false, message: error.message || 'Server error' })
+  }
+}
+
+export const getEmployeeWeekDaysController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = Number(req.params.userId)
+
+    if (isNaN(userId)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid userId',
+      })
+    }
+
+    const data = await getEmployeeWeekDaysByUserId(userId)
+
+    res.status(200).json(data)
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    })
   }
 }
