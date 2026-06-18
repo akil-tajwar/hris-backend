@@ -698,3 +698,19 @@ export const deleteEmployee = async (employeeId: number) => {
     }
   })
 }
+
+export const getEmployeeIdByUserIdService = async (userId: number) => {
+  const result = await db
+    .select({
+      employeeId: employeeModel.employeeId,
+    })
+    .from(employeeModel)
+    .where(eq(employeeModel.userId, userId))
+    .limit(1)
+
+  if (!result.length) {
+    throw new Error('Employee not found for this userId')
+  }
+
+  return result[0].employeeId
+}

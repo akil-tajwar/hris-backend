@@ -195,6 +195,30 @@ export const approveLeaveByHr = async (
   return updated
 }
 
+export const rejectLeave = async (
+  employeeLeaveApplyId: number,
+  updatedBy: number
+) => {
+  await db
+    .update(employeeLeaveApplyModel)
+    .set({
+      status: 'Rejected',
+      updatedBy,
+    })
+    .where(
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+    )
+
+  const [updated] = await db
+    .select()
+    .from(employeeLeaveApplyModel)
+    .where(
+      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+    )
+
+  return updated
+}
+
 // DELETE
 export const deleteEmployeeLeaveApply = async (
   employeeLeaveApplyId: number
