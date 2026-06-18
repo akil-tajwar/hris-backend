@@ -16,19 +16,67 @@ import {
 import { and, eq, gte, lte } from 'drizzle-orm'
 
 // CREATE
-export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
-  const result = await db.insert(employeeLeaveApplyModel).values(data)
+export const createEmployeeLeaveApply = async (
+  data: NewEmployeeLeaveApply
+) => {
+  const formatDate = (
+    value: string | Date | null | undefined
+  ): string | null => {
+    if (!value) return null
+  
+    return new Date(value).toISOString().split('T')[0]
+  }
 
-  const employeeLeaveApplyId = Number(result[0].insertId)
+  try {
+    // Find employee by userId
+    const [employee] = await db
+      .select({
+        employeeId: employeeModel.employeeId,
+      })
+      .from(employeeModel)
+      .where(eq(employeeModel.userId, data.employeeId))
 
-  const [leaveApply] = await db
-    .select()
-    .from(employeeLeaveApplyModel)
-    .where(
-      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
-    )
+    if (!employee) {
+      throw new Error(
+        `No employee found for userId: ${data.employeeId}`
+      )
+    }
 
-  return leaveApply
+    const payload = {
+      ...data,
+      employeeId: employee.employeeId, // replace userId with actual employeeId
+      effectiveFrom: formatDate(data.effectiveFrom),
+      effectiveTo: formatDate(data.effectiveTo),
+    }
+
+    const result = await db
+      .insert(employeeLeaveApplyModel)
+      .values(payload)
+
+    const insertId =
+      (result as any)?.[0]?.insertId ?? (result as any)?.insertId
+
+    const [leaveApply] = await db
+      .select()
+      .from(employeeLeaveApplyModel)
+      .where(
+        eq(
+          employeeLeaveApplyModel.employeeLeaveApplyId,
+          Number(insertId)
+        )
+      )
+
+    return leaveApply
+  } catch (error: any) {
+    console.error('================ DATABASE ERROR ================')
+    console.error('Message:', error?.message)
+    console.error('SQL Message:', error?.cause?.sqlMessage)
+    console.error('Code:', error?.cause?.code)
+    console.error('Full Cause:', error?.cause)
+    console.error('===============================================')
+
+    throw error
+  }
 }
 
 // READ ALL
@@ -43,8 +91,6 @@ export const getEmployeeLeaveApplications = async () => {
 
       leaveTypeId: employeeLeaveApplyModel.leaveTypeId,
       leaveTypeName: leaveTypeModel.name,
-      yearlyAllocation: leavePolicyDetailsModel.yearlyAllocation,
-      accrualFrequency: leavePolicyDetailsModel.accrualFrequency,
 
       effectiveFrom: employeeLeaveApplyModel.effectiveFrom,
       effectiveTo: employeeLeaveApplyModel.effectiveTo,
@@ -60,15 +106,22 @@ export const getEmployeeLeaveApplications = async () => {
       updatedAt: employeeLeaveApplyModel.updatedAt,
     })
     .from(employeeLeaveApplyModel)
+
+    // employee join
     .leftJoin(
       employeeModel,
       eq(employeeLeaveApplyModel.employeeId, employeeModel.employeeId)
     )
+
+    // leave type join
     .leftJoin(
-      leavePolicyMasterModel,
+      leaveTypeModel,
       eq(employeeLeaveApplyModel.leaveTypeId, leaveTypeModel.leaveTypeId)
     )
+
+    
 }
+
 
 // UPDATE
 export const updateEmployeeLeaveApply = async (

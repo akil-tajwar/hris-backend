@@ -39,6 +39,10 @@ router.delete(
   authenticateUser,
   deleteEmployeeLeaveApplyController
 )
-router.get('/calculate-noOfDays', calculateLeaveDaysController)
+router.get(
+  '/calculate-noOfDays',
+  authenticateUser,
+  calculateLeaveDaysController
+)
 
 export default router
