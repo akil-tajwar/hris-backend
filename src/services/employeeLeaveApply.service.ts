@@ -22,55 +22,90 @@ export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
     value: string | Date | null | undefined
   ): string | null => {
     if (!value) return null
-
     return new Date(value).toISOString().split('T')[0]
   }
 
-  try {
-    // Find employee by userId
-    const [employee] = await db
-      .select({
-        employeeId: employeeModel.employeeId,
-        responsibleEmployeeId: employeeModel.reportingAuthorityId,
-      })
-      .from(employeeModel)
-      .where(eq(employeeModel.userId, data.employeeId))
+  return await db.transaction(async (tx) => {
+    try {
+      // 1. Find employee by userId
+      const [employee] = await tx
+        .select({
+          employeeId: employeeModel.employeeId,
+          responsibleEmployeeId: employeeModel.reportingAuthorityId,
+        })
+        .from(employeeModel)
+        .where(eq(employeeModel.userId, data.employeeId))
 
-    if (!employee) {
-      throw new Error(`No employee found for userId: ${data.employeeId}`)
+      if (!employee) {
+        throw new Error(`No employee found for userId: ${data.employeeId}`)
+      }
+
+      const effectiveFrom = formatDate(data.effectiveFrom)
+      const year = new Date(effectiveFrom!).getFullYear()
+
+      // 2. Get balance BEFORE inserting leave
+      const [balance] = await tx
+        .select()
+        .from(employeeLeaveBalanceModel)
+        .where(
+          and(
+            eq(employeeLeaveBalanceModel.employeeId, employee.employeeId),
+            eq(employeeLeaveBalanceModel.leaveTypeId, data.leaveTypeId),
+            eq(employeeLeaveBalanceModel.year, year)
+          )
+        )
+        .limit(1)
+
+      console.log('💰 Balance found:', balance)
+
+      if (!balance) {
+        throw new Error('Leave balance not found')
+      }
+
+      // 3. VALIDATION (IMPORTANT)
+      if (balance.remainingDays < data.noOfDays) {
+        throw new Error(
+          `Insufficient leave balance. Remaining: ${balance.remainingDays}, Requested: ${data.noOfDays}`
+        )
+      }
+
+      // 4. Insert leave application
+      const payload = {
+        ...data,
+        employeeId: employee.employeeId,
+        effectiveFrom: formatDate(data.effectiveFrom),
+        effectiveTo: formatDate(data.effectiveTo),
+        status: 'Pending',
+      }
+
+      const result = await tx
+        .insert(employeeLeaveApplyModel)
+        .values(payload as any)
+
+      // 5. Notify reporting authority
+      if (employee.responsibleEmployeeId) {
+        await notifyEmployee(
+          employee.responsibleEmployeeId,
+          'An employee applied for a leave'
+        )
+      }
+
+      const insertId =
+        (result as any)?.[0]?.insertId ?? (result as any)?.insertId
+
+      const [leaveApply] = await tx
+        .select()
+        .from(employeeLeaveApplyModel)
+        .where(
+          eq(employeeLeaveApplyModel.employeeLeaveApplyId, Number(insertId))
+        )
+
+      return leaveApply
+    } catch (error: any) {
+      console.error('Error in createEmployeeLeaveApply:', error)
+      throw error
     }
-
-    const payload = {
-      ...data,
-      employeeId: employee.employeeId, // replace userId with actual employeeId
-      effectiveFrom: formatDate(data.effectiveFrom),
-      effectiveTo: formatDate(data.effectiveTo),
-    }
-
-    const result = await db
-      .insert(employeeLeaveApplyModel)
-      .values(payload as any)
-
-    //inserts notification data
-    if (employee.responsibleEmployeeId) {
-      await notifyEmployee(
-        employee.responsibleEmployeeId,
-        'An employee applied for a leave'
-      )
-    }
-
-    const insertId = (result as any)?.[0]?.insertId ?? (result as any)?.insertId
-
-    const [leaveApply] = await db
-      .select()
-      .from(employeeLeaveApplyModel)
-      .where(eq(employeeLeaveApplyModel.employeeLeaveApplyId, Number(insertId)))
-
-    return leaveApply
-  } catch (error: any) {
-    console.error('Error:', error)
-    throw error
-  }
+  })
 }
 
 // READ ALL
@@ -184,7 +219,10 @@ export const approveLeaveByRepAuth = async (
     // 4. Send notifications
     await Promise.all(
       hrEmployees.map((emp) =>
-        notifyEmployee(emp.employeeId, 'A reporting authority has approved a leave')
+        notifyEmployee(
+          emp.employeeId,
+          'A reporting authority has approved a leave'
+        )
       )
     )
 
@@ -309,12 +347,12 @@ export const approveLeaveByHr = async (
         eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
       )
 
-      if (updated?.employeeId) {
-    await notifyEmployee(
-      updated.employeeId,
-      'Your applied leave have been accepted'
-    )
-  }
+    if (updated?.employeeId) {
+      await notifyEmployee(
+        updated.employeeId,
+        'Your applied leave have been approved'
+      )
+    }
 
     console.log('🎯 Final updated leave:', updated)
 
