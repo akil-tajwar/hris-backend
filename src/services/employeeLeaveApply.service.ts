@@ -1,9 +1,8 @@
 import { db } from '../config/database'
+import { notifyEmployee } from '../middlewares/notifyEmployee'
 import {
   employeeLeaveApplyModel,
   employeeModel,
-  leavePolicyMasterModel,
-  leavePolicyDetailsModel,
   NewEmployeeLeaveApply,
   EmployeeLeaveApply,
   leaveTypeModel,
@@ -13,17 +12,15 @@ import {
   holidaysModel,
   weekDayModel,
 } from '../schemas'
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 // CREATE
-export const createEmployeeLeaveApply = async (
-  data: NewEmployeeLeaveApply
-) => {
+export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
   const formatDate = (
     value: string | Date | null | undefined
   ): string | null => {
     if (!value) return null
-  
+
     return new Date(value).toISOString().split('T')[0]
   }
 
@@ -32,14 +29,13 @@ export const createEmployeeLeaveApply = async (
     const [employee] = await db
       .select({
         employeeId: employeeModel.employeeId,
+        responsibleEmployeeId: employeeModel.reportingAuthorityId,
       })
       .from(employeeModel)
       .where(eq(employeeModel.userId, data.employeeId))
 
     if (!employee) {
-      throw new Error(
-        `No employee found for userId: ${data.employeeId}`
-      )
+      throw new Error(`No employee found for userId: ${data.employeeId}`)
     }
 
     const payload = {
@@ -49,32 +45,26 @@ export const createEmployeeLeaveApply = async (
       effectiveTo: formatDate(data.effectiveTo),
     }
 
-    const result = await db
-      .insert(employeeLeaveApplyModel)
-      .values(payload)
+    const result = await db.insert(employeeLeaveApplyModel).values(payload as any)
 
-    const insertId =
-      (result as any)?.[0]?.insertId ?? (result as any)?.insertId
+    //inserts notification data
+    if (employee.responsibleEmployeeId) {
+      await notifyEmployee(
+        employee.responsibleEmployeeId,
+        "An employee applied for a leave",
+      )
+    }
+
+    const insertId = (result as any)?.[0]?.insertId ?? (result as any)?.insertId
 
     const [leaveApply] = await db
       .select()
       .from(employeeLeaveApplyModel)
-      .where(
-        eq(
-          employeeLeaveApplyModel.employeeLeaveApplyId,
-          Number(insertId)
-        )
-      )
+      .where(eq(employeeLeaveApplyModel.employeeLeaveApplyId, Number(insertId)))
 
     return leaveApply
   } catch (error: any) {
-    console.error('================ DATABASE ERROR ================')
-    console.error('Message:', error?.message)
-    console.error('SQL Message:', error?.cause?.sqlMessage)
-    console.error('Code:', error?.cause?.code)
-    console.error('Full Cause:', error?.cause)
-    console.error('===============================================')
-
+    console.error('Error:', error)
     throw error
   }
 }
@@ -118,10 +108,7 @@ export const getEmployeeLeaveApplications = async () => {
       leaveTypeModel,
       eq(employeeLeaveApplyModel.leaveTypeId, leaveTypeModel.leaveTypeId)
     )
-
-    
 }
-
 
 // UPDATE
 export const updateEmployeeLeaveApply = async (
