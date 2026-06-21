@@ -4,6 +4,7 @@ import {
   dailyAttendanceReport,
   attendanceSummaryReport,
   getLeaveBalanceSummaryReport,
+  leaveLedgerReport,
 } from '../services/reports.service'
 import {
   employeeActivitiesReport,
@@ -251,6 +252,26 @@ export const getLeaveBalanceSummaryReportController = async (
     res.status(500).json({
       success: false,
       message: 'Failed to fetch report',
+    })
+  }
+}
+
+export const leaveLedgerReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { year } = req.query
+
+    const data = await leaveLedgerReport(Number(year))
+
+    res.status(200).json(data)
+  } catch (error) {
+    console.error('Controller Error:', error)
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch leave ledger report',
     })
   }
 }
