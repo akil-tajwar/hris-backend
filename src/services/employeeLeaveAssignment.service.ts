@@ -13,7 +13,7 @@ import {
   NewEmployee,
   NewEmployeeLeaveAssignment,
 } from '../schemas'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 const toDate = (value: Date | string) => new Date(value)
 
@@ -32,7 +32,7 @@ export const createEmployeeLeaveAssignmentService = async (
   data: NewEmployeeLeaveAssignment
 ) => {
   return await db.transaction(async (tx) => {
-    // Create assignment
+    // 1. Create assignment
     const [assignment] = await tx
       .insert(employeeLeaveAssignmentModel)
       .values({
@@ -45,11 +45,9 @@ export const createEmployeeLeaveAssignmentService = async (
       })
       .$returningId()
 
-    // Get employee
+    // 2. Get employee
     const [employee] = await tx
-      .select({
-        doj: employeeModel.doj,
-      })
+      .select({ doj: employeeModel.doj })
       .from(employeeModel)
       .where(eq(employeeModel.employeeId, data.employeeId))
 
@@ -59,8 +57,9 @@ export const createEmployeeLeaveAssignmentService = async (
 
     const doj = new Date(employee.doj)
     const effectiveFrom = new Date(data.effectiveFrom)
+    const year = effectiveFrom.getFullYear()
 
-    // Get policy details + leave type
+    // 3. Get policy details
     const policyDetails = await tx
       .select({
         leaveTypeId: leavePolicyDetailsModel.leaveTypeId,
@@ -82,27 +81,53 @@ export const createEmployeeLeaveAssignmentService = async (
       throw new Error('No leave policy details found')
     }
 
-    const balanceRows = policyDetails.map((detail) => {
+    // 4. Build balance rows with duplicate check
+    const balanceRows = []
+
+    for (const detail of policyDetails) {
+      // 🔥 check if balance already exists
+      const [existing] = await tx
+        .select()
+        .from(employeeLeaveBalanceModel)
+        .where(
+          and(
+            eq(employeeLeaveBalanceModel.employeeId, data.employeeId),
+            eq(employeeLeaveBalanceModel.leaveTypeId, detail.leaveTypeId),
+            eq(employeeLeaveBalanceModel.year, year)
+          )
+        )
+        .limit(1)
+
+      if (existing) {
+        continue // skip duplicate
+      }
+
       const earnedDays = calculateAllocatedLeaves(
         detail.maxDaysPerYear,
         doj,
         effectiveFrom
       )
 
-      return {
+      balanceRows.push({
         employeeId: data.employeeId,
         leaveTypeId: detail.leaveTypeId,
-        year: effectiveFrom.getFullYear(),
+        employeeLeaveAssignmentId: assignment.employeeLeaveAssignmentId, // ✅ FIXED
+        year,
         earnedDays,
         usedDays: 0,
-      }
-    })
+        remainingDays: earnedDays,
+      })
+    }
 
-    await tx.insert(employeeLeaveBalanceModel).values(balanceRows)
+    // 5. Insert only if new rows exist
+    if (balanceRows.length > 0) {
+      await tx.insert(employeeLeaveBalanceModel).values(balanceRows)
+    }
 
     return {
       success: true,
       assignmentId: assignment.employeeLeaveAssignmentId,
+      balancesCreated: balanceRows.length,
     }
   })
 }
