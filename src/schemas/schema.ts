@@ -1124,9 +1124,13 @@ export const employeeLeaveBalanceModel = mysqlTable('employee_leave_balance', {
   leaveTypeId: int('leave_type_id')
     .references(() => leaveTypeModel.leaveTypeId)
     .notNull(),
+  employeeLeaveAssignmentId: int('employee_leave_assignment_id')
+    .references(() => employeeLeaveAssignmentModel.employeeLeaveAssignmentId)
+    .notNull(),
   year: int('year').notNull(),
   earnedDays: double('earned_days').notNull(),
   usedDays: double('used_days').notNull().default(0),
+  remainingDays: int('remaining_days').notNull(),
 })
 
 export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {

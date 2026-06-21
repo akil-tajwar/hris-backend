@@ -11,8 +11,10 @@ import {
   attendancePoliciesModel,
   holidaysModel,
   weekDayModel,
+  employeeLeaveBalanceModel,
+  userModel,
 } from '../schemas'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 
 // CREATE
 export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
@@ -20,53 +22,90 @@ export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
     value: string | Date | null | undefined
   ): string | null => {
     if (!value) return null
-
     return new Date(value).toISOString().split('T')[0]
   }
 
-  try {
-    // Find employee by userId
-    const [employee] = await db
-      .select({
-        employeeId: employeeModel.employeeId,
-        responsibleEmployeeId: employeeModel.reportingAuthorityId,
-      })
-      .from(employeeModel)
-      .where(eq(employeeModel.userId, data.employeeId))
+  return await db.transaction(async (tx) => {
+    try {
+      // 1. Find employee by userId
+      const [employee] = await tx
+        .select({
+          employeeId: employeeModel.employeeId,
+          responsibleEmployeeId: employeeModel.reportingAuthorityId,
+        })
+        .from(employeeModel)
+        .where(eq(employeeModel.userId, data.employeeId))
 
-    if (!employee) {
-      throw new Error(`No employee found for userId: ${data.employeeId}`)
+      if (!employee) {
+        throw new Error(`No employee found for userId: ${data.employeeId}`)
+      }
+
+      const effectiveFrom = formatDate(data.effectiveFrom)
+      const year = new Date(effectiveFrom!).getFullYear()
+
+      // 2. Get balance BEFORE inserting leave
+      const [balance] = await tx
+        .select()
+        .from(employeeLeaveBalanceModel)
+        .where(
+          and(
+            eq(employeeLeaveBalanceModel.employeeId, employee.employeeId),
+            eq(employeeLeaveBalanceModel.leaveTypeId, data.leaveTypeId),
+            eq(employeeLeaveBalanceModel.year, year)
+          )
+        )
+        .limit(1)
+
+      console.log('💰 Balance found:', balance)
+
+      if (!balance) {
+        throw new Error('Leave balance not found')
+      }
+
+      // 3. VALIDATION (IMPORTANT)
+      if (balance.remainingDays < data.noOfDays) {
+        throw new Error(
+          `Insufficient leave balance. Remaining: ${balance.remainingDays}, Requested: ${data.noOfDays}`
+        )
+      }
+
+      // 4. Insert leave application
+      const payload = {
+        ...data,
+        employeeId: employee.employeeId,
+        effectiveFrom: formatDate(data.effectiveFrom),
+        effectiveTo: formatDate(data.effectiveTo),
+        status: 'Pending',
+      }
+
+      const result = await tx
+        .insert(employeeLeaveApplyModel)
+        .values(payload as any)
+
+      // 5. Notify reporting authority
+      if (employee.responsibleEmployeeId) {
+        await notifyEmployee(
+          employee.responsibleEmployeeId,
+          'An employee applied for a leave'
+        )
+      }
+
+      const insertId =
+        (result as any)?.[0]?.insertId ?? (result as any)?.insertId
+
+      const [leaveApply] = await tx
+        .select()
+        .from(employeeLeaveApplyModel)
+        .where(
+          eq(employeeLeaveApplyModel.employeeLeaveApplyId, Number(insertId))
+        )
+
+      return leaveApply
+    } catch (error: any) {
+      console.error('Error in createEmployeeLeaveApply:', error)
+      throw error
     }
-
-    const payload = {
-      ...data,
-      employeeId: employee.employeeId, // replace userId with actual employeeId
-      effectiveFrom: formatDate(data.effectiveFrom),
-      effectiveTo: formatDate(data.effectiveTo),
-    }
-
-    const result = await db.insert(employeeLeaveApplyModel).values(payload as any)
-
-    //inserts notification data
-    if (employee.responsibleEmployeeId) {
-      await notifyEmployee(
-        employee.responsibleEmployeeId,
-        "An employee applied for a leave",
-      )
-    }
-
-    const insertId = (result as any)?.[0]?.insertId ?? (result as any)?.insertId
-
-    const [leaveApply] = await db
-      .select()
-      .from(employeeLeaveApplyModel)
-      .where(eq(employeeLeaveApplyModel.employeeLeaveApplyId, Number(insertId)))
-
-    return leaveApply
-  } catch (error: any) {
-    console.error('Error:', error)
-    throw error
-  }
+  })
 }
 
 // READ ALL
@@ -137,24 +176,66 @@ export const approveLeaveByRepAuth = async (
   employeeLeaveApplyId: number,
   updatedBy: number
 ) => {
-  await db
-    .update(employeeLeaveApplyModel)
-    .set({
-      approvedByRepAuth: true,
-      updatedBy,
-    })
-    .where(
-      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+  return await db.transaction(async (tx) => {
+    // 1. Update leave approval
+    await tx
+      .update(employeeLeaveApplyModel)
+      .set({
+        approvedByRepAuth: true,
+        updatedBy,
+      })
+      .where(
+        eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+      )
+
+    // 2. Get HR users (roleId = 2)
+    const hrUsers = await tx
+      .select({
+        userId: userModel.userId,
+      })
+      .from(userModel)
+      .where(eq(userModel.roleId, 2))
+
+    if (!hrUsers.length) {
+      return {
+        success: true,
+        message: 'Leave approved but no HR users found',
+      }
+    }
+
+    // 3. Get HR employees linked to users
+    const hrEmployees = await tx
+      .select({
+        employeeId: employeeModel.employeeId,
+      })
+      .from(employeeModel)
+      .where(
+        inArray(
+          employeeModel.userId,
+          hrUsers.map((u) => u.userId)
+        )
+      )
+
+    // 4. Send notifications
+    await Promise.all(
+      hrEmployees.map((emp) =>
+        notifyEmployee(
+          emp.employeeId,
+          'A reporting authority has approved a leave'
+        )
+      )
     )
 
-  const [updated] = await db
-    .select()
-    .from(employeeLeaveApplyModel)
-    .where(
-      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
-    )
+    // 5. Return updated leave
+    const [updated] = await tx
+      .select()
+      .from(employeeLeaveApplyModel)
+      .where(
+        eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+      )
 
-  return updated
+    return updated
+  })
 }
 
 // APPROVE BY HR
@@ -162,24 +243,121 @@ export const approveLeaveByHr = async (
   employeeLeaveApplyId: number,
   updatedBy: number
 ) => {
-  await db
-    .update(employeeLeaveApplyModel)
-    .set({
-      approvedByHr: true,
-      updatedBy,
+  return await db.transaction(async (tx) => {
+    console.log('👉 Approving leave ID:', employeeLeaveApplyId)
+
+    // 1. Get leave application
+    const [leave] = await tx
+      .select()
+      .from(employeeLeaveApplyModel)
+      .where(
+        eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+      )
+
+    console.log('📄 Leave application:', leave)
+
+    if (!leave) {
+      console.log('❌ Leave not found')
+      throw new Error('Leave application not found')
+    }
+
+    if (leave.status === 'Approved') {
+      console.log('⚠️ Leave already approved')
+      throw new Error('Leave already approved')
+    }
+
+    const year = new Date(leave.effectiveFrom).getFullYear()
+    console.log('📅 Year calculated:', year)
+
+    // 2. Find balance
+    console.log('🔍 Searching balance with:')
+    console.log({
+      employeeId: leave.employeeId,
+      leaveTypeId: leave.leaveTypeId,
+      year,
     })
-    .where(
-      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
-    )
 
-  const [updated] = await db
-    .select()
-    .from(employeeLeaveApplyModel)
-    .where(
-      eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
-    )
+    const [balance] = await tx
+      .select()
+      .from(employeeLeaveBalanceModel)
+      .where(
+        and(
+          eq(employeeLeaveBalanceModel.employeeId, leave.employeeId),
+          eq(employeeLeaveBalanceModel.leaveTypeId, leave.leaveTypeId),
+          eq(employeeLeaveBalanceModel.year, year)
+        )
+      )
+      .limit(1)
 
-  return updated
+    console.log('💰 Balance result:', balance)
+
+    if (!balance) {
+      console.log('❌ No balance found for this employee/leave/year')
+      throw new Error('Leave balance not found')
+    }
+
+    // 3. Validation
+    console.log('🧮 Remaining vs Requested:', {
+      remaining: balance.remainingDays,
+      requested: leave.noOfDays,
+    })
+
+    if (balance.remainingDays < leave.noOfDays) {
+      console.log('❌ Insufficient balance')
+      throw new Error('Insufficient leave balance')
+    }
+
+    // 4. Update balance
+    console.log('✏️ Updating balance...')
+
+    await tx
+      .update(employeeLeaveBalanceModel)
+      .set({
+        usedDays: balance.usedDays + leave.noOfDays,
+        remainingDays: balance.remainingDays - leave.noOfDays,
+      })
+      .where(
+        eq(
+          employeeLeaveBalanceModel.employeeLeaveBalanceId,
+          balance.employeeLeaveBalanceId
+        )
+      )
+
+    console.log('✅ Balance updated')
+
+    // 5. Approve leave
+    await tx
+      .update(employeeLeaveApplyModel)
+      .set({
+        approvedByHr: true,
+        status: 'Approved',
+        updatedBy,
+      })
+      .where(
+        eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+      )
+
+    console.log('✅ Leave marked as approved')
+
+    // 6. Final fetch
+    const [updated] = await tx
+      .select()
+      .from(employeeLeaveApplyModel)
+      .where(
+        eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
+      )
+
+    if (updated?.employeeId) {
+      await notifyEmployee(
+        updated.employeeId,
+        'Your applied leave have been approved'
+      )
+    }
+
+    console.log('🎯 Final updated leave:', updated)
+
+    return updated
+  })
 }
 
 export const rejectLeave = async (
@@ -202,6 +380,13 @@ export const rejectLeave = async (
     .where(
       eq(employeeLeaveApplyModel.employeeLeaveApplyId, employeeLeaveApplyId)
     )
+
+  if (updated?.employeeId) {
+    await notifyEmployee(
+      updated.employeeId,
+      'Your applied leave have been rejected'
+    )
+  }
 
   return updated
 }

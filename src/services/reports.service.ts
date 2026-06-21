@@ -15,7 +15,10 @@ import {
   salaryComponentsModel,
   salaryModel,
   workStationModel,
-  attendanceDaily
+  attendanceDaily,
+  employeeLeaveBalanceModel,
+  leaveTypeModel,
+  employeeLeaveApplyModel,
 } from '../schemas'
 
 export const employeeActivitiesReport = async (employeeId: number) => {
@@ -458,8 +461,6 @@ export const loneReport = async (fromDate: string, toDate: string) => {
   return Array.from(groupedMap.values())
 }
 
-
-
 // ─── Report 1: Daily Attendance ───────────────────────────────
 export const dailyAttendanceReport = async (date: string) => {
   return await db
@@ -479,27 +480,42 @@ export const dailyAttendanceReport = async (date: string) => {
       status: attendanceDaily.status, // PRESENT / ABSENT / LATE / HALF_DAY
     })
     .from(attendanceDaily)
-    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
-    .leftJoin(departmentModel, eq(employeeModel.departmentId, departmentModel.departmentId))
-    .leftJoin(designationModel, eq(employeeModel.designationId, designationModel.designationId))
-   .where(sql`DATE(${attendanceDaily.attendanceDate}) = ${date}`)  // ← এটাই fix
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
+    )
+    .leftJoin(
+      designationModel,
+      eq(employeeModel.designationId, designationModel.designationId)
+    )
+    .where(sql`DATE(${attendanceDaily.attendanceDate}) = ${date}`) // ← এটাই fix
     .orderBy(employeeModel.empCode)
 }
 
 // ─── Report 2: Attendance Summary (Date Range) ────────────────
-export const attendanceSummaryReport = async (fromDate: string, toDate: string) => {
+export const attendanceSummaryReport = async (
+  fromDate: string,
+  toDate: string
+) => {
   const rows = await db
     .select({
       attendanceDate: attendanceDaily.attendanceDate,
       status: attendanceDaily.status,
     })
     .from(attendanceDaily)
-   .where(
-  sql`DATE(${attendanceDaily.attendanceDate}) BETWEEN ${fromDate} AND ${toDate}`
-)
+    .where(
+      sql`DATE(${attendanceDaily.attendanceDate}) BETWEEN ${fromDate} AND ${toDate}`
+    )
 
   // Date অনুযায়ী group করো
-  const summaryMap = new Map<string, { present: number; absent: number; late: number; halfDay: number }>()
+  const summaryMap = new Map<
+    string,
+    { present: number; absent: number; late: number; halfDay: number }
+  >()
 
   for (const row of rows) {
     const dateKey = (row.attendanceDate as Date).toISOString().split('T')[0]
@@ -508,20 +524,227 @@ export const attendanceSummaryReport = async (fromDate: string, toDate: string) 
     }
     const entry = summaryMap.get(dateKey)!
     const s = row.status?.toUpperCase()
-    if (s === 'PRESENT')   entry.present++
-    else if (s === 'ABSENT')    entry.absent++
-    else if (s === 'LATE')      entry.late++
-    else if (s === 'HALF_DAY')  entry.halfDay++
+    if (s === 'PRESENT') entry.present++
+    else if (s === 'ABSENT') entry.absent++
+    else if (s === 'LATE') entry.late++
+    else if (s === 'HALF_DAY') entry.halfDay++
   }
 
   return Array.from(summaryMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, counts]) => ({
       date,
-      present:  counts.present,
-      absent:   counts.absent,
-      late:     counts.late,
-      halfDay:  counts.halfDay,
-      total:    counts.present + counts.absent + counts.late + counts.halfDay,
+      present: counts.present,
+      absent: counts.absent,
+      late: counts.late,
+      halfDay: counts.halfDay,
+      total: counts.present + counts.absent + counts.late + counts.halfDay,
     }))
+}
+
+// leave balance summary report
+export const getLeaveBalanceSummaryReport = async () => {
+  try {
+    const result = await db
+      .select({
+        employeeLeaveBalanceId:
+          employeeLeaveBalanceModel.employeeLeaveBalanceId,
+
+        employeeId: employeeModel.employeeId,
+        empFullName: employeeModel.empFullName,
+        empCode: employeeModel.empCode,
+
+        designationName: designationModel.designationName,
+
+        departmentName: departmentModel.departmentName,
+
+        leaveTypeName: leaveTypeModel.name,
+
+        usedDays: employeeLeaveBalanceModel.usedDays,
+
+        remainingDays: employeeLeaveBalanceModel.remainingDays,
+      })
+      .from(employeeLeaveBalanceModel)
+      .leftJoin(
+        employeeModel,
+        eq(employeeLeaveBalanceModel.employeeId, employeeModel.employeeId)
+      )
+      .leftJoin(
+        leaveTypeModel,
+        eq(employeeLeaveBalanceModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+      )
+      .leftJoin(
+        designationModel,
+        eq(employeeModel.designationId, designationModel.designationId)
+      )
+      .leftJoin(
+        departmentModel,
+        eq(employeeModel.departmentId, departmentModel.departmentId)
+      )
+
+    // =========================
+    // Group by employee
+    // =========================
+    const grouped = result.reduce((acc: any, row) => {
+      if (!row.employeeId) {
+        console.log('Skipping row with null employeeId:', row)
+        return acc
+      }
+
+      const key = row.employeeId // now safe (number only)
+
+      if (!acc[key]) {
+        acc[key] = {
+          employeeId: row.employeeId,
+          empCode: row.empCode,
+          empFullName: row.empFullName,
+          empDesignation: row.designationName,
+          empDepartment: row.departmentName,
+          leaves: [],
+        }
+      }
+
+      acc[key].leaves.push({
+        leaveTypeName: row.leaveTypeName,
+        usedDays: row.usedDays,
+        remainingDays: row.remainingDays,
+      })
+
+      return acc
+    }, {})
+
+    return Object.values(grouped)
+  } catch (error) {
+    console.error('Error in Leave Balance Summary Report:', error)
+    throw error
+  }
+}
+
+export const leaveLedgerReport = async () => {
+  try {
+    console.log('========== LEAVE LEDGER REPORT ==========')
+
+    // =========================
+    // 1. FETCH LEAVE APPLICATIONS
+    // =========================
+    const result = await db
+      .select({
+        employeeId: employeeModel.employeeId,
+        empCode: employeeModel.empCode,
+        empFullName: employeeModel.empFullName,
+
+        leaveTypeId: leaveTypeModel.leaveTypeId,
+        leaveTypeName: leaveTypeModel.name,
+
+        effectiveFrom: employeeLeaveApplyModel.effectiveFrom,
+        effectiveTo: employeeLeaveApplyModel.effectiveTo,
+        noOfDays: employeeLeaveApplyModel.noOfDays,
+        status: employeeLeaveApplyModel.status,
+      })
+      .from(employeeLeaveApplyModel)
+      .leftJoin(
+        employeeModel,
+        eq(employeeLeaveApplyModel.employeeId, employeeModel.employeeId)
+      )
+      .leftJoin(
+        leaveTypeModel,
+        eq(employeeLeaveApplyModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+      )
+      .orderBy(employeeLeaveApplyModel.createdAt)
+
+    // =========================
+    // 2. FETCH LEAVE BALANCES (OPENING)
+    // =========================
+    const balances = await db.select().from(employeeLeaveBalanceModel)
+
+    const balanceMap = new Map<string, number>()
+
+    balances.forEach((b) => {
+      if (!b.employeeId || !b.leaveTypeId) return
+
+      const key = `${b.employeeId}-${b.leaveTypeId}`
+
+      balanceMap.set(key, (b.earnedDays ?? 0) - (b.usedDays ?? 0))
+    })
+
+    // =========================
+    // 3. GROUP LEDGER DATA
+    // =========================
+    const ledger = result.reduce((acc: any, row) => {
+      if (!row.employeeId || !row.leaveTypeId) {
+        console.log('Skipping invalid row:', row)
+        return acc
+      }
+
+      const empKey = row.employeeId
+      const ltKey = row.leaveTypeId
+      const mapKey = `${empKey}-${ltKey}`
+
+      if (!acc[empKey]) {
+        acc[empKey] = {
+          employeeId: row.employeeId,
+          empCode: row.empCode,
+          empFullName: row.empFullName,
+          leaveType: {},
+        }
+      }
+
+      if (!acc[empKey].leaveType[ltKey]) {
+        acc[empKey].leaveType[ltKey] = {
+          leaveTypeId: row.leaveTypeId,
+          leaveTypeName: row.leaveTypeName,
+
+          openingBalance: balanceMap.get(mapKey) ?? 0,
+
+          currentBalance: balanceMap.get(mapKey) ?? 0,
+
+          transactions: [],
+          closingBalance: 0,
+        }
+      }
+
+      const entry = acc[empKey].leaveType[ltKey]
+
+      // =========================
+      // 4. BALANCE LOGIC
+      // =========================
+      let sign = 0
+
+      if (row.status === 'Approved') {
+        sign = -Number(row.noOfDays || 0)
+      }
+
+      entry.currentBalance += sign
+
+      // =========================
+      // 5. PUSH TRANSACTION
+      // =========================
+      entry.transactions.push({
+        date: row.effectiveFrom,
+        type: row.status,
+        from: row.effectiveFrom,
+        to: row.effectiveTo,
+        noOfDays: row.noOfDays,
+        balanceAfterThisTxn: entry.currentBalance,
+      })
+
+      return acc
+    }, {})
+
+    // =========================
+    // 6. FINALIZE OUTPUT
+    // =========================
+    Object.values(ledger).forEach((emp: any) => {
+      Object.values(emp.leaveType).forEach((lt: any) => {
+        lt.closingBalance = lt.currentBalance
+      })
+
+      emp.leaveType = Object.values(emp.leaveType)
+    })
+
+    return Object.values(ledger)
+  } catch (error) {
+    console.error('❌ LEAVE LEDGER ERROR:', error)
+    throw error
+  }
 }
