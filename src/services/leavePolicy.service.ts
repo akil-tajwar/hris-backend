@@ -216,60 +216,69 @@ export const getLeavePolicyByIdService = async (
   }
 }
 
+const formatMySQLDate = (
+  value: string | Date | null | undefined
+): Date | undefined => {
+  if (!value) return undefined
+
+  return new Date(value)
+}
+
 export const updateLeavePolicyService = async (
   leavePolicyMasterId: number,
   data: LeavePolicyInput
 ) => {
-  return await db.transaction(async (tx) => {
-    // update master
-    await tx
-      .update(leavePolicyMasterModel)
-      .set({
-        companyId: data.leavePolicyMaster.companyId,
-        policyName: data.leavePolicyMaster.policyName,
-        effectiveFrom: data.leavePolicyMaster.effectiveFrom,
-        effectiveTo: data.leavePolicyMaster.effectiveTo,
-        description: data.leavePolicyMaster.description,
-        active: data.leavePolicyMaster.active,
-        updatedBy: data.leavePolicyMaster.updatedBy,
-      })
-      .where(
-        eq(leavePolicyMasterModel.leavePolicyMasterId, leavePolicyMasterId)
-      )
+  try {
+    return await db.transaction(async (tx) => {
+      // Update Master
+      const masterResult = await tx
+        .update(leavePolicyMasterModel)
+        .set({
+          companyId: data.leavePolicyMaster.companyId,
+          policyName: data.leavePolicyMaster.policyName,
+          effectiveFrom: formatMySQLDate(data.leavePolicyMaster.effectiveFrom),
+          effectiveTo: formatMySQLDate(data.leavePolicyMaster.effectiveTo),
+          description: data.leavePolicyMaster.description,
+          active: data.leavePolicyMaster.active,
+          updatedBy: data.leavePolicyMaster.updatedBy,
+        })
+        .where(
+          eq(leavePolicyMasterModel.leavePolicyMasterId, leavePolicyMasterId)
+        )
 
-    const incomingDetailIds = data.leavePolicyDetails
-      .map((item) => item.leavePolicyDetailsId)
-      .filter((id): id is number => typeof id === 'number')
+      console.log('Master Update Result:', masterResult)
 
-    const existingDetails = await tx
-      .select({
-        leavePolicyDetailsId: leavePolicyDetailsModel.leavePolicyDetailsId,
-      })
-      .from(leavePolicyDetailsModel)
-      .where(
-        eq(leavePolicyDetailsModel.leavePolicyMasterId, leavePolicyMasterId)
-      )
+      // Update Existing / Insert New Details
+      for (const item of data.leavePolicyDetails) {
+        console.log('Processing Detail:', item)
 
-    const existingIds = existingDetails.map((item) => item.leavePolicyDetailsId)
+        if (item.leavePolicyDetailsId) {
+          console.log(
+            `Updating existing detail ID: ${item.leavePolicyDetailsId}`
+          )
 
-    const deleteIds = existingIds.filter(
-      (id) => !incomingDetailIds.includes(id)
-    )
-
-    // delete removed details
-    if (deleteIds.length > 0) {
-      await tx
-        .delete(leavePolicyDetailsModel)
-        .where(inArray(leavePolicyDetailsModel.leavePolicyDetailsId, deleteIds))
-    }
-
-    // insert/update details
-    for (const item of data.leavePolicyDetails) {
-      if (item.leavePolicyDetailsId) {
-        // update
-        await tx
-          .update(leavePolicyDetailsModel)
-          .set({
+          const updateResult = await tx
+            .update(leavePolicyMasterModel)
+            .set({
+              companyId: data.leavePolicyMaster.companyId,
+              policyName: data.leavePolicyMaster.policyName,
+              effectiveFrom: formatMySQLDate(
+                data.leavePolicyMaster.effectiveFrom
+              ),
+              effectiveTo: formatMySQLDate(data.leavePolicyMaster.effectiveTo),
+              description: data.leavePolicyMaster.description,
+              active: data.leavePolicyMaster.active,
+              updatedBy: data.leavePolicyMaster.updatedBy,
+            })
+            .where(
+              eq(
+                leavePolicyMasterModel.leavePolicyMasterId,
+                leavePolicyMasterId
+              )
+            )
+        } else {
+          const insertResult = await tx.insert(leavePolicyDetailsModel).values({
+            leavePolicyMasterId,
             leaveTypeId: item.leaveTypeId,
             yearlyAllocation: item.yearlyAllocation,
             accrualFrequency: item.accrualFrequency,
@@ -277,32 +286,26 @@ export const updateLeavePolicyService = async (
             maxBalanceAllowed: item.maxBalanceAllowed,
             carryForwardLimit: item.carryForwardLimit,
             active: item.active,
-            updatedBy: item.updatedBy,
+            createdBy: item.createdBy,
           })
-          .where(
-            eq(
-              leavePolicyDetailsModel.leavePolicyDetailsId,
-              item.leavePolicyDetailsId
-            )
-          )
-      } else {
-        // insert
-        await tx.insert(leavePolicyDetailsModel).values({
-          leavePolicyMasterId,
-          leaveTypeId: item.leaveTypeId,
-          yearlyAllocation: item.yearlyAllocation,
-          accrualFrequency: item.accrualFrequency,
-          accrualRate: item.accrualRate,
-          maxBalanceAllowed: item.maxBalanceAllowed,
-          carryForwardLimit: item.carryForwardLimit,
-          active: item.active,
-          createdBy: item.createdBy,
-        })
+        }
       }
+
+      return {
+        success: true,
+        message: 'Leave policy updated successfully',
+      }
+    })
+  } catch (error) {
+    console.error('ERROR IN updateLeavePolicyService:', error)
+
+    if (error instanceof Error) {
+      console.error('Error Message:', error.message)
+      console.error('Error Stack:', error.stack)
     }
 
-    return true
-  })
+    throw error
+  }
 }
 
 export const deleteLeavePolicyService = async (leavePolicyMasterId: number) => {
