@@ -1,6 +1,10 @@
 import { Request, Response } from 'express'
 import { requirePermission } from '../services/utils/jwt.utils'
-import { dailyAttendanceReport, attendanceSummaryReport } from '../services/reports.service'
+import {
+  dailyAttendanceReport,
+  attendanceSummaryReport,
+  getLeaveBalanceSummaryReport,
+} from '../services/reports.service'
 import {
   employeeActivitiesReport,
   employeeAttendanceReport,
@@ -177,10 +181,10 @@ export const loneReportController = async (req: Request, res: Response) => {
   }
 }
 
-
-
-
-export const dailyAttendanceReportController = async (req: Request, res: Response): Promise<void> => {
+export const dailyAttendanceReportController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     // requirePermission(req, 'view_attendance_report')
     const { date } = req.query
@@ -190,18 +194,24 @@ export const dailyAttendanceReportController = async (req: Request, res: Respons
         success: false,
         message: 'date is required (format: YYYY-MM-DD)',
       })
-      return  // ← return শুধু এখানে, res.status এর আগে না
+      return // ← return শুধু এখানে, res.status এর আগে না
     }
 
     const data = await dailyAttendanceReport(date as string)
     res.status(200).json({ success: true, data })
   } catch (error) {
     console.error('Daily attendance report error:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch daily attendance report' })
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch daily attendance report',
+    })
   }
 }
 
-export const attendanceSummaryReportController = async (req: Request, res: Response): Promise<void> => {
+export const attendanceSummaryReportController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     // requirePermission(req, 'view_attendance_report')
     const { fromDate, toDate } = req.query
@@ -214,10 +224,33 @@ export const attendanceSummaryReportController = async (req: Request, res: Respo
       return
     }
 
-    const data = await attendanceSummaryReport(fromDate as string, toDate as string)
+    const data = await attendanceSummaryReport(
+      fromDate as string,
+      toDate as string
+    )
     res.status(200).json({ success: true, data })
   } catch (error) {
     console.error('Attendance summary report error:', error)
-    res.status(500).json({ success: false, message: 'Failed to fetch attendance summary' })
+    res
+      .status(500)
+      .json({ success: false, message: 'Failed to fetch attendance summary' })
+  }
+}
+
+export const getLeaveBalanceSummaryReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = await getLeaveBalanceSummaryReport()
+
+    res.status(200).json(data)
+  } catch (error) {
+    console.error('Controller Error:', error)
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch report',
+    })
   }
 }
