@@ -105,25 +105,32 @@ export const getMillisecondsFromTimeString = (timeString: string): number => {
 };
 
 export async function getUserPermissions(userId: number) {
+  type UserRoleWithPermissions = {
+    roleId: number;
+    userId: number;
+    role?: {
+      rolePermissions: Array<{ permission: { name: string } }>;
+    };
+  };
 
-    const result = await db.query.userRolesModel.findMany({
-      where: (ur, { eq }) => eq(ur.userId, userId),
-      with: {
-        role: {
-          with: {
-            rolePermissions: {
-              with: {
-                permission: true,
-              },
+  const result = await db.query.userRolesModel.findMany({
+    where: (ur, { eq }) => eq(ur.userId, userId),
+    with: {
+      role: {
+        with: {
+          rolePermissions: {
+            with: {
+              permission: true,
             },
           },
         },
       },
-    });
+    },
+  }) as UserRoleWithPermissions[];
+
   const permissions = new Set<string>();
-  // console.log('dfdfdfdfdfdf',result)
   for (const ur of result) {
-    for (const perm of ur.role?.rolePermissions) {
+    for (const perm of ur.role?.rolePermissions ?? []) {
       permissions.add(perm.permission.name);
     }
   }

@@ -6,6 +6,7 @@ import {
   getAllEmployeesController,
   getEmployeeByIdController,
   deleteEmployeeController,
+  getEmployeeIdByUserIdController,
 } from '../controllers/employees.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
@@ -33,6 +34,7 @@ router.patch(
 )
 router.get('/getAll', authenticateUser, getAllEmployeesController)
 router.get('/getById/:id', authenticateUser, getEmployeeByIdController)
+router.get('/getEmpIdByUserId/:userId', authenticateUser, getEmployeeIdByUserIdController)
 router.delete('/delete/:id', authenticateUser, deleteEmployeeController)
 
 export default router

@@ -108,6 +108,7 @@ export const updateUser = async (
 // Login user
 export const loginUser = async (username: string, password: string) => {
   const user = await findUserByUsername(username)
+  console.log("🚀 ~ loginUser ~ user:", user)
 
   if (!user) {
     throw UnauthorizedError(
@@ -125,10 +126,18 @@ export const loginUser = async (username: string, password: string) => {
     )
   }
 
-  const userDetails = await getUserDetailsByUserId(user.userId)
+  const userDetails = await getUserDetailsByUserId(user.userId) as {
+    role?: {
+      rolePermissions?: Array<{
+        permission: {
+          name: string
+        }
+      }>
+    }
+  }
 
   const permissions =
-    userDetails?.role?.rolePermissions.map((ur) => ur.permission.name) || []
+    userDetails?.role?.rolePermissions?.map((ur) => ur.permission.name) || []
 
   const token = generateAccessToken({
     userId: user.userId,

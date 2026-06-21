@@ -6,6 +6,7 @@ import {
   getAllEmployees,
   getEmployeeById,
   deleteEmployee,
+  getEmployeeIdByUserIdService,
 } from '../services/employees.service'
 
 /* ================================
@@ -189,6 +190,30 @@ export const deleteEmployeeController = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Server error',
+    })
+  }
+}
+
+export const getEmployeeIdByUserIdController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = Number(req.params.userId)
+    console.log("🚀 ~ getEmployeeIdByUserIdController ~ req.params.userId:", req.params.userId)
+    console.log("🚀 ~ getEmployeeIdByUserIdController ~ userId:", userId)
+
+    if (!userId) {
+      res.status(400).json({ message: 'Invalid userId' })
+    }
+
+    const employeeId = await getEmployeeIdByUserIdService(Number(userId))
+
+    res.status(200).json(employeeId)
+  } catch (error: any) {
+    res.status(404).json({
+      success: false,
+      message: error.message || 'Something went wrong',
     })
   }
 }

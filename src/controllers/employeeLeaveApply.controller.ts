@@ -7,6 +7,7 @@ import {
   approveLeaveByRepAuth,
   approveLeaveByHr,
   calculateLeaveDaysService,
+  rejectLeave,
 } from '../services/employeeLeaveApply.service'
 import { requirePermission } from '../services/utils/jwt.utils'
 
@@ -79,7 +80,7 @@ export const approveLeaveByRepAuthController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'approve_leave_rep_auth')
+    requirePermission(req, 'edit_employee_leave_apply')
 
     const { employeeLeaveApplyId } = req.params
     const { updatedBy } = req.body
@@ -105,12 +106,37 @@ export const approveLeaveByHrController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'approve_leave_hr')
+    requirePermission(req, 'edit_employee_leave_apply')
 
     const { employeeLeaveApplyId } = req.params
     const { updatedBy } = req.body
 
     const result = await approveLeaveByHr(
+      Number(employeeLeaveApplyId),
+      updatedBy
+    )
+
+    res.json({
+      status: 'success',
+      data: result,
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const rejectLeaveController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    requirePermission(req, 'edit_employee_leave_apply')
+
+    const { employeeLeaveApplyId } = req.params
+    const { updatedBy } = req.body
+
+    const result = await rejectLeave(
       Number(employeeLeaveApplyId),
       updatedBy
     )
