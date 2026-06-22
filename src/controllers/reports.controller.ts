@@ -263,7 +263,7 @@ export const leaveLedgerReportController = async (
   try {
     const { year } = req.query
 
-    const data = await leaveLedgerReport(Number(year))
+    const data = await leaveLedgerReport()
 
     res.status(200).json(data)
   } catch (error) {
