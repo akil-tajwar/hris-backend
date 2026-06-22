@@ -221,7 +221,7 @@ export const approveLeaveByRepAuth = async (
       hrEmployees.map((emp) =>
         notifyEmployee(
           emp.employeeId,
-          'A reporting authority has approved a leave'
+          'You have a pending leave approval'
         )
       )
     )

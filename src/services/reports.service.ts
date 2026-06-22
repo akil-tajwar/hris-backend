@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   companyModel,
@@ -19,6 +19,7 @@ import {
   employeeLeaveBalanceModel,
   leaveTypeModel,
   employeeLeaveApplyModel,
+  employeeLeaveAssignmentModel,
 } from '../schemas'
 
 export const employeeActivitiesReport = async (employeeId: number) => {
@@ -622,12 +623,11 @@ export const getLeaveBalanceSummaryReport = async () => {
 
 export const leaveLedgerReport = async () => {
   try {
-    console.log('========== LEAVE LEDGER REPORT ==========')
+    // =====================================================
+    // 1. FETCH LEAVE BALANCES (BASE: ALL ASSIGNED EMPLOYEES)
+    // =====================================================
 
-    // =========================
-    // 1. FETCH LEAVE APPLICATIONS
-    // =========================
-    const result = await db
+    const balances = await db
       .select({
         employeeId: employeeModel.employeeId,
         empCode: employeeModel.empCode,
@@ -636,115 +636,171 @@ export const leaveLedgerReport = async () => {
         leaveTypeId: leaveTypeModel.leaveTypeId,
         leaveTypeName: leaveTypeModel.name,
 
+        earnedDays: employeeLeaveBalanceModel.earnedDays,
+        usedDays: employeeLeaveBalanceModel.usedDays,
+        remainingDays: employeeLeaveBalanceModel.remainingDays,
+
+        year: employeeLeaveBalanceModel.year,
+
+        assignmentEffectiveFrom: employeeLeaveAssignmentModel.effectiveFrom,
+      })
+      .from(employeeLeaveBalanceModel)
+      .leftJoin(
+        employeeModel,
+        eq(employeeLeaveBalanceModel.employeeId, employeeModel.employeeId)
+      )
+      .leftJoin(
+        leaveTypeModel,
+        eq(employeeLeaveBalanceModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+      )
+      .leftJoin(
+        employeeLeaveAssignmentModel,
+        eq(
+          employeeLeaveBalanceModel.employeeLeaveAssignmentId,
+          employeeLeaveAssignmentModel.employeeLeaveAssignmentId
+        )
+      )
+
+    // =====================================================
+    // 2. FETCH LEAVE APPLICATIONS (ALL EMPLOYEES)
+    // =====================================================
+
+    const leaveApplications = await db
+      .select({
+        leaveApplyId: employeeLeaveApplyModel.employeeLeaveApplyId,
+        employeeId: employeeLeaveApplyModel.employeeId,
+        leaveTypeId: employeeLeaveApplyModel.leaveTypeId,
+
         effectiveFrom: employeeLeaveApplyModel.effectiveFrom,
         effectiveTo: employeeLeaveApplyModel.effectiveTo,
+
         noOfDays: employeeLeaveApplyModel.noOfDays,
         status: employeeLeaveApplyModel.status,
       })
       .from(employeeLeaveApplyModel)
-      .leftJoin(
-        employeeModel,
-        eq(employeeLeaveApplyModel.employeeId, employeeModel.employeeId)
-      )
-      .leftJoin(
-        leaveTypeModel,
-        eq(employeeLeaveApplyModel.leaveTypeId, leaveTypeModel.leaveTypeId)
-      )
-      .orderBy(employeeLeaveApplyModel.createdAt)
+      .orderBy(asc(employeeLeaveApplyModel.effectiveFrom))
 
-    // =========================
-    // 2. FETCH LEAVE BALANCES (OPENING)
-    // =========================
-    const balances = await db.select().from(employeeLeaveBalanceModel)
+    // =====================================================
+    // 3. BUILD BASE LEDGER FROM ASSIGNMENTS
+    // =====================================================
 
-    const balanceMap = new Map<string, number>()
+    const ledgerMap = new Map<string, any>()
 
-    balances.forEach((b) => {
-      if (!b.employeeId || !b.leaveTypeId) return
-
+    for (const b of balances) {
       const key = `${b.employeeId}-${b.leaveTypeId}`
 
-      balanceMap.set(key, (b.earnedDays ?? 0) - (b.usedDays ?? 0))
-    })
+      ledgerMap.set(key, {
+        employeeId: b.employeeId,
+        empCode: b.empCode,
+        empFullName: b.empFullName,
 
-    // =========================
-    // 3. GROUP LEDGER DATA
-    // =========================
-    const ledger = result.reduce((acc: any, row) => {
-      if (!row.employeeId || !row.leaveTypeId) {
-        console.log('Skipping invalid row:', row)
-        return acc
-      }
+        leaveTypeId: b.leaveTypeId,
+        leaveTypeName: b.leaveTypeName,
 
-      const empKey = row.employeeId
-      const ltKey = row.leaveTypeId
-      const mapKey = `${empKey}-${ltKey}`
+        summary: {
+          allocated: Number(b.earnedDays ?? 0),
+          used: Number(b.usedDays ?? 0),
+          available: Number(b.remainingDays ?? 0),
+        },
 
-      if (!acc[empKey]) {
-        acc[empKey] = {
-          employeeId: row.employeeId,
-          empCode: row.empCode,
-          empFullName: row.empFullName,
-          leaveType: {},
-        }
-      }
+        runningBalance: Number(b.earnedDays ?? 0),
 
-      if (!acc[empKey].leaveType[ltKey]) {
-        acc[empKey].leaveType[ltKey] = {
-          leaveTypeId: row.leaveTypeId,
-          leaveTypeName: row.leaveTypeName,
-
-          openingBalance: balanceMap.get(mapKey) ?? 0,
-
-          currentBalance: balanceMap.get(mapKey) ?? 0,
-
-          transactions: [],
-          closingBalance: 0,
-        }
-      }
-
-      const entry = acc[empKey].leaveType[ltKey]
-
-      // =========================
-      // 4. BALANCE LOGIC
-      // =========================
-      let sign = 0
-
-      if (row.status === 'Approved') {
-        sign = -Number(row.noOfDays || 0)
-      }
-
-      entry.currentBalance += sign
-
-      // =========================
-      // 5. PUSH TRANSACTION
-      // =========================
-      entry.transactions.push({
-        date: row.effectiveFrom,
-        type: row.status,
-        from: row.effectiveFrom,
-        to: row.effectiveTo,
-        noOfDays: row.noOfDays,
-        balanceAfterThisTxn: entry.currentBalance,
+        history: [],
       })
+    }
 
-      return acc
-    }, {})
+    // =====================================================
+    // 4. ADD ALLOCATION ENTRY
+    // =====================================================
 
-    // =========================
-    // 6. FINALIZE OUTPUT
-    // =========================
-    Object.values(ledger).forEach((emp: any) => {
-      Object.values(emp.leaveType).forEach((lt: any) => {
-        lt.closingBalance = lt.currentBalance
+    for (const b of balances) {
+      const key = `${b.employeeId}-${b.leaveTypeId}`
+
+      const record = ledgerMap.get(key)
+      if (!record) continue
+
+      record.history.push({
+        date: b.assignmentEffectiveFrom,
+        event: 'Policy Assigned',
+        days: Number(b.earnedDays ?? 0),
+        balanceAfter: record.runningBalance,
       })
+    }
 
-      emp.leaveType = Object.values(emp.leaveType)
-    })
+    // =====================================================
+    // 5. APPLY LEAVE TRANSACTIONS
+    // =====================================================
 
-    return Object.values(ledger)
+    for (const leave of leaveApplications) {
+      const key = `${leave.employeeId}-${leave.leaveTypeId}`
+
+      const record = ledgerMap.get(key)
+
+      // 🔥 IMPORTANT FIX:
+      // if employee has balance but no leave applied yet -> skip safely
+      if (!record) continue
+
+      if (leave.status === 'Approved') {
+        record.runningBalance -= Number(leave.noOfDays ?? 0)
+      }
+
+      record.history.push({
+        leaveApplyId: leave.leaveApplyId,
+        date: leave.effectiveFrom,
+
+        event: 'Leave Application',
+
+        status: leave.status,
+        fromDate: leave.effectiveFrom,
+        toDate: leave.effectiveTo,
+
+        days: Number(leave.noOfDays ?? 0),
+
+        balanceAfter: record.runningBalance,
+      })
+    }
+
+    // =====================================================
+    // 6. GROUP BY EMPLOYEE (IMPORTANT FIX INCLUDED)
+    // =====================================================
+
+    const employeeMap = new Map<number, any>()
+
+    for (const record of ledgerMap.values()) {
+      if (!employeeMap.has(record.employeeId)) {
+        employeeMap.set(record.employeeId, {
+          employeeId: record.employeeId,
+          empCode: record.empCode,
+          empFullName: record.empFullName,
+          leaveLedgers: [],
+        })
+      }
+
+      const emp = employeeMap.get(record.employeeId)
+
+      emp.leaveLedgers.push({
+        leaveTypeId: record.leaveTypeId,
+        leaveTypeName: record.leaveTypeName,
+
+        allocatedDays: record.summary.allocated,
+        usedDays: record.summary.used,
+        availableDays: record.summary.available,
+
+        // FINAL BALANCE
+        currentBalance: record.runningBalance,
+
+        // 🔥 IMPORTANT: ALWAYS RETURN HISTORY (EMPTY IF NO LEAVE)
+        history: record.history,
+      })
+    }
+
+    // =====================================================
+    // 7. RETURN RESULT
+    // =====================================================
+
+    return Array.from(employeeMap.values())
   } catch (error) {
-    console.error('❌ LEAVE LEDGER ERROR:', error)
+    console.error('LEAVE LEDGER REPORT ERROR:', error)
     throw error
   }
 }
