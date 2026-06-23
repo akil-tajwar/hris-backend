@@ -9,9 +9,9 @@ import { authenticateUser } from '../middlewares/auth.middleware'
 
 const router = Router()
 
-router.post('/create', authenticateUser, createTenantController)
-router.get('/getAll', authenticateUser, getTenantsController)
-router.patch('/edit/:tenantId', authenticateUser, updateTenantController)
-router.delete('/delete/:tenantId', authenticateUser, deleteTenantController)
+router.post('/create', createTenantController)
+router.get('/getAll', getTenantsController)
+router.patch('/edit/:tenantId', updateTenantController)
+router.delete('/delete/:tenantId', deleteTenantController)
 
 export default router

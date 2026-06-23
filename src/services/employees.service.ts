@@ -21,6 +21,8 @@ import {
   employeeLeavePolicyHistoryModel,
   employeeSalaryStructureHistoryModel,
   employeeLifecycleEventsModel,
+  userCompanyModel,
+  employeeLeaveAssignmentModel,
 } from '../schemas'
 import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
@@ -35,7 +37,7 @@ export const createEmployee = async (input: {
     leavePolicyMasterId?: number | null
     salaryStructureMasterId?: number | null
   }
-  userData: NewUser
+  userData: NewUser & { userCompanies?: number[]; createdBy: number }
 }) => {
   const CACHE_KEY = 'employees:all'
 
@@ -70,6 +72,17 @@ export const createEmployee = async (input: {
 
     const userId = Number(userInsertResult[0].insertId)
 
+    // 3.1 Insert user-company associations
+    if (userData.userCompanies && userData.userCompanies.length > 0) {
+      await db.insert(userCompanyModel).values(
+        userData.userCompanies.map((companyId) => ({
+          userId: userId,
+          companyId,
+          createdBy: userData.createdBy,
+        }))
+      )
+    }
+
     // 4. Create employee
     const employeeInsertResult = await tx.insert(employeeModel).values({
       ...employeeData,
@@ -77,6 +90,15 @@ export const createEmployee = async (input: {
     })
 
     const employeeId = Number(employeeInsertResult[0].insertId)
+
+    // 4.1 Create leave assignment
+    await tx.insert(employeeLeaveAssignmentModel).values({
+      employeeId,
+      leavePolicyMasterId: employeeData.leavePolicyMasterId!,
+      effectiveFrom: employeeData.doj,
+      active: true,
+      createdBy: employeeData.createdBy,
+    })
 
     // 5. Update preboarding if exists
     if (employeeData.preboardingId != null) {

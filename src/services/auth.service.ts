@@ -7,7 +7,7 @@ import {
   hashPassword,
   validatePassword,
 } from './utils/password.utils'
-import { NewUser, roleModel, userModel } from '../schemas'
+import { NewUser, roleModel, userCompanyModel, userModel } from '../schemas'
 
 // Find user by username
 export const findUserByUsername = async (username: string) => {
@@ -39,7 +39,9 @@ export const getUserDetailsByUserId = async (userId: number) => {
 }
 
 // Create new user
-export const createUser = async (userData: NewUser) => {
+export const createUser = async (
+  userData: NewUser & { userCompanies?: number[]; createdBy: number }
+) => {
   const existingUser = await findUserByUsername(userData.username)
 
   if (existingUser) {
@@ -49,7 +51,6 @@ export const createUser = async (userData: NewUser) => {
   validatePassword(userData.password)
   const hashedPassword = await hashPassword(userData.password)
 
-  // SQLite does not support $returningId(); use lastInsertRowid
   const result = await db.insert(userModel).values({
     username: userData.username,
     password: hashedPassword,
@@ -60,7 +61,18 @@ export const createUser = async (userData: NewUser) => {
     email: userData.email,
   })
 
-  const newUserId = result[0] // Drizzle returns array with inserted row ID
+  const newUserId = result[0].insertId // MySQL returns insertId
+
+  // Insert user-company associations
+  if (userData.userCompanies && userData.userCompanies.length > 0) {
+    await db.insert(userCompanyModel).values(
+      userData.userCompanies.map((companyId) => ({
+        userId: newUserId,
+        companyId,
+        createdBy: userData.createdBy,
+      }))
+    )
+  }
 
   return {
     id: newUserId,
@@ -71,6 +83,7 @@ export const createUser = async (userData: NewUser) => {
     tenantId: userData.tenantId,
     email: userData.email,
     isPasswordResetRequired: userData.isPasswordResetRequired,
+    userCompanies: userData.userCompanies ?? [],
   }
 }
 
@@ -108,7 +121,7 @@ export const updateUser = async (
 // Login user
 export const loginUser = async (username: string, password: string) => {
   const user = await findUserByUsername(username)
-  console.log("🚀 ~ loginUser ~ user:", user)
+  console.log('🚀 ~ loginUser ~ user:', user)
 
   if (!user) {
     throw UnauthorizedError(
@@ -126,7 +139,7 @@ export const loginUser = async (username: string, password: string) => {
     )
   }
 
-  const userDetails = await getUserDetailsByUserId(user.userId) as {
+  const userDetails = (await getUserDetailsByUserId(user.userId)) as {
     role?: {
       rolePermissions?: Array<{
         permission: {

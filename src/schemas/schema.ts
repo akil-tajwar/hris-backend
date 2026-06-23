@@ -149,6 +149,9 @@ export const designationModel = mysqlTable('designations', {
 
 export const companyModel = mysqlTable('companies', {
   companyId: int('company_id').primaryKey().autoincrement(),
+  tenantId: int('tenant_id')
+    .references(() => tenantModel.tenantId)
+    .notNull(),
   code: varchar('code', { length: 50 }),
   companyName: varchar('company_name', { length: 100 }).notNull(),
   shortName: varchar('short_name', { length: 50 }),
@@ -163,6 +166,22 @@ export const companyModel = mysqlTable('companies', {
   currency: varchar('currency', { length: 3 }).default('USD'),
   status: boolean('status').default(true),
   createdBy: int('created_by'),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const userCompanyModel = mysqlTable('user_companies', {
+  userCompanyId: int('user_company_id').primaryKey().autoincrement(),
+  userId: int('user_id')
+    .notNull()
+    .references(() => userModel.userId, { onDelete: 'cascade' }),
+  companyId: int('company_id')
+    .notNull()
+    .references(() => companyModel.companyId, { onDelete: 'cascade' }),
+  createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
   updatedAt: timestamp('updated_at').default(

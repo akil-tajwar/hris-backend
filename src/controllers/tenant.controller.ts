@@ -14,7 +14,6 @@ export const createTenantController = async (
 ) => {
 
   try {
-    requirePermission(req, 'create_tenant')
     const tenant = await createTenant(req.body)
     res.status(201).json({ status: 'success', data: tenant })
   } catch (err) {
@@ -29,7 +28,6 @@ export const getTenantsController = async (
 ) => {
 
   try {
-    requirePermission(req, 'view_tenant')
     const tenants = await getTenants()
     res.json(tenants)
   } catch (err) {
@@ -44,7 +42,6 @@ export const updateTenantController = async (
 ) => {
 
   try {
-    requirePermission(req, 'edit_tenant')
     const { tenantId } = req.params
     const { tenantName, updatedBy } = req.body
 
@@ -62,7 +59,6 @@ export const deleteTenantController = async (
 ) => {
 
   try {
-    requirePermission(req, 'delete_tenant')
     const { tenantId } = req.params
     await deleteTenant(Number(tenantId))
     res.json({ status: 'success', message: 'Tenant deleted' })
