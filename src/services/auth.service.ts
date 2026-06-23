@@ -145,9 +145,21 @@ export const loginUser = async (username: string, password: string) => {
         permission: {
           name: string
         }
+        userCompanies?: {
+          companyId: number[]
+        }
       }>
     }
   }
+
+  const userCompanies = await db
+    .select({
+      companyId: userCompanyModel.companyId,
+    })
+    .from(userCompanyModel)
+    .where(eq(userCompanyModel.userId, user.userId))
+
+  const companyIds = userCompanies.map((c) => c.companyId)
 
   const permissions =
     userDetails?.role?.rolePermissions?.map((ur) => ur.permission.name) || []
@@ -163,6 +175,7 @@ export const loginUser = async (username: string, password: string) => {
   return {
     token,
     user: userDetails,
+    userCompanies: companyIds,
   }
 }
 

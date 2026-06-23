@@ -1563,7 +1563,7 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
 // ========================
 // Relations (unchanged)
 // ========================
-export const userRelations = relations(userModel, ({ one }) => ({
+export const userRelations = relations(userModel, ({ one, many }) => ({
   role: one(roleModel, {
     fields: [userModel.roleId],
     references: [roleModel.roleId],
@@ -1571,6 +1571,18 @@ export const userRelations = relations(userModel, ({ one }) => ({
   tenant: one(tenantModel, {
     fields: [userModel.tenantId],
     references: [tenantModel.tenantId],
+  }),
+  userCompanies: many(userCompanyModel),
+}))
+
+export const userCompanyRelations = relations(userCompanyModel, ({ one }) => ({
+  user: one(userModel, {
+    fields: [userCompanyModel.userId],
+    references: [userModel.userId],
+  }),
+  company: one(companyModel, {
+    fields: [userCompanyModel.companyId],
+    references: [companyModel.companyId],
   }),
 }))
 
