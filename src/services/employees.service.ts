@@ -29,6 +29,7 @@ import { BadRequestError } from './utils/errors.utils'
 import { hashPassword, validatePassword } from './utils/password.utils'
 import { getCache, setCache } from '../middlewares/cache'
 import { redis } from '../middlewares/redis'
+import { error } from 'console'
 
 //CREATE
 export const createEmployee = async (input: {
@@ -39,6 +40,7 @@ export const createEmployee = async (input: {
   }
   userData: NewUser & { userCompanies?: number[]; createdBy: number }
 }) => {
+  console.log("🚀 ~ createEmployee ~ input:", input)
   const CACHE_KEY = 'employees:all'
 
   return await db.transaction(async (tx) => {
@@ -74,13 +76,15 @@ export const createEmployee = async (input: {
 
     // 3.1 Insert user-company associations
     if (userData.userCompanies && userData.userCompanies.length > 0) {
-      await db.insert(userCompanyModel).values(
+      await tx.insert(userCompanyModel).values(
         userData.userCompanies.map((companyId) => ({
           userId: userId,
           companyId,
-          createdBy: userData.createdBy,
+          createdBy: employeeData.createdBy,
         }))
       )
+    } else {
+      throw error('select at least one company')
     }
 
     // 4. Create employee

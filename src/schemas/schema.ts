@@ -462,6 +462,9 @@ export const employeeModel = mysqlTable('employees', {
   leavePolicyMasterId: int('leave_policy_master_id').references(
     () => leavePolicyMasterModel.leavePolicyMasterId
   ),
+  attendancePolicyId: int('attendance_policy_id').references(
+    () => attendancePoliciesModel.id
+  ),
   reportingAuthorityId: int('reporting_authority_id'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
