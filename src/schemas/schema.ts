@@ -173,22 +173,6 @@ export const companyModel = mysqlTable('companies', {
   ),
 })
 
-export const userCompanyModel = mysqlTable('user_companies', {
-  userCompanyId: int('user_company_id').primaryKey().autoincrement(),
-  userId: int('user_id')
-    .notNull()
-    .references(() => userModel.userId, { onDelete: 'cascade' }),
-  companyId: int('company_id')
-    .notNull()
-    .references(() => companyModel.companyId, { onDelete: 'cascade' }),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
 export const workStationModel = mysqlTable('work_stations', {
   workStationId: int('work_station_id').primaryKey().autoincrement(),
   workStationNumber: int('work_station_number').notNull(),
@@ -441,7 +425,7 @@ export const employeeModel = mysqlTable('employees', {
   designationId: int('designation_id')
     .references(() => designationModel.designationId)
     .notNull(),
-  employmentTypeId: int('employee_type_id')
+  employmentTypeId: int('employment_type_id')
     .references(() => employmentTypeModel.employmentTypeId)
     .notNull(),
   companyId: int('company_id')
@@ -535,7 +519,7 @@ export const employeeSalaryStructureHistoryModel = mysqlTable(
     employeeId: int('employee_id')
       .references(() => employeeModel.employeeId)
       .notNull(),
-    salaryStructureId: int('salary_structure_id')
+    salaryStructureMasterId: int('salary_structure_master_id')
       .references(() => salaryStructureMasterModel.salaryStructureMasterId)
       .notNull(),
     effectiveFrom: date('effective_from').notNull(),
@@ -1563,7 +1547,7 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
 // ========================
 // Relations (unchanged)
 // ========================
-export const userRelations = relations(userModel, ({ one, many }) => ({
+export const userRelations = relations(userModel, ({ one }) => ({
   role: one(roleModel, {
     fields: [userModel.roleId],
     references: [roleModel.roleId],
@@ -1571,18 +1555,6 @@ export const userRelations = relations(userModel, ({ one, many }) => ({
   tenant: one(tenantModel, {
     fields: [userModel.tenantId],
     references: [tenantModel.tenantId],
-  }),
-  userCompanies: many(userCompanyModel),
-}))
-
-export const userCompanyRelations = relations(userCompanyModel, ({ one }) => ({
-  user: one(userModel, {
-    fields: [userCompanyModel.userId],
-    references: [userModel.userId],
-  }),
-  company: one(companyModel, {
-    fields: [userCompanyModel.companyId],
-    references: [companyModel.companyId],
   }),
 }))
 

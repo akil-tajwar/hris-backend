@@ -7,7 +7,7 @@ import {
   hashPassword,
   validatePassword,
 } from './utils/password.utils'
-import { NewUser, roleModel, userCompanyModel, userModel } from '../schemas'
+import { NewUser, roleModel, userModel } from '../schemas'
 
 // Find user by username
 export const findUserByEmail = async (email: string) => {
@@ -71,16 +71,6 @@ export const createUser = async (
   })
 
   const newUserId = result[0].insertId
-
-  if (userData.userCompanies?.length) {
-    await dbInstance.insert(userCompanyModel).values(
-      userData.userCompanies.map((companyId) => ({
-        userId: newUserId,
-        companyId,
-        createdBy: userData.createdBy,
-      }))
-    )
-  }
 
   return {
     userId: newUserId,
@@ -159,15 +149,6 @@ export const loginUser = async (email: string, password: string) => {
     }
   }
 
-  const userCompanies = await db
-    .select({
-      companyId: userCompanyModel.companyId,
-    })
-    .from(userCompanyModel)
-    .where(eq(userCompanyModel.userId, user.userId))
-
-  const companyIds = userCompanies.map((c) => c.companyId)
-
   const permissions =
     userDetails?.role?.rolePermissions?.map((ur) => ur.permission.name) || []
 
@@ -182,7 +163,6 @@ export const loginUser = async (email: string, password: string) => {
   return {
     token,
     user: userDetails,
-    userCompanies: companyIds,
   }
 }
 
