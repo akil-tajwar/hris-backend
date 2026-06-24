@@ -10,11 +10,12 @@ import {
 import { NewUser, roleModel, userCompanyModel, userModel } from '../schemas'
 
 // Find user by username
-export const findUserByUsername = async (username: string) => {
+export const findUserByEmail = async (email: string) => {
   const [user] = await db
     .select()
     .from(userModel)
-    .where(eq(userModel.username, username))
+    .where(eq(userModel.email, email))
+
   return user
 }
 
@@ -125,8 +126,8 @@ export const updateUser = async (
 }
 
 // Login user
-export const loginUser = async (username: string, password: string) => {
-  const user = await findUserByUsername(username)
+export const loginUser = async (email: string, password: string) => {
+  const user = await findUserByEmail(email)
   console.log('🚀 ~ loginUser ~ user:', user)
 
   if (!user) {
