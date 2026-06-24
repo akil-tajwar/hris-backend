@@ -40,32 +40,39 @@ export const getUserDetailsByUserId = async (userId: number) => {
 
 // Create new user
 export const createUser = async (
-  userData: NewUser & { userCompanies?: number[]; createdBy: number }
+  dbInstance: typeof db,
+  userData: NewUser & {
+    userCompanies?: number[]
+    createdBy: number
+  }
 ) => {
-  const existingUser = await findUserByUsername(userData.username)
+  const [existingUser] = await dbInstance
+    .select()
+    .from(userModel)
+    .where(eq(userModel.username, userData.username))
 
   if (existingUser) {
     throw BadRequestError('Username already registered, Please Try Another')
   }
 
   validatePassword(userData.password)
+
   const hashedPassword = await hashPassword(userData.password)
 
-  const result = await db.insert(userModel).values({
+  const result = await dbInstance.insert(userModel).values({
     username: userData.username,
     password: hashedPassword,
-    active: userData.active ? true : false,
-    isPasswordResetRequired: userData.isPasswordResetRequired ? true : false,
+    active: userData.active ?? true,
+    isPasswordResetRequired: userData.isPasswordResetRequired ?? true,
     roleId: userData.roleId,
     tenantId: userData.tenantId,
     email: userData.email,
   })
 
-  const newUserId = result[0].insertId // MySQL returns insertId
+  const newUserId = result[0].insertId
 
-  // Insert user-company associations
-  if (userData.userCompanies && userData.userCompanies.length > 0) {
-    await db.insert(userCompanyModel).values(
+  if (userData.userCompanies?.length) {
+    await dbInstance.insert(userCompanyModel).values(
       userData.userCompanies.map((companyId) => ({
         userId: newUserId,
         companyId,
@@ -75,13 +82,12 @@ export const createUser = async (
   }
 
   return {
-    id: newUserId,
+    userId: newUserId,
     username: userData.username,
-    password: userData.password,
-    active: userData.active,
+    email: userData.email,
     roleId: userData.roleId,
     tenantId: userData.tenantId,
-    email: userData.email,
+    active: userData.active,
     isPasswordResetRequired: userData.isPasswordResetRequired,
     userCompanies: userData.userCompanies ?? [],
   }

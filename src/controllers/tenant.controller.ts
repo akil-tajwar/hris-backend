@@ -5,7 +5,6 @@ import {
   updateTenant,
   deleteTenant,
 } from '../services/tenant.service'
-import { requirePermission } from '../services/utils/jwt.utils'
 
 export const createTenantController = async (
   req: Request,

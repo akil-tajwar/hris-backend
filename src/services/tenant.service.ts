@@ -1,19 +1,43 @@
 import { db } from '../config/database'
-import { NewTenant, tenantModel } from '../schemas'
+import { tenantModel } from '../schemas'
 import { eq } from 'drizzle-orm'
+import { createUser } from './auth.service'
 
 // CREATE
-export const createTenant = async (data: NewTenant) => {
+export const createTenant = async (data: {
+  tenantData: {
+    tenantName: string
+    status?: boolean
+    createdBy: number
+  }
+  userData: any
+}) => {
   return await db.transaction(async (tx) => {
-    const [result] = await tx.insert(tenantModel).values(data)
-    const tenantId = result.insertId
-    
+    const [tenantResult] = await tx.insert(tenantModel).values({
+      tenantName: data.tenantData.tenantName,
+      status: data.tenantData.status ?? true,
+      createdBy: data.tenantData.createdBy,
+    })
+
+    const tenantId = tenantResult.insertId
+
+    const user = await createUser(tx as any, {
+      ...data.userData,
+      roleId: 1,
+      tenantId,
+      active: true,
+      createdBy: data.tenantData.createdBy,
+    })
+
     const [tenant] = await tx
       .select()
       .from(tenantModel)
       .where(eq(tenantModel.tenantId, tenantId))
-    
-    return tenant
+
+    return {
+      tenant,
+      user,
+    }
   })
 }
 
@@ -43,7 +67,5 @@ export const updateTenant = async (
 
 // DELETE
 export const deleteTenant = async (tenantId: number) => {
-  await db
-    .delete(tenantModel)
-    .where(eq(tenantModel.tenantId, tenantId))
+  await db.delete(tenantModel).where(eq(tenantModel.tenantId, tenantId))
 }
