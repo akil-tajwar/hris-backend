@@ -162,7 +162,9 @@ export const updateChecklistService = async (
   return result
 }
 
-export const getAllChecklistsService = async (): Promise<ChecklistInput[]> => {
+export const getAllChecklistsService = async (
+  tenantId: number
+): Promise<ChecklistInput[]> => {
   // masters
   const masters = await db
     .select({
@@ -182,6 +184,7 @@ export const getAllChecklistsService = async (): Promise<ChecklistInput[]> => {
       employeeModel,
       eq(checklistMasterModel.responsibleEmployeeId, employeeModel.employeeId)
     )
+    .where(eq(checklistMasterModel.tenantId, tenantId))
 
   if (masters.length === 0) {
     return []
@@ -205,6 +208,7 @@ export const getAllChecklistsService = async (): Promise<ChecklistInput[]> => {
       employeeModel,
       eq(checklistDetailsModel.responsibleEmployeeId, employeeModel.employeeId)
     )
+    .where(eq(checklistDetailsModel.tenantId, tenantId))
 
   // group details by master id
   const groupedDetails = details.reduce<Record<number, NewChecklistDetails[]>>(

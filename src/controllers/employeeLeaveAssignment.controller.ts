@@ -16,7 +16,13 @@ export const createEmployeeLeaveAssignmentController = async (
 ) => {
   try {
     requirePermission(req, 'create_employee_leave_assignment')
-    const result = await createEmployeeLeaveAssignmentService(req.body)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const result = await createEmployeeLeaveAssignmentService(data)
 
     res.status(201).json({
       success: true,
@@ -61,7 +67,12 @@ export const getAllEmployeeLeaveAssignmentsController = async (
 ) => {
   try {
     requirePermission(req, 'view_employee_leave_assignment')
-    const result = await getAllEmployeeLeaveAssignmentsService()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const result = await getAllEmployeeLeaveAssignmentsService(tenantId)
 
     res.status(200).json(result)
   } catch (error: any) {

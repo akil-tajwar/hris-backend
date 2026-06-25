@@ -84,8 +84,11 @@ export const createCustomer = async (data: NewCustomer) => {
 }
 
 // READ ALL
-export const getCustomers = async () => {
-  return await db.select().from(customerModel)
+export const getCustomers = async (tenantId: number) => {
+  return await db
+    .select()
+    .from(customerModel)
+    .where(eq(customerModel.tenantId, tenantId))
 }
 
 // UPDATE

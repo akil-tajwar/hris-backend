@@ -22,11 +22,9 @@ import leaveTypeRoutes from './leaveTypes.routes'
 import leavePolicyRoutes from './leavePolicy.routes'
 import employeeLeaveAssignmentRoutes from './employeeLeaveAssignment.routes'
 import employeeLeaveApplyRoutes from './employeeLeaveApply.routes'
-import employeeAttendanceRoutes from './employeeAttendances.routes'
 import salaryComponentsRoutes from './salaryComponents.routes'
 import salaryStructureRoutes from './salaryStructure.routes'
 import salaryRoutes from './salary.routes'
-import employeeLoneRoutes from './employeeLones.routes'
 import reportRoutes from './reports.routes'
 import dashboardRoutes from './dashboard.routes'
 import assetCategoryRoutes from './assetCategory.routes'
@@ -67,11 +65,9 @@ router.use('/leaveTypes', leaveTypeRoutes)
 router.use('/leavePolicy', leavePolicyRoutes)
 router.use('/employeeLeaveAssignments', employeeLeaveAssignmentRoutes)
 router.use('/employeeLeaveApply', employeeLeaveApplyRoutes)
-router.use('/employeeAttendances', employeeAttendanceRoutes)
 router.use('/salaryComponents', salaryComponentsRoutes)
 router.use('/salaryStructures', salaryStructureRoutes)
 router.use('/salary', salaryRoutes)
-router.use('/employeeLones', employeeLoneRoutes)
 router.use('/reports', reportRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/assetCategory', assetCategoryRoutes)

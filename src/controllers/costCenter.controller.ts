@@ -15,7 +15,12 @@ export const createCostCenterController = async (
 ) => {
   try {
     requirePermission(req, 'create_cost_center')
-    const costCenter = await createCostCenter(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const costCenter = await createCostCenter(data)
     res.status(201).json({ status: 'success', data: costCenter })
   } catch (err) {
     next(err)
@@ -29,7 +34,11 @@ export const getCostCentersController = async (
 ) => {
   try {
     requirePermission(req, 'view_cost_center')
-    const costCenters = await getCostCenters()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const costCenters = await getCostCenters(tenantId)
     res.json(costCenters)
   } catch (err) {
     next(err)

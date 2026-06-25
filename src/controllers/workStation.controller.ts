@@ -15,12 +15,12 @@ export const createWorkStationController = async (
 ) => {
   try {
     requirePermission(req, 'create_work_station')
-    const { workStationName, workStationNumber, createdBy } = req.body
-    const workStation = await createWorkStation(
-      workStationName,
-      workStationNumber,
-      createdBy
-    )
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const workStation = await createWorkStation(data)
     res.status(201).json({ status: 'success', data: workStation })
   } catch (err) {
     next(err)
@@ -34,7 +34,11 @@ export const getWorkStationsController = async (
 ) => {
   try {
     requirePermission(req, 'view_work_station')
-    const workStations = await getWorkStations()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const workStations = await getWorkStations(tenantId)
     res.json(workStations)
   } catch (err) {
     next(err)

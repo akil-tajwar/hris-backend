@@ -22,7 +22,12 @@ export const importCsvController = async (req: Request, res: Response) => {
       return
     }
 
-    const result = await importAttendancePunchesFromCsv(req.file, createdBy)
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const result = await importAttendancePunchesFromCsv(req.file, createdBy, tenantId)
 
     res.status(200).json({
       success: true,

@@ -25,8 +25,14 @@ export const createSalaryComponentController = async (
   try {
     requirePermission(req, 'create_salary_component')
     const salaryComponentData = createSalaryComponentSchema.parse(req.body)
-    console.log("🚀 ~ createSalaryComponentController ~ salaryComponentData:", salaryComponentData)
-    const salaryComponent = await createSalaryComponent(salaryComponentData)
+    
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...salaryComponentData,
+      tenantId,
+    }
+
+    const salaryComponent = await createSalaryComponent(data)
 
     res.status(201).json({
       status: 'success',
@@ -44,7 +50,13 @@ export const getAllSalaryComponentsController = async (
 ) => {
   try {
     requirePermission(req, 'view_salary_component')
-    const salaryComponents = await getAllSalaryComponents()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const salaryComponents = await getAllSalaryComponents(tenantId)
 
     res.status(200).json(salaryComponents)
   } catch (error) {

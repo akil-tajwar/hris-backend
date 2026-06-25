@@ -183,7 +183,7 @@ export const updateEmployeeLeaveAssignmentService = async (
   }
 }
 
-export const getAllEmployeeLeaveAssignmentsService = async () => {
+export const getAllEmployeeLeaveAssignmentsService = async (tenantId: number) => {
   try {
     const result = await db
       .select({
@@ -211,7 +211,7 @@ export const getAllEmployeeLeaveAssignmentsService = async () => {
         policyName: leavePolicyMasterModel.policyName,
       })
       .from(employeeLeaveAssignmentModel)
-
+      .where(eq(employeeLeaveAssignmentModel.tenantId, tenantId))
       // employee join
       .leftJoin(
         employeeModel,

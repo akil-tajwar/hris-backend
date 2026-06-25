@@ -14,7 +14,12 @@ export const createDepartmentController = async (
 ) => {
   try {
     requirePermission(req, 'create_department')
-    const department = await createDepartment(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const department = await createDepartment(data)
     res.status(201).json({ status: 'success', data: department })
   } catch (err) {
     next(err)
@@ -28,7 +33,11 @@ export const getDepartmentsController = async (
 ) => {
   try {
     requirePermission(req, 'view_department')
-    const departments = await getDepartments()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const departments = await getDepartments(tenantId)
     res.json(departments)
   } catch (err) {
     next(err)

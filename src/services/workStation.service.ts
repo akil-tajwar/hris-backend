@@ -1,31 +1,26 @@
 import { db } from '../config/database'
-import { workStationModel } from '../schemas'
+import { NewWorkStation, workStationModel } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createWorkStation = async (
-  workStationName: string,
-  workStationNumber: number,
-  createdBy: number
-) => {
-  await db.insert(workStationModel).values({
-    workStationName,
-    workStationNumber,
-    createdBy,
-  })
+export const createWorkStation = async (data: NewWorkStation) => {
+  await db.insert(workStationModel).values(data)
 
-  const [workStation] = await db
+  const [costCenter] = await db
     .select()
     .from(workStationModel)
     .orderBy(workStationModel.workStationId)
     .limit(1)
 
-  return workStation
+  return costCenter
 }
 
 // READ ALL
-export const getWorkStations = async () => {
-  return await db.select().from(workStationModel)
+export const getWorkStations = async (tenantId: number) => {
+  return await db
+    .select()
+    .from(workStationModel)
+    .where(eq(workStationModel.tenantId, tenantId))
 }
 
 // READ ONE

@@ -14,7 +14,12 @@ export const createBusinessUnitController = async (
 ) => {
   try {
     requirePermission(req, 'create_business_unit')
-    const businessUnit = await createBusinessUnit(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const businessUnit = await createBusinessUnit(data)
     res.status(201).json({ status: 'success', data: businessUnit })
   } catch (err) {
     next(err)
@@ -28,7 +33,11 @@ export const getBusinessUnitsController = async (
 ) => {
   try {
     requirePermission(req, 'view_business_unit')
-    const businessUnits = await getBusinessUnits()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const businessUnits = await getBusinessUnits(tenantId)
     res.json(businessUnits)
   } catch (err) {
     next(err)

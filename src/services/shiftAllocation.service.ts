@@ -397,7 +397,8 @@ export const copyShiftAllocation = async (id: number, createdBy: number) => {
 // ─── COPY ALL ACTIVE ──────────────────────────────────────────────
 export const copyAllActiveAllocations = async (
   recurrenceType: 'weekly' | 'monthly',
-  createdBy: number
+  createdBy: number,
+  tenantId: number
 ) => {
   const activeAllocations = await db
     .select()
@@ -405,7 +406,8 @@ export const copyAllActiveAllocations = async (
     .where(
       and(
         eq(employeeShiftAllocations.recurrenceType, recurrenceType),
-        eq(employeeShiftAllocations.recurrenceActive, 1)
+        eq(employeeShiftAllocations.recurrenceActive, 1),
+        eq(employeeShiftAllocations.tenantId, tenantId)
       )
     )
 
@@ -481,7 +483,7 @@ export const copyAllActiveAllocations = async (
 }
 
 // ─── GET ALL ──────────────────────────────────────────────────────
-export const getAllShiftAllocations = async () => {
+export const getAllShiftAllocations = async (tenantId: number) => {
   const cached = await getCache(CACHE_KEY)
   if (cached) {
     console.log('⚡ Redis HIT')
@@ -507,6 +509,7 @@ export const getAllShiftAllocations = async () => {
       recurrenceActive: employeeShiftAllocations.recurrenceActive,
     })
     .from(employeeShiftAllocations)
+    .where(eq(employeeShiftAllocations.tenantId, tenantId))
     .leftJoin(
       employeeModel,
       eq(employeeShiftAllocations.employeeId, employeeModel.employeeId)

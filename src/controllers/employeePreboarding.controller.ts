@@ -23,7 +23,12 @@ export const createEmployeePreboardingController = async (
   try {
     requirePermission(req, 'create_employee_preboarding')
 
-    const result = await createEmployeePreboarding(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const result = await createEmployeePreboarding(data)
 
     res.status(201).json({
       status: 'success',
@@ -43,7 +48,11 @@ export const getEmployeePreboardingController = async (
   try {
     requirePermission(req, 'view_employee_preboarding')
 
-    const result = await getEmployeePreboarding()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const result = await getEmployeePreboarding(tenantId)
 
     res.json(result)
   } catch (err) {

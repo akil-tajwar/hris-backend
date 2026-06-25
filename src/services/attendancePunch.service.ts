@@ -69,7 +69,7 @@ export const updateAttendancePunch = async (
 }
 
 // GET ALL PUNCHES
-export const getAllAttendancePunches = async () => {
+export const getAllAttendancePunches = async (tenantId: number) => {
   const cached = await getCache(PUNCH_CACHE_KEY)
   if (cached) {
     console.log('⚡ Redis HIT')
@@ -78,7 +78,10 @@ export const getAllAttendancePunches = async () => {
 
   console.log('🐢 MySQL QUERY (CACHE MISS)')
 
-  const punches = await db.select().from(attendancePunches)
+  const punches = await db
+    .select()
+    .from(attendancePunches)
+    .where(eq(attendancePunches.tenantId, tenantId))
 
   await setCache(PUNCH_CACHE_KEY, punches, 300)
   return punches

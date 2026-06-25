@@ -16,7 +16,12 @@ export const createChecklistController = async (
 ) => {
   try {
     requirePermission(req, 'create_checklist')
-    const result = await createChecklistService(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const result = await createChecklistService(data)
 
     res.status(201).json({
       status: 'success',
@@ -36,7 +41,11 @@ export const getAllChecklistsController = async (
 ) => {
   try {
     requirePermission(req, 'view_checklist')
-    const result = await getAllChecklistsService()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const result = await getAllChecklistsService(tenantId)
 
     res.status(200).json(result)
   } catch (error: any) {

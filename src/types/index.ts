@@ -27,6 +27,7 @@ declare global {
         userId: number;
         username: string;
         role?: number;
+        tenantId: number;
         permissions?:string[];
         hasPermission: (permission: string) => boolean;
         hasRole: (role: number) => boolean;

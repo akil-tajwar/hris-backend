@@ -495,7 +495,7 @@ export const updateEmployee = async (
 }
 
 //GET ALL EMPLOYEES
-export const getAllEmployees = async () => {
+export const getAllEmployees = async (tenantId: number) => {
   const CACHE_KEY = 'employees:all'
 
   // 1️⃣ CHECK CACHE FIRST
@@ -588,6 +588,7 @@ export const getAllEmployees = async () => {
       updatedAt: employeeModel.updatedAt,
     })
     .from(employeeModel)
+    .where(eq(employeeModel.tenantId, tenantId))
     .leftJoin(
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)

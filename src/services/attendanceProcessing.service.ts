@@ -11,9 +11,8 @@ import {
   holidaysModel,
   holidayCalendarModel,
   weekDayModel,
-  attendanceDailyAudit
+  attendanceDailyAudit,
 } from '../schemas/schema'
-
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const differenceInMinutes = (a: Date, b: Date): number =>
@@ -44,12 +43,27 @@ export const formatDate = (date: Date): string => {
 }
 
 const getDayName = (dateStr: string): string => {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const days = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ]
   const [y, m, d] = dateStr.split('-').map(Number)
   return days[new Date(y, m - 1, d).getDay()]
 }
 
-type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY' | 'HOLIDAY' | 'WEEKEND' | 'ON_LEAVE'
+type AttendanceStatus =
+  | 'PRESENT'
+  | 'ABSENT'
+  | 'LATE'
+  | 'HALF_DAY'
+  | 'HOLIDAY'
+  | 'WEEKEND'
+  | 'ON_LEAVE'
 
 // ─── Get employee's active shift ──────────────────────────────────────────────
 const getEmployeeShift = async (employeeId: number, attendanceDate: string) => {
@@ -283,18 +297,17 @@ const isWeekendDate = async (
 //   }
 // }
 
-
 const upsertAttendanceDaily = async (
   data: {
-    employeeId:      number
-    attendanceDate:  string
-    firstIn:         Date | null
-    lastOut:         Date | null
-    workedMinutes:   number
-    lateMinutes:     number
+    employeeId: number
+    attendanceDate: string
+    firstIn: Date | null
+    lastOut: Date | null
+    workedMinutes: number
+    lateMinutes: number
     earlyOutMinutes: number
     overtimeMinutes: number
-    status:          AttendanceStatus
+    status: AttendanceStatus
   },
   changedBy: number = 1
 ) => {
@@ -317,73 +330,72 @@ const upsertAttendanceDaily = async (
     await db
       .update(attendanceDaily)
       .set({
-        firstIn:         data.firstIn,
-        lastOut:         data.lastOut,
-        workedMinutes:   data.workedMinutes,
-        lateMinutes:     data.lateMinutes,
+        firstIn: data.firstIn,
+        lastOut: data.lastOut,
+        workedMinutes: data.workedMinutes,
+        lateMinutes: data.lateMinutes,
         earlyOutMinutes: data.earlyOutMinutes,
         overtimeMinutes: data.overtimeMinutes,
-        status:          data.status,
-        updatedBy:       changedBy,
+        status: data.status,
+        updatedBy: changedBy,
       })
       .where(eq(attendanceDaily.id, old.id))
 
     await db.insert(attendanceDailyAudit).values({
-      recordId:           old.id,
-      employeeId:         data.employeeId,
-      attendanceDate:     data.attendanceDate,  // ← 'YYYY-MM-DD' string
-      action:             'UPDATE',
+      recordId: old.id,
+      employeeId: data.employeeId,
+      attendanceDate: data.attendanceDate, // ← 'YYYY-MM-DD' string
+      action: 'UPDATE',
       changedBy,
-      oldStatus:          old.status,
-      oldWorkedMinutes:   old.workedMinutes ?? 0,
-      oldLateMinutes:     old.lateMinutes ?? 0,
+      oldStatus: old.status,
+      oldWorkedMinutes: old.workedMinutes ?? 0,
+      oldLateMinutes: old.lateMinutes ?? 0,
       oldEarlyOutMinutes: old.earlyOutMinutes ?? 0,
       oldOvertimeMinutes: old.overtimeMinutes ?? 0,
-      oldFirstIn:         toSafeDate(old.firstIn),
-      oldLastOut:         toSafeDate(old.lastOut),
-      newStatus:          data.status,
-      newWorkedMinutes:   data.workedMinutes,
-      newLateMinutes:     data.lateMinutes,
+      oldFirstIn: toSafeDate(old.firstIn),
+      oldLastOut: toSafeDate(old.lastOut),
+      newStatus: data.status,
+      newWorkedMinutes: data.workedMinutes,
+      newLateMinutes: data.lateMinutes,
       newEarlyOutMinutes: data.earlyOutMinutes,
       newOvertimeMinutes: data.overtimeMinutes,
-      newFirstIn:         data.firstIn,
-      newLastOut:         data.lastOut,
+      newFirstIn: data.firstIn,
+      newLastOut: data.lastOut,
     })
-
   } else {
     const inserted = await db.insert(attendanceDaily).values({
-      employeeId:      data.employeeId,
-      attendanceDate:  dateObj,
-      firstIn:         data.firstIn,
-      lastOut:         data.lastOut,
-      workedMinutes:   data.workedMinutes,
-      lateMinutes:     data.lateMinutes,
+      employeeId: data.employeeId,
+      attendanceDate: dateObj,
+      firstIn: data.firstIn,
+      lastOut: data.lastOut,
+      workedMinutes: data.workedMinutes,
+      lateMinutes: data.lateMinutes,
       earlyOutMinutes: data.earlyOutMinutes,
       overtimeMinutes: data.overtimeMinutes,
-      status:          data.status,
-      createdBy:       changedBy,
+      status: data.status,
+      createdBy: changedBy,
     })
 
     await db.insert(attendanceDailyAudit).values({
-      recordId:           Number((inserted as any).insertId) || null,
-      employeeId:         data.employeeId,
-      attendanceDate:     data.attendanceDate,  // ← 'YYYY-MM-DD' string
-      action:             'INSERT',
+      recordId: Number((inserted as any).insertId) || null,
+      employeeId: data.employeeId,
+      attendanceDate: data.attendanceDate, // ← 'YYYY-MM-DD' string
+      action: 'INSERT',
       changedBy,
-      oldStatus:          null,
-      oldWorkedMinutes:   null,
-      oldLateMinutes:     null,
+      oldStatus: null,
+      oldWorkedMinutes: null,
+      oldLateMinutes: null,
       oldEarlyOutMinutes: null,
       oldOvertimeMinutes: null,
-      oldFirstIn:         null,
-      oldLastOut:         null,
-      newStatus:          data.status,
-      newWorkedMinutes:   data.workedMinutes,
-      newLateMinutes:     data.lateMinutes,
+      oldFirstIn: null,
+      oldLastOut: null,
+      newStatus: data.status,
+      newWorkedMinutes: data.workedMinutes,
+      newLateMinutes: data.lateMinutes,
       newEarlyOutMinutes: data.earlyOutMinutes,
       newOvertimeMinutes: data.overtimeMinutes,
-      newFirstIn:         data.firstIn,
-      newLastOut:         data.lastOut,
+      newFirstIn: data.firstIn,
+      newLastOut: data.lastOut,
     })
   }
 }
@@ -391,7 +403,8 @@ const upsertAttendanceDaily = async (
 // ─── Process single date ──────────────────────────────────────────────────────
 export const processAttendanceForDate = async (
   attendanceDate: string,
-  changedBy: number = 1
+  changedBy: number = 1,
+  tenantId?: number
 ) => {
   if (!attendanceDate || !/^\d{4}-\d{2}-\d{2}$/.test(attendanceDate)) {
     throw new Error(`Invalid attendanceDate: "${attendanceDate}"`)
@@ -399,17 +412,21 @@ export const processAttendanceForDate = async (
 
   const [y, mo, d] = attendanceDate.split('-').map(Number)
   const startOfDay = new Date(y, mo - 1, d, 0, 0, 0)
-  const endOfDay   = new Date(y, mo - 1, d, 23, 59, 59)
+  const endOfDay = new Date(y, mo - 1, d, 23, 59, 59)
+
+  const whereClauses = [
+    gte(attendancePunches.punchTime, startOfDay),
+    lte(attendancePunches.punchTime, endOfDay),
+  ]
+
+  if (tenantId != null) {
+    whereClauses.push(eq(attendancePunches.tenantId, tenantId))
+  }
 
   const punches = await db
     .select()
     .from(attendancePunches)
-    .where(
-      and(
-        gte(attendancePunches.punchTime, startOfDay),
-        lte(attendancePunches.punchTime, endOfDay)
-      )
-    )
+    .where(and(...whereClauses))
     .orderBy(attendancePunches.employeeId, attendancePunches.punchTime)
 
   const grouped = new Map<number, typeof punches>()
@@ -430,19 +447,26 @@ export const processAttendanceForDate = async (
     const policy = await getEmployeeAttendancePolicy(employeeId)
 
     // PRIORITY 1: Holiday
-    const isHoliday = await isHolidayDate(attendanceDate, policy?.holidayCalendarId ?? null)
+    const isHoliday = await isHolidayDate(
+      attendanceDate,
+      policy?.holidayCalendarId ?? null
+    )
     if (isHoliday) {
       await upsertAttendanceDaily(
         {
           employeeId,
           attendanceDate,
-          firstIn:         employeePunches.length ? toSafeDate(employeePunches[0].punchTime) : null,
-          lastOut:         employeePunches.length ? toSafeDate(employeePunches[employeePunches.length - 1].punchTime) : null,
-          workedMinutes:   0,
-          lateMinutes:     0,
+          firstIn: employeePunches.length
+            ? toSafeDate(employeePunches[0].punchTime)
+            : null,
+          lastOut: employeePunches.length
+            ? toSafeDate(employeePunches[employeePunches.length - 1].punchTime)
+            : null,
+          workedMinutes: 0,
+          lateMinutes: 0,
           earlyOutMinutes: 0,
           overtimeMinutes: 0,
-          status:          'HOLIDAY',
+          status: 'HOLIDAY',
         },
         changedBy
       )
@@ -451,19 +475,22 @@ export const processAttendanceForDate = async (
     }
 
     // PRIORITY 2: Weekend
-    const isWeekend = await isWeekendDate(attendanceDate, policy?.weekendDayIds ?? [])
+    const isWeekend = await isWeekendDate(
+      attendanceDate,
+      policy?.weekendDayIds ?? []
+    )
     if (isWeekend) {
       await upsertAttendanceDaily(
         {
           employeeId,
           attendanceDate,
-          firstIn:         null,
-          lastOut:         null,
-          workedMinutes:   0,
-          lateMinutes:     0,
+          firstIn: null,
+          lastOut: null,
+          workedMinutes: 0,
+          lateMinutes: 0,
           earlyOutMinutes: 0,
           overtimeMinutes: 0,
-          status:          'WEEKEND',
+          status: 'WEEKEND',
         },
         changedBy
       )
@@ -479,30 +506,12 @@ export const processAttendanceForDate = async (
         {
           employeeId,
           attendanceDate,
-          firstIn:         null,
-          lastOut:         null,
-          workedMinutes:   0,
-          lateMinutes:     0,
+          firstIn: null,
+          lastOut: null,
+          workedMinutes: 0,
+          lateMinutes: 0,
           earlyOutMinutes: 0,
           overtimeMinutes: 0,
-          status:          'ABSENT',
-        },
-        changedBy
-      )
-      results.push({ employeeId, status: 'ABSENT' })
-      continue
-    }
-
-    const firstIn  = toSafeDate(employeePunches[0].punchTime)
-    const lastOut  = toSafeDate(employeePunches[employeePunches.length - 1].punchTime)
-
-    if (!firstIn || !lastOut) {
-      await upsertAttendanceDaily(
-        {
-          employeeId, attendanceDate,
-          firstIn: null, lastOut: null,
-          workedMinutes: 0, lateMinutes: 0,
-          earlyOutMinutes: 0, overtimeMinutes: 0,
           status: 'ABSENT',
         },
         changedBy
@@ -511,24 +520,54 @@ export const processAttendanceForDate = async (
       continue
     }
 
-    const workedMinutes    = differenceInMinutes(lastOut, firstIn)
-    const shiftStart       = combineDateAndTime(attendanceDate, shift.startTime)
-    const shiftEnd         = combineDateAndTime(attendanceDate, shift.endTime)
-    const graceMinutes     = policy?.graceMinutes ?? 0
-    const allowedStart     = new Date(shiftStart.getTime() + graceMinutes * 60000)
+    const firstIn = toSafeDate(employeePunches[0].punchTime)
+    const lastOut = toSafeDate(
+      employeePunches[employeePunches.length - 1].punchTime
+    )
 
-    const lateMinutes      = firstIn > allowedStart ? differenceInMinutes(firstIn, allowedStart) : 0
-    const earlyOutMinutes  = lastOut < shiftEnd ? differenceInMinutes(shiftEnd, lastOut) : 0
-    const overtimeMinutes  = policy?.allowOvertime
+    if (!firstIn || !lastOut) {
+      await upsertAttendanceDaily(
+        {
+          employeeId,
+          attendanceDate,
+          firstIn: null,
+          lastOut: null,
+          workedMinutes: 0,
+          lateMinutes: 0,
+          earlyOutMinutes: 0,
+          overtimeMinutes: 0,
+          status: 'ABSENT',
+        },
+        changedBy
+      )
+      results.push({ employeeId, status: 'ABSENT' })
+      continue
+    }
+
+    const workedMinutes = differenceInMinutes(lastOut, firstIn)
+    const shiftStart = combineDateAndTime(attendanceDate, shift.startTime)
+    const shiftEnd = combineDateAndTime(attendanceDate, shift.endTime)
+    const graceMinutes = policy?.graceMinutes ?? 0
+    const allowedStart = new Date(shiftStart.getTime() + graceMinutes * 60000)
+
+    const lateMinutes =
+      firstIn > allowedStart ? differenceInMinutes(firstIn, allowedStart) : 0
+    const earlyOutMinutes =
+      lastOut < shiftEnd ? differenceInMinutes(shiftEnd, lastOut) : 0
+    const overtimeMinutes = policy?.allowOvertime
       ? Math.max(0, differenceInMinutes(lastOut, shiftEnd))
       : 0
 
     const minimumMinutesForPresent = shift.minimumHoursForPresent * 60
-    const halfDayAfterMinutes      = policy?.halfDayAfterMinutes ?? 120
-    const absentAfterMinutes       = policy?.absentAfterMinutes ?? 240
+    const halfDayAfterMinutes = policy?.halfDayAfterMinutes ?? 120
+    const absentAfterMinutes = policy?.absentAfterMinutes ?? 240
 
     let status: AttendanceStatus
-    if (workedMinutes <= 0 || (workedMinutes < halfDayAfterMinutes && workedMinutes < absentAfterMinutes)) {
+    if (
+      workedMinutes <= 0 ||
+      (workedMinutes < halfDayAfterMinutes &&
+        workedMinutes < absentAfterMinutes)
+    ) {
       status = 'ABSENT'
     } else if (workedMinutes >= minimumMinutesForPresent) {
       status = lateMinutes > 0 ? 'LATE' : 'PRESENT'
@@ -539,51 +578,60 @@ export const processAttendanceForDate = async (
     }
 
     await upsertAttendanceDaily(
-      { employeeId, attendanceDate, firstIn, lastOut, workedMinutes, lateMinutes, earlyOutMinutes, overtimeMinutes, status },
+      {
+        employeeId,
+        attendanceDate,
+        firstIn,
+        lastOut,
+        workedMinutes,
+        lateMinutes,
+        earlyOutMinutes,
+        overtimeMinutes,
+        status,
+      },
       changedBy
     )
     results.push({ employeeId, status })
   }
 
   return {
-    success:   true,
-    date:      attendanceDate,
+    success: true,
+    date: attendanceDate,
     processed: results.length,
     summary: {
-      holiday: results.filter(r => r.status === 'HOLIDAY').length,
-      weekend: results.filter(r => r.status === 'WEEKEND').length,
-      present: results.filter(r => r.status === 'PRESENT').length,
-      late:    results.filter(r => r.status === 'LATE').length,
-      halfDay: results.filter(r => r.status === 'HALF_DAY').length,
-      absent:  results.filter(r => r.status === 'ABSENT').length,
+      holiday: results.filter((r) => r.status === 'HOLIDAY').length,
+      weekend: results.filter((r) => r.status === 'WEEKEND').length,
+      present: results.filter((r) => r.status === 'PRESENT').length,
+      late: results.filter((r) => r.status === 'LATE').length,
+      halfDay: results.filter((r) => r.status === 'HALF_DAY').length,
+      absent: results.filter((r) => r.status === 'ABSENT').length,
     },
   }
 }
 
 // ─── Process date range ───────────────────────────────────────────────────────
 export const processAttendanceForRange = async (
-  fromDate:  string,
-  toDate:    string,
-  changedBy: number = 1
+  fromDate: string,
+  toDate: string,
+  changedBy: number,
+  tenantId: number
 ) => {
   const results = []
   const [fy, fm, fd] = fromDate.split('-').map(Number)
   const [ty, tm, td] = toDate.split('-').map(Number)
 
   const current = new Date(fy, fm - 1, fd)
-  const end     = new Date(ty, tm - 1, td)
+  const end = new Date(ty, tm - 1, td)
 
   while (current <= end) {
     const dateStr = formatDate(current)
-    const result  = await processAttendanceForDate(dateStr, changedBy)
+    const result = await processAttendanceForDate(dateStr, changedBy, tenantId)
     results.push(result)
     current.setDate(current.getDate() + 1)
   }
 
   return { success: true, results }
 }
-
-
 
 //   import { and, eq, gte, lte, or, isNull } from 'drizzle-orm'
 // import { db } from '../config/database'
@@ -1024,4 +1072,3 @@ export const processAttendanceForRange = async (
 
 //   return { success: true, results }
 // }
-

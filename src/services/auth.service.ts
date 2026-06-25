@@ -85,8 +85,8 @@ export const createUser = async (
 }
 
 // Get all users
-export const getUsers = async () => {
-  const userList = await db.select().from(userModel)
+export const getUsers = async (tenantId: number) => {
+  const userList = await db.select().from(userModel).where(eq(userModel.tenantId, tenantId))
   return userList
 }
 

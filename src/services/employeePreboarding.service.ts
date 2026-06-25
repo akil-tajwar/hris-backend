@@ -56,7 +56,7 @@ export const createEmployeePreboarding = async (data: any) => {
 }
 
 // READ ALL
-export const getEmployeePreboarding = async () => {
+export const getEmployeePreboarding = async (tenantId: number) => {
   return await db
     .select({
       // Preboarding
@@ -103,6 +103,7 @@ export const getEmployeePreboarding = async () => {
       reportingEmpFullName: reportingEmployee.empFullName,
     })
     .from(employeePreboardingModel)
+    .where(eq(employeePreboardingModel.tenantId, tenantId))
     .leftJoin(
       companyModel,
       eq(employeePreboardingModel.companyId, companyModel.companyId)

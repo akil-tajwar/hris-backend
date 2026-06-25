@@ -14,7 +14,12 @@ export const createDesignationController = async (
 ) => {
   try {
     requirePermission(req, 'create_designation')
-    const designation = await createDesignation(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const designation = await createDesignation(data)
     res.status(201).json({ status: 'success', data: designation })
   } catch (err) {
     next(err)
@@ -28,7 +33,11 @@ export const getDesignationsController = async (
 ) => {
   try {
     requirePermission(req, 'view_designation')
-    const designations = await getDesignations()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const designations = await getDesignations(tenantId)
     res.json(designations)
   } catch (err) {
     next(err)

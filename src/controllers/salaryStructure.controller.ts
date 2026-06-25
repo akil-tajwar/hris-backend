@@ -17,7 +17,13 @@ export const createSalaryStructureController = async (
   try {
     requirePermission(req, 'create_salary_structure')
 
-    const result = await createSalaryStructureService(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const result = await createSalaryStructureService(data)
 
     res.status(201).json({
       status: 'success',
@@ -38,7 +44,12 @@ export const getAllSalaryStructuresController = async (
   try {
     requirePermission(req, 'view_salary_structure');
 
-    const result = await getAllSalaryStructuresService();
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const result = await getAllSalaryStructuresService(tenantId);
 
     res.status(200).json(result);
   } catch (error: any) {

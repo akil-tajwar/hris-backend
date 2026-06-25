@@ -14,7 +14,17 @@ export const createAssetCategoryController = async (
 ) => {
   try {
     requirePermission(req, 'create_asset_category')
-    const assetCategory = await createAssetCategory(req.body)
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const assetCategory = await createAssetCategory(data)
     res.status(201).json({ status: 'success', data: assetCategory })
   } catch (err) {
     next(err)
@@ -28,7 +38,14 @@ export const getAssetCategorysController = async (
 ) => {
   try {
     requirePermission(req, 'view_asset_category')
-    const assetCategorys = await getAllAssetCategories()
+    
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const assetCategorys = await getAllAssetCategories(tenantId)
+
     res.json(assetCategorys)
   } catch (err) {
     next(err)

@@ -31,7 +31,14 @@ export const createHolidayRangeController = async (
 ) => {
   try {
     requirePermission(req, 'create_holiday')
-    const rangeData = createHolidayRangeSchema.parse(req.body)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const rangeData = createHolidayRangeSchema.parse(data)
     const result = await createHolidayRange(rangeData)
 
     res.status(201).json({
@@ -57,7 +64,14 @@ export const createHolidayController = async (
 ) => {
   try {
     requirePermission(req, 'create_holiday')
-    const holidayData = createHolidaySchema.parse(req.body)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const holidayData = createHolidaySchema.parse(data)
     const holiday = await createHoliday(holidayData)
 
     res.status(201).json({
@@ -85,8 +99,11 @@ export const getAllHolidaysController = async (
       req.query.isOptional !== undefined
         ? req.query.isOptional === 'true'
         : undefined
-
-    const holidays = await getAllHolidays({ calendarId, type, isOptional })
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const holidays = await getAllHolidays({ calendarId, type, isOptional, tenantId })
 
     res.status(200).json(holidays)
   } catch (error) {

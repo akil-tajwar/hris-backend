@@ -15,7 +15,12 @@ export const createCustomerController = async (
 ) => {
   try {
     requirePermission(req, 'create_customer')
-    const customer = await createCustomer(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const customer = await createCustomer(data)
     res.status(201).json({
       status: 'success',
       data: customer,
@@ -32,7 +37,11 @@ export const getCustomersController = async (
 ) => {
   try {
     requirePermission(req, 'view_customer')
-    const customers = await getCustomers()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const customers = await getCustomers(tenantId)
     res.json(customers)
   } catch (err) {
     next(err)

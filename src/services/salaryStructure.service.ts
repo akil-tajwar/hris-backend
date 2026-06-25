@@ -130,11 +130,12 @@ export const createSalaryStructureService = async (
    GET ALL
 ========================= */
 
-export const getAllSalaryStructuresService = async () => {
+export const getAllSalaryStructuresService = async (tenantId: number) => {
   try {
     const masters = await db
       .select()
       .from(salaryStructureMasterModel)
+      .where(eq(salaryStructureMasterModel.tenantId, tenantId))
 
     const details = await db
       .select({
@@ -155,6 +156,7 @@ export const getAllSalaryStructuresService = async () => {
         mandatory: salaryStructureDetailsModel.mandatory,
       })
       .from(salaryStructureDetailsModel)
+      .where(eq(salaryStructureDetailsModel.tenantId, tenantId))
       .leftJoin(
         salaryComponentsModel,
         eq(

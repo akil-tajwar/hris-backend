@@ -82,7 +82,7 @@ export const createLeavePolicyService = async (data: LeavePolicyInput) => {
   }
 }
 
-export const getAllLeavePoliciesService = async (): Promise<
+export const getAllLeavePoliciesService = async (tenantId: number): Promise<
   LeavePolicyInput[]
 > => {
   // master
@@ -102,6 +102,7 @@ export const getAllLeavePoliciesService = async (): Promise<
       updatedAt: leavePolicyMasterModel.updatedAt,
     })
     .from(leavePolicyMasterModel)
+    .where(eq(leavePolicyMasterModel.tenantId, tenantId))
     .leftJoin(
       companyModel,
       eq(leavePolicyMasterModel.companyId, companyModel.companyId)
@@ -130,6 +131,7 @@ export const getAllLeavePoliciesService = async (): Promise<
       updatedAt: leavePolicyDetailsModel.updatedAt,
     })
     .from(leavePolicyDetailsModel)
+    .where(eq(leavePolicyDetailsModel.tenantId, tenantId))
     .leftJoin(
       leaveTypeModel,
       eq(leavePolicyDetailsModel.leaveTypeId, leaveTypeModel.leaveTypeId)

@@ -4,9 +4,7 @@ import { eq } from 'drizzle-orm'
 
 // CREATE
 export const createCostCenter = async (data: NewCostCenter) => {
-  await db
-    .insert(costCenterModel)
-    .values(data)
+  await db.insert(costCenterModel).values(data)
 
   const [costCenter] = await db
     .select()
@@ -18,8 +16,11 @@ export const createCostCenter = async (data: NewCostCenter) => {
 }
 
 // READ ALL
-export const getCostCenters = async () => {
-  return await db.select().from(costCenterModel)
+export const getCostCenters = async (tenantId: number) => {
+  return await db
+    .select()
+    .from(costCenterModel)
+    .where(eq(costCenterModel.tenantId, tenantId))
 }
 
 // READ ONE
@@ -34,7 +35,7 @@ export const getCostCenterById = async (costCenterId: number) => {
 
 // UPDATE
 export const updateCostCenter = async (
-  data: CostCenter & { costCenterId: number },
+  data: CostCenter & { costCenterId: number }
 ) => {
   await db
     .update(costCenterModel)

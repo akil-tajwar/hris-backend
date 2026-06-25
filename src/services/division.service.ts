@@ -24,7 +24,7 @@ export const createDivision = async (data: NewDivision) => {
 }
 
 // READ ALL
-export const getDivisions = async () => {
+export const getDivisions = async (tenantId: number) => {
   return await db
     .select({
       // Division fields
@@ -55,6 +55,7 @@ export const getDivisions = async () => {
       designationName: designationModel.designationName,
     })
     .from(divisionModel)
+    .where(eq(divisionModel.tenantId, tenantId))
     .leftJoin(
       businessUnitsModel,
       eq(divisionModel.businessUnitId, businessUnitsModel.businessUnitId)
