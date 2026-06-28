@@ -19,6 +19,7 @@ const reportingEmployee = aliasedTable(employeeModel, 'reportingEmployee')
 
 // CREATE
 export const createEmployeePreboarding = async (data: any) => {
+  console.log("🚀 ~ createEmployeePreboarding ~ data:", data)
   // Get latest preboarding record
   const [lastRecord] = await db
     .select({
@@ -177,6 +178,7 @@ export const assignChecklistToPreboardingService = async (
     responsibleEmployeeId: item.responsibleEmployeeId || null,
     completionDate: item.completionDate ? new Date(item.completionDate) : null,
     status: item.status,
+    tenantId: item.tenantId,
     createdBy: item.createdBy,
   }))
 
@@ -200,6 +202,7 @@ export const updateAssignedChecklistService = async (
           : null,
 
         status: item.status,
+        tenantId: item.tenantId,
         updatedBy: item.updatedBy,
       })
       .where(
@@ -227,6 +230,7 @@ export const getAssignedChecklistService = async (preboardingId: number) => {
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
+      tenantId: employeePreboardingChecklistModel.tenantId,
       createdBy: employeePreboardingChecklistModel.createdBy,
       createdAt: employeePreboardingChecklistModel.createdAt,
       updatedBy: employeePreboardingChecklistModel.updatedBy,
@@ -283,6 +287,7 @@ export const getAssignedChecklistByUserService = async (userId: number) => {
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
+      tenantId: employeePreboardingChecklistModel.tenantId,
       createdBy: employeePreboardingChecklistModel.createdBy,
       createdAt: employeePreboardingChecklistModel.createdAt,
       updatedBy: employeePreboardingChecklistModel.updatedBy,

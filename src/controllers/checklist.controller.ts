@@ -18,9 +18,16 @@ export const createChecklistController = async (
     requirePermission(req, 'create_checklist')
     const tenantId = req.user?.tenantId
     const data = {
-      ...req.body,
-      tenantId,
+      checklistMaster: {
+        ...req.body.checklistMaster,
+        tenantId,
+      },
+      checklistDetails: req.body.checklistDetails.map((detail: any) => ({
+        ...detail,
+        tenantId,
+      })),
     }
+    console.log('🚀 ~ createChecklistController ~ data:', data)
     const result = await createChecklistService(data)
 
     res.status(201).json({

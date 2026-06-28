@@ -41,8 +41,8 @@ export const getDivisions = async (tenantId: number) => {
       updatedAt: divisionModel.updatedAt,
 
       // Business Unit
-      unitName: businessUnitsModel.unitName,
-      unitCode: businessUnitsModel.unitCode,
+      businessUnitName: businessUnitsModel.unitName,
+      businessUnitCode: businessUnitsModel.unitCode,
 
       // Head Employee
       empCode: employeeModel.empCode,

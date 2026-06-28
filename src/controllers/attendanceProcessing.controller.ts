@@ -18,8 +18,14 @@ export const processDateController = async (req: Request, res: Response): Promis
       ...req.body,
       tenantId,
     }
+    console.log("🚀 ~ processDateController ~ req.body,:", req.body,)
+    console.log("🚀 ~ processDateController ~ data:", data)
 
-    const result = await processAttendanceForDate(data, changedBy)
+    const result = await processAttendanceForDate(
+      date,
+      changedBy,
+      tenantId
+    )
     res.status(200).json(result)
   } catch (error: any) {
     console.error('❌ Process attendance error:', error)

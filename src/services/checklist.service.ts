@@ -23,6 +23,7 @@ export const createChecklistService = async (data: ChecklistInput) => {
           checklistName: data.checklistMaster.checklistName,
           heading: data.checklistMaster.heading,
           responsibleEmployeeId: data.checklistMaster.responsibleEmployeeId,
+          tenantId: data.checklistMaster.tenantId,
           createdBy: data.checklistMaster.createdBy,
         })
         .$returningId()
@@ -39,6 +40,7 @@ export const createChecklistService = async (data: ChecklistInput) => {
             checklistMasterId: insertId,
             checklistDetailsName: item.checklistDetailsName,
             responsibleEmployeeId: item.responsibleEmployeeId || 0,
+            tenantId: item.tenantId,
             createdBy: item.createdBy,
           }))
         )

@@ -171,6 +171,7 @@ export const createAssetTransaction = async (data: {
   transactionDate: string
   remarks?: string
   approvedBy?: number
+  tenantId: number
   createdBy: number
 }) => {
   const toMySqlDate = (d: Date) => d.toISOString().split('T')[0]
@@ -297,6 +298,7 @@ export const createAssetTransaction = async (data: {
           transactionDate,
           remarks: data.remarks,
           approvedBy: data.approvedBy,
+          tenantId: data.tenantId,
           createdBy: data.createdBy,
         })
         .$returningId()
@@ -351,6 +353,7 @@ export const createAssetTransaction = async (data: {
           oldValue,
           newValue,
 
+          tenantId: data.tenantId,
           createdBy: data.createdBy,
         } as any)
       }

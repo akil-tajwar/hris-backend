@@ -348,11 +348,11 @@ export const employeePreboardingModel = mysqlTable('employee_preboarding', {
   ),
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
     onDelete: 'restrict',
-  }),
+  }).notNull(),
   offeredSalary: double('offered_salary'),
   probationMonths: int('probation_months'),
   isConfirmed: boolean('is_confirmed').notNull().default(false),
-  status: varchar('status', { length: 50 }),
+  status: boolean('status'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),

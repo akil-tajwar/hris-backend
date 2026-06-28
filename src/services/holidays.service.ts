@@ -132,7 +132,7 @@ export const getAllHolidays = async (filters?: {
   }
 
   if (filters?.tenantId !== undefined) {
-    conditions.push(eq(holidayCalendarModel.tenantId, filters.tenantId))
+    conditions.push(eq(holidaysModel.tenantId, filters.tenantId))
   }
 
   if (conditions.length) {

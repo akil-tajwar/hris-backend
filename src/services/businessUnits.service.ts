@@ -42,7 +42,7 @@ export const getBusinessUnits = async (tenantId: number) => {
     .leftJoin(employeeModel, eq(businessUnitsModel.headEmployeeId, employeeModel.employeeId))
     .leftJoin(departmentModel, eq(employeeModel.departmentId, departmentModel.departmentId))
     .leftJoin(designationModel, eq(employeeModel.designationId, designationModel.designationId))
-    .where(eq(designationModel.tenantId, tenantId));
+    .where(eq(businessUnitsModel.tenantId, tenantId));
 };
 
 // UPDATEassetTransactionsModel

@@ -28,6 +28,7 @@ export const createAttendancePolicy = async (
         weekDayIds.map((weekDayId) => ({
           policyId,
           weekDayId,
+          tenantId: policyData.tenantId,
           createdBy: policyData.createdBy,
         }))
       )
@@ -72,6 +73,7 @@ export const updateAttendancePolicy = async (
           weekDayIds.map((weekDayId) => ({
             policyId: id,
             weekDayId,
+            tenantId: policyData.tenantId,
             createdBy: policyData.updatedBy ?? 0,
           }))
         )

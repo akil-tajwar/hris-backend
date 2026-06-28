@@ -127,6 +127,7 @@ export const createAssetTransactionController = async (
       ...req.body,
       tenantId,
     }
+    console.log("🚀 ~ createAssetTransactionController ~ data:", data)
 
     const result = await createAssetTransaction(data)
 

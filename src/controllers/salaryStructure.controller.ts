@@ -19,9 +19,16 @@ export const createSalaryStructureController = async (
 
     const tenantId = req.user?.tenantId
     const data = {
-      ...req.body,
-      tenantId,
+      salaryStructureMaster: {
+        ...req.body.salaryStructureMaster,
+        tenantId,
+      },
+      salaryStructureDetails: req.body.salaryStructureDetails.map((detail: any) => ({
+        ...detail,
+        tenantId,
+      })),
     }
+    console.log("🚀 ~ createSalaryStructureController ~ data:", data)
 
     const result = await createSalaryStructureService(data)
 

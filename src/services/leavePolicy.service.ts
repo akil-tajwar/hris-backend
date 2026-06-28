@@ -26,6 +26,7 @@ export const createLeavePolicyService = async (data: LeavePolicyInput) => {
         .insert(leavePolicyMasterModel)
         .values({
           companyId: data.leavePolicyMaster.companyId,
+          tenantId: data.leavePolicyMaster.tenantId,
           policyName: data.leavePolicyMaster.policyName,
           effectiveFrom: toDate(data.leavePolicyMaster.effectiveFrom),
           effectiveTo: data.leavePolicyMaster.effectiveTo
@@ -49,6 +50,7 @@ export const createLeavePolicyService = async (data: LeavePolicyInput) => {
           data.leavePolicyDetails.map((item) => ({
             leavePolicyMasterId: insertId,
             leaveTypeId: item.leaveTypeId,
+            tenantId: item.tenantId,
             yearlyAllocation: item.yearlyAllocation,
             accrualFrequency: item.accrualFrequency,
             accrualRate: item.accrualRate,
@@ -242,6 +244,7 @@ export const updateLeavePolicyService = async (
           effectiveTo: formatMySQLDate(data.leavePolicyMaster.effectiveTo),
           description: data.leavePolicyMaster.description,
           active: data.leavePolicyMaster.active,
+          tenantId: data.leavePolicyMaster.tenantId,
           updatedBy: data.leavePolicyMaster.updatedBy,
         })
         .where(
@@ -270,6 +273,7 @@ export const updateLeavePolicyService = async (
               effectiveTo: formatMySQLDate(data.leavePolicyMaster.effectiveTo),
               description: data.leavePolicyMaster.description,
               active: data.leavePolicyMaster.active,
+              tenantId: data.leavePolicyMaster.tenantId,
               updatedBy: data.leavePolicyMaster.updatedBy,
             })
             .where(
@@ -278,6 +282,7 @@ export const updateLeavePolicyService = async (
                 leavePolicyMasterId
               )
             )
+          console.log("🚀 ~ updateLeavePolicyService ~ updateResult:", updateResult)
         } else {
           const insertResult = await tx.insert(leavePolicyDetailsModel).values({
             leavePolicyMasterId,
@@ -288,8 +293,10 @@ export const updateLeavePolicyService = async (
             maxBalanceAllowed: item.maxBalanceAllowed,
             carryForwardLimit: item.carryForwardLimit,
             active: item.active,
+            tenantId: item.tenantId,
             createdBy: item.createdBy,
           })
+          console.log("🚀 ~ updateLeavePolicyService ~ insertResult:", insertResult)
         }
       }
 

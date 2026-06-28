@@ -86,6 +86,7 @@ export const createEmployee = async (input: {
       leavePolicyMasterId: employeeData.leavePolicyMasterId!,
       effectiveFrom: employeeData.doj,
       active: true,
+      tenantId: employeeData.tenantId,
       createdBy: employeeData.createdBy,
     })
 
@@ -137,7 +138,7 @@ export const createEmployee = async (input: {
         newValue: JSON.stringify({
           employmentType: employmentType.employmentTypeName,
         }),
-
+        tenantId: employeeData.tenantId,
         createdBy: employeeData.createdBy,
       } as any)
     }

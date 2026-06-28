@@ -4,6 +4,7 @@ import { eq, inArray } from 'drizzle-orm'
 
 // CREATE
 export const createLeaveType = async (data: NewLeaveType | NewLeaveType[]) => {
+  console.log("🚀 ~ createLeaveType ~ data:", data)
   // normalize to array
   const values = Array.isArray(data) ? data : [data]
 

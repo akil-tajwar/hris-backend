@@ -16,10 +16,15 @@ export const createLeaveTypeController = async (
     requirePermission(req, 'create_leave_type')
 
     const tenantId = req.user?.tenantId
-    const data = {
-      ...req.body,
-      tenantId,
-    }
+    const data = Array.isArray(req.body)
+      ? req.body.map((item: any) => ({
+          ...item,
+          tenantId,
+        }))
+      : {
+          ...req.body,
+          tenantId,
+        }
 
     const leaveTypes = await createLeaveType(data)
 
