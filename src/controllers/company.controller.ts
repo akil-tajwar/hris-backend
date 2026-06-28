@@ -31,16 +31,21 @@ export const createCompanyController = async (
     if (files?.logoUrl?.[0]) {
       companyDetails.logoUrl = `${baseUrl}${files.logoUrl[0].filename}`
     }
-
+    
     // ✅ Convert status
     if (companyDetails.status !== undefined) {
       companyDetails.status =
-        companyDetails.status === 'true' || companyDetails.status === true
-          ? 1
-          : 0
+      companyDetails.status === 'true' || companyDetails.status === true
+      ? 1
+      : 0
+    }
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...companyDetails,
+      tenantId,
     }
 
-    const company = await createCompany(companyDetails)
+    const company = await createCompany(data)
 
     res.status(201).json({
       success: true,
@@ -105,8 +110,12 @@ export const getCompaniesController = async (
   next: NextFunction
 ) => {
   try {
-    //requirePermission(req, 'view_company')
-    const companies = await getCompanies()
+    requirePermission(req, 'view_company')
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const companies = await getCompanies(tenantId)
     res.json(companies)
   } catch (err) {
     next(err)

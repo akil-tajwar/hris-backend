@@ -16,7 +16,20 @@ export const createLeavePolicyController = async (
 ) => {
   try {
     requirePermission(req, 'create_leave_policy')
-    const result = await createLeavePolicyService(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      leavePolicyMaster: {
+        ...req.body.leavePolicyMaster,
+        tenantId,
+      },
+      leavePolicyDetails:
+        req.body.leavePolicyDetails?.map((item: any) => ({
+          ...item,
+          tenantId,
+        })) ?? [],
+    }
+    console.log("🚀 ~ createLeavePolicyController ~ data:", data)
+    const result = await createLeavePolicyService(data)
 
     res.status(201).json({
       status: 'success',
@@ -36,7 +49,11 @@ export const getAllLeavePoliciesController = async (
 ) => {
   try {
     requirePermission(req, 'view_leave_policy')
-    const result = await getAllLeavePoliciesService()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const result = await getAllLeavePoliciesService(tenantId)
 
     res.status(200).json(result)
   } catch (error) {

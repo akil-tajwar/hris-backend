@@ -19,6 +19,7 @@ const reportingEmployee = aliasedTable(employeeModel, 'reportingEmployee')
 
 // CREATE
 export const createEmployeePreboarding = async (data: any) => {
+  console.log("🚀 ~ createEmployeePreboarding ~ data:", data)
   // Get latest preboarding record
   const [lastRecord] = await db
     .select({
@@ -56,7 +57,7 @@ export const createEmployeePreboarding = async (data: any) => {
 }
 
 // READ ALL
-export const getEmployeePreboarding = async () => {
+export const getEmployeePreboarding = async (tenantId: number) => {
   return await db
     .select({
       // Preboarding
@@ -103,6 +104,7 @@ export const getEmployeePreboarding = async () => {
       reportingEmpFullName: reportingEmployee.empFullName,
     })
     .from(employeePreboardingModel)
+    .where(eq(employeePreboardingModel.tenantId, tenantId))
     .leftJoin(
       companyModel,
       eq(employeePreboardingModel.companyId, companyModel.companyId)
@@ -176,6 +178,7 @@ export const assignChecklistToPreboardingService = async (
     responsibleEmployeeId: item.responsibleEmployeeId || null,
     completionDate: item.completionDate ? new Date(item.completionDate) : null,
     status: item.status,
+    tenantId: item.tenantId,
     createdBy: item.createdBy,
   }))
 
@@ -199,6 +202,7 @@ export const updateAssignedChecklistService = async (
           : null,
 
         status: item.status,
+        tenantId: item.tenantId,
         updatedBy: item.updatedBy,
       })
       .where(
@@ -226,6 +230,7 @@ export const getAssignedChecklistService = async (preboardingId: number) => {
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
+      tenantId: employeePreboardingChecklistModel.tenantId,
       createdBy: employeePreboardingChecklistModel.createdBy,
       createdAt: employeePreboardingChecklistModel.createdAt,
       updatedBy: employeePreboardingChecklistModel.updatedBy,
@@ -282,6 +287,7 @@ export const getAssignedChecklistByUserService = async (userId: number) => {
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
+      tenantId: employeePreboardingChecklistModel.tenantId,
       createdBy: employeePreboardingChecklistModel.createdBy,
       createdAt: employeePreboardingChecklistModel.createdAt,
       updatedBy: employeePreboardingChecklistModel.updatedBy,

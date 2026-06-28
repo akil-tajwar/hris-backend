@@ -23,7 +23,13 @@ export const createEmployeePreboardingController = async (
   try {
     requirePermission(req, 'create_employee_preboarding')
 
-    const result = await createEmployeePreboarding(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    console.log('🚀 ~ createEmployeePreboardingController ~ data:', data)
+    const result = await createEmployeePreboarding(data)
 
     res.status(201).json({
       status: 'success',
@@ -43,7 +49,11 @@ export const getEmployeePreboardingController = async (
   try {
     requirePermission(req, 'view_employee_preboarding')
 
-    const result = await getEmployeePreboarding()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const result = await getEmployeePreboarding(tenantId)
 
     res.json(result)
   } catch (err) {
@@ -108,7 +118,14 @@ export const assignChecklistToPreboardingController = async (
   res: Response
 ) => {
   try {
-    await assignChecklistToPreboardingService(req.body)
+    const tenantId = req.user?.tenantId
+
+    const data = req.body.map((item: any) => ({
+      ...item,
+      tenantId,
+    }))
+
+    await assignChecklistToPreboardingService(data)
 
     res.status(201).json({
       status: 'success',
@@ -216,9 +233,7 @@ export const completeEmployeePreboardingChecklistController = async (
     }
 
     const result = await completeEmployeePreboardingChecklist({
-      employeePreboardingChecklistId: Number(
-        employeePreboardingChecklistId
-      ),
+      employeePreboardingChecklistId: Number(employeePreboardingChecklistId),
       completionDate,
     })
 

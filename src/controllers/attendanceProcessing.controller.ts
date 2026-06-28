@@ -13,8 +13,19 @@ export const processDateController = async (req: Request, res: Response): Promis
       res.status(400).json({ message: 'date required (YYYY-MM-DD)' })
       return
     }
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    console.log("🚀 ~ processDateController ~ req.body,:", req.body,)
+    console.log("🚀 ~ processDateController ~ data:", data)
 
-    const result = await processAttendanceForDate(date, changedBy)
+    const result = await processAttendanceForDate(
+      date,
+      changedBy,
+      tenantId
+    )
     res.status(200).json(result)
   } catch (error: any) {
     console.error('❌ Process attendance error:', error)
@@ -31,8 +42,12 @@ export const processRangeController = async (req: Request, res: Response): Promi
       res.status(400).json({ message: 'fromDate and toDate required' })
       return
     }
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
 
-    const result = await processAttendanceForRange(fromDate, toDate, changedBy)
+    const result = await processAttendanceForRange(fromDate, toDate, changedBy, tenantId)
     res.status(200).json(result)
   } catch (error: any) {
     console.error('❌ Process range error:', error)

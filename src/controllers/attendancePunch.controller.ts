@@ -10,37 +10,25 @@ import {
 } from '../services/attendancePunch.service'
 import { processAttendanceForDate } from '../services/attendanceProcessing.service'
 
-// ========================
-// ATTENDANCE PUNCHES
-// ========================
-
-// export const createAttendancePunchController = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   try {
-//     requirePermission(req, 'create_attendance_punch')
-//     const data = await createAttendancePunch(req.body)
-//     res.status(201).json(data)
-//   } catch (error: any) {
-//     console.error('❌ Attendance Punch create error:', error)
-//     res
-//       .status(400)
-//       .json({ success: false, message: error.message || 'Something went wrong' })
-//   }
-// }
 export const createAttendancePunchController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'create_attendance_punch')
-    const data = await createAttendancePunch(req.body)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    
+    const attendancePunch = await createAttendancePunch(data)
 
     // ✅ instant process
     const attendanceDate = new Date(req.body.punchTime)
       .toISOString()
       .slice(0, 10)
-    await processAttendanceForDate(attendanceDate)
+    await processAttendanceForDate(attendanceDate, tenantId)
 
-    res.status(201).json(data)
+    res.status(201).json(attendancePunch)
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message })
   }
@@ -74,8 +62,14 @@ export const getAllAttendancePunchesController = async (
 ) => {
   try {
     requirePermission(req, 'view_attendance_punch')
-    const data = await getAllAttendancePunches()
-    res.json(data)
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const attendancePunch = await getAllAttendancePunches(tenantId)
+    res.json(attendancePunch)
   } catch (error) {
     console.error('❌ Get All Attendance Punches error:', error)
     res.status(500).json({ success: false, message: 'Server error' })

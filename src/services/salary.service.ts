@@ -78,7 +78,7 @@ export const createSalaries = async (
 }
 
 // GET ALL
-export const getSalarys = async () => {
+export const getSalarys = async (tenantId: number) => {
   const rows = await db
     .select({
       // Salary
@@ -113,6 +113,7 @@ export const getSalarys = async () => {
       createdAt: salaryModel.createdAt,
     })
     .from(salaryModel)
+    .where(eq(salaryModel.tenantId, tenantId))
     .leftJoin(
       employeeModel,
       eq(salaryModel.employeeId, employeeModel.employeeId)

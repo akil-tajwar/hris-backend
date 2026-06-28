@@ -20,7 +20,13 @@ export const createEmployeeLeaveApplyController = async (
   try {
     requirePermission(req, 'create_employee_leave_apply')
 
-    const leaveApply = await createEmployeeLeaveApply(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const leaveApply = await createEmployeeLeaveApply(data)
 
     res.status(201).json({
       status: 'success',
@@ -40,7 +46,11 @@ export const getEmployeeLeaveApplicationsController = async (
   try {
     requirePermission(req, 'view_employee_leave_apply')
 
-    const leaveApplications = await getEmployeeLeaveApplications()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const leaveApplications = await getEmployeeLeaveApplications(tenantId)
 
     res.json(leaveApplications)
   } catch (err) {

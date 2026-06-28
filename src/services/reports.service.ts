@@ -22,7 +22,10 @@ import {
   employeeLeaveAssignmentModel,
 } from '../schemas'
 
-export const employeeActivitiesReport = async (employeeId: number) => {
+export const employeeActivitiesReport = async (
+  employeeId: number,
+  tenantId: number
+) => {
   // Employee Details
   const [employeeDetails] = await db
     .select({
@@ -112,7 +115,12 @@ export const employeeActivitiesReport = async (employeeId: number) => {
       costCenterModel,
       eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
-    .where(eq(employeeModel.employeeId, employeeId))
+    .where(
+      and(
+        eq(employeeModel.employeeId, employeeId),
+        eq(employeeModel.tenantId, tenantId)
+      )
+    )
   // Employee History with performedBy and approvedBy names
   const employeeHistory = await db
     .select({
@@ -132,7 +140,12 @@ export const employeeActivitiesReport = async (employeeId: number) => {
       createdAt: employeeLifecycleEventsModel.createdAt,
     })
     .from(employeeLifecycleEventsModel)
-    .where(eq(employeeLifecycleEventsModel.employeeId, employeeId))
+    .where(
+      and(
+        eq(employeeLifecycleEventsModel.employeeId, employeeId),
+        eq(employeeLifecycleEventsModel.tenantId, tenantId)
+      )
+    )
     .orderBy(desc(employeeLifecycleEventsModel.eventDate))
 
   return {
@@ -143,7 +156,8 @@ export const employeeActivitiesReport = async (employeeId: number) => {
 
 export const employeeAttendanceReport = async (
   fromDate: string,
-  toDate: string
+  toDate: string,
+  tenantId: number
 ) => {
   return await db
     .select({
@@ -178,6 +192,7 @@ export const employeeAttendanceReport = async (
     )
     .where(
       and(
+        eq(employeeAttendanceModel.tenantId, tenantId),
         gte(employeeAttendanceModel.attendanceDate, new Date(fromDate)),
         lte(employeeAttendanceModel.attendanceDate, new Date(toDate))
       )
@@ -205,7 +220,8 @@ type SalaryMonth =
 
 export const salaryReport = async (
   salaryMonth: SalaryMonth,
-  salaryYear: number
+  salaryYear: number,
+  tenantId: number
 ) => {
   // Get main salary data with employee, department, and designation details
   const salaryData = await db
@@ -244,6 +260,7 @@ export const salaryReport = async (
     )
     .where(
       and(
+        eq(salaryModel.tenantId, tenantId),
         eq(salaryModel.salaryMonth, salaryMonth),
         eq(salaryModel.salaryYear, salaryYear)
       )
@@ -346,124 +363,8 @@ export const salaryReport = async (
   }
 }
 
-export const loneReport = async (fromDate: string, toDate: string) => {
-  const rows = await db
-    .select({
-      // lone data
-      employeeLoneId: employeeLoneModel.employeeLoneId,
-      employeeLoneName: employeeLoneModel.employeeLoneName,
-      loneAmount: employeeLoneModel.amount,
-      perMonth: employeeLoneModel.perMonth,
-      loneDate: employeeLoneModel.loneDate,
-      loneDescription: employeeLoneModel.description,
-
-      // employee data
-      employeeId: employeeModel.employeeId,
-      employeeName: employeeModel.empFullName,
-      empCode: employeeModel.empCode,
-
-      // department
-      departmentId: departmentModel.departmentId,
-      departmentName: departmentModel.departmentName,
-
-      // designation
-      designationId: designationModel.designationId,
-      designationName: designationModel.designationName,
-
-      // installment data
-      employeeSalaryComponentId:
-        employeeSalaryComponentsModel.employeeSalaryComponentId,
-      salaryComponentId: employeeSalaryComponentsModel.salaryComponentId,
-      salaryMonth: employeeSalaryComponentsModel.salaryMonth,
-      salaryYear: employeeSalaryComponentsModel.salaryYear,
-      installmentAmount: employeeSalaryComponentsModel.amount,
-      isAuthorized: employeeSalaryComponentsModel.isAuthorized,
-      isSkipped: employeeSalaryComponentsModel.isSkipped,
-      isSalaryGiven: employeeSalaryComponentsModel.isSalaryGiven,
-      installmentCreatedAt: employeeSalaryComponentsModel.createdAt,
-    })
-    .from(employeeLoneModel)
-    .leftJoin(
-      employeeModel,
-      eq(employeeLoneModel.employeeId, employeeModel.employeeId)
-    )
-    .leftJoin(
-      designationModel,
-      eq(employeeModel.designationId, designationModel.designationId)
-    )
-    .leftJoin(
-      departmentModel,
-      eq(employeeModel.departmentId, departmentModel.departmentId)
-    )
-    .leftJoin(
-      employeeSalaryComponentsModel,
-      eq(
-        employeeLoneModel.employeeLoneId,
-        employeeSalaryComponentsModel.employeeLoneId
-      )
-    )
-    .where(
-      and(
-        gte(employeeLoneModel.loneDate, new Date(fromDate)),
-        lte(employeeLoneModel.loneDate, new Date(toDate))
-      )
-    )
-    .orderBy(
-      employeeLoneModel.employeeLoneId,
-      employeeSalaryComponentsModel.salaryYear,
-      employeeSalaryComponentsModel.salaryMonth
-    )
-
-  const groupedMap = new Map()
-
-  for (const row of rows) {
-    const loneId = row.employeeLoneId
-
-    if (!groupedMap.has(loneId)) {
-      groupedMap.set(loneId, {
-        lone: {
-          employeeLoneId: row.employeeLoneId,
-          employeeLoneName: row.employeeLoneName,
-          amount: row.loneAmount,
-          perMonth: row.perMonth,
-          loneDate: row.loneDate,
-          description: row.loneDescription,
-
-          employeeId: row.employeeId,
-          employeeName: row.employeeName,
-          empCode: row.empCode,
-
-          departmentId: row.departmentId,
-          departmentName: row.departmentName,
-
-          designationId: row.designationId,
-          designationName: row.designationName,
-        },
-
-        installments: [],
-      })
-    }
-
-    if (row.employeeSalaryComponentId) {
-      groupedMap.get(loneId).installments.push({
-        employeeSalaryComponentId: row.employeeSalaryComponentId,
-        salaryComponentId: row.salaryComponentId,
-        salaryMonth: row.salaryMonth,
-        salaryYear: row.salaryYear,
-        amount: row.installmentAmount,
-        isAuthorized: row.isAuthorized,
-        isSkipped: row.isSkipped,
-        isSalaryGiven: row.isSalaryGiven,
-        createdAt: row.installmentCreatedAt,
-      })
-    }
-  }
-
-  return Array.from(groupedMap.values())
-}
-
 // ─── Report 1: Daily Attendance ───────────────────────────────
-export const dailyAttendanceReport = async (date: string) => {
+export const dailyAttendanceReport = async (date: string, tenantId: number) => {
   return await db
     .select({
       employeeId: employeeModel.employeeId,
@@ -493,14 +394,20 @@ export const dailyAttendanceReport = async (date: string) => {
       designationModel,
       eq(employeeModel.designationId, designationModel.designationId)
     )
-    .where(sql`DATE(${attendanceDaily.attendanceDate}) = ${date}`) // ← এটাই fix
+    .where(
+      and(
+        sql`DATE(${attendanceDaily.attendanceDate}) = ${date}`,
+        eq(attendanceDaily.tenantId, tenantId)
+      )
+    )
     .orderBy(employeeModel.empCode)
 }
 
 // ─── Report 2: Attendance Summary (Date Range) ────────────────
 export const attendanceSummaryReport = async (
   fromDate: string,
-  toDate: string
+  toDate: string,
+  tenantId: number
 ) => {
   const rows = await db
     .select({
@@ -509,7 +416,10 @@ export const attendanceSummaryReport = async (
     })
     .from(attendanceDaily)
     .where(
-      sql`DATE(${attendanceDaily.attendanceDate}) BETWEEN ${fromDate} AND ${toDate}`
+      and(
+        sql`DATE(${attendanceDaily.attendanceDate}) BETWEEN ${fromDate} AND ${toDate}`,
+        eq(attendanceDaily.tenantId, tenantId)
+      )
     )
 
   // Date অনুযায়ী group করো
@@ -544,7 +454,7 @@ export const attendanceSummaryReport = async (
 }
 
 // leave balance summary report
-export const getLeaveBalanceSummaryReport = async () => {
+export const getLeaveBalanceSummaryReport = async (tenantId: number) => {
   try {
     const result = await db
       .select({
@@ -566,6 +476,7 @@ export const getLeaveBalanceSummaryReport = async () => {
         remainingDays: employeeLeaveBalanceModel.remainingDays,
       })
       .from(employeeLeaveBalanceModel)
+      .where(eq(employeeLeaveBalanceModel.tenantId, tenantId))
       .leftJoin(
         employeeModel,
         eq(employeeLeaveBalanceModel.employeeId, employeeModel.employeeId)
@@ -621,7 +532,7 @@ export const getLeaveBalanceSummaryReport = async () => {
   }
 }
 
-export const leaveLedgerReport = async () => {
+export const leaveLedgerReport = async (tenantId: number) => {
   try {
     // =====================================================
     // 1. FETCH LEAVE BALANCES (BASE: ALL ASSIGNED EMPLOYEES)
@@ -645,6 +556,7 @@ export const leaveLedgerReport = async () => {
         assignmentEffectiveFrom: employeeLeaveAssignmentModel.effectiveFrom,
       })
       .from(employeeLeaveBalanceModel)
+      .where(eq(employeeLeaveBalanceModel.tenantId, tenantId))
       .leftJoin(
         employeeModel,
         eq(employeeLeaveBalanceModel.employeeId, employeeModel.employeeId)
@@ -678,6 +590,7 @@ export const leaveLedgerReport = async () => {
         status: employeeLeaveApplyModel.status,
       })
       .from(employeeLeaveApplyModel)
+      .where(eq(employeeLeaveApplyModel.tenantId, tenantId))
       .orderBy(asc(employeeLeaveApplyModel.effectiveFrom))
 
     // =====================================================

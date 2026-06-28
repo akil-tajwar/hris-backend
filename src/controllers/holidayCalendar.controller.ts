@@ -27,7 +27,14 @@ export const createHolidayCalendarController = async (
 ) => {
   try {
     requirePermission(req, 'create_holiday_calendar')
-    const calendarData = createHolidayCalendarSchema.parse(req.body)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const calendarData = createHolidayCalendarSchema.parse(data)
     const calendar = await createHolidayCalendar(calendarData)
 
     res.status(201).json({
@@ -47,12 +54,17 @@ export const getAllHolidayCalendarsController = async (
   try {
     requirePermission(req, 'view_holiday_calendar')
 
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
     const companyId = req.query.companyId
       ? Number(req.query.companyId)
       : undefined
     const year = req.query.year ? Number(req.query.year) : undefined
 
-    const calendars = await getAllHolidayCalendars({ companyId, year })
+    const calendars = await getAllHolidayCalendars({ companyId, year, tenantId })
 
     res.status(200).json(calendars)
   } catch (error) {

@@ -1,29 +1,26 @@
 import { db } from '../config/database'
-import { employmentTypeModel } from '../schemas'
+import { employmentTypeModel, NewEmploymentType } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createEmploymentType = async (
-  employmentTypeName: string,
-  createdBy: number
-) => {
-  const result = await db
-    .insert(employmentTypeModel)
-    .values({ employmentTypeName, createdBy })
+export const createEmploymentType = async (data: NewEmploymentType) => {
+  await db.insert(employmentTypeModel).values(data)
 
-  const employmentTypeId = Number(result[0].insertId)
-
-  const [employmentType] = await db
+  const [division] = await db
     .select()
     .from(employmentTypeModel)
-    .where(eq(employmentTypeModel.employmentTypeId, employmentTypeId))
+    .orderBy(employmentTypeModel.employmentTypeId)
+    .limit(1)
 
-  return employmentType
+  return division
 }
 
 // READ ALL
-export const getEmploymentTypes = async () => {
-  return await db.select().from(employmentTypeModel)
+export const getEmploymentTypes = async (tenantId: number) => {
+  return await db
+    .select()
+    .from(employmentTypeModel)
+    .where(eq(employmentTypeModel.tenantId, tenantId))
 }
 
 // UPDATE

@@ -89,6 +89,9 @@ export const customerModel = mysqlTable('customers', {
   companyId: int('company_id').references(() => companyModel.companyId, {
     onDelete: 'restrict',
   }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -122,6 +125,9 @@ export const departmentModel: MySqlTableWithColumns<any> = mysqlTable(
       () => employeeModel.employeeId,
       { onDelete: 'restrict' }
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -139,6 +145,9 @@ export const designationModel = mysqlTable('designations', {
   jobLevel: int('job_level'),
   description: text('description'),
   status: boolean('status').default(true),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -149,6 +158,9 @@ export const designationModel = mysqlTable('designations', {
 
 export const companyModel = mysqlTable('companies', {
   companyId: int('company_id').primaryKey().autoincrement(),
+  tenantId: int('tenant_id')
+    .references(() => tenantModel.tenantId)
+    .notNull(),
   code: varchar('code', { length: 50 }),
   companyName: varchar('company_name', { length: 100 }).notNull(),
   shortName: varchar('short_name', { length: 50 }),
@@ -174,6 +186,9 @@ export const workStationModel = mysqlTable('work_stations', {
   workStationId: int('work_station_id').primaryKey().autoincrement(),
   workStationNumber: int('work_station_number').notNull(),
   workStationName: varchar('work_station_name', { length: 100 }).notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -196,6 +211,9 @@ export const businessUnitsModel: MySqlTableWithColumns<any> = mysqlTable(
       () => employeeModel.employeeId,
       { onDelete: 'restrict' }
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -221,6 +239,9 @@ export const divisionModel: MySqlTableWithColumns<any> = mysqlTable(
       () => employeeModel.employeeId,
       { onDelete: 'restrict' }
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     status: boolean('status').default(true),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -234,6 +255,9 @@ export const divisionModel: MySqlTableWithColumns<any> = mysqlTable(
 export const costCenterModel = mysqlTable('cost_centers', {
   costCenterId: int('cost_center_id').primaryKey().autoincrement(),
   costCenterName: varchar('cost_center_name', { length: 100 }).notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -245,6 +269,9 @@ export const costCenterModel = mysqlTable('cost_centers', {
 export const employmentTypeModel = mysqlTable('employment_types', {
   employmentTypeId: int('employment_type_id').primaryKey().autoincrement(),
   employmentTypeName: varchar('employment_type_name', { length: 50 }).notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -260,6 +287,9 @@ export const checklistMasterModel = mysqlTable('checklist_master', {
   responsibleEmployeeId: int('responsible_employee_id').references(
     () => employeeModel.employeeId
   ),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   isComplete: boolean('is_complete').notNull().default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -280,6 +310,9 @@ export const checklistDetailsModel = mysqlTable('checklist_details', {
   responsibleEmployeeId: int('responsible_employee_id').references(
     () => employeeModel.employeeId
   ),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -313,10 +346,13 @@ export const employeePreboardingModel = mysqlTable('employee_preboarding', {
   salaryStructureMasterId: int('salary_structure_master_id').references(
     () => salaryStructureMasterModel.salaryStructureMasterId
   ),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }).notNull(),
   offeredSalary: double('offered_salary'),
   probationMonths: int('probation_months'),
   isConfirmed: boolean('is_confirmed').notNull().default(false),
-  status: varchar('status', { length: 50 }),
+  status: boolean('status'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -340,6 +376,9 @@ export const employeePreboardingChecklistModel = mysqlTable(
     responsibleEmployeeId: int('responsible_employee_id').references(
       () => employeeModel.employeeId
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     completionDate: date('completion_date'),
     isComplete: boolean('is_complete').notNull().default(false),
     status: boolean('status').notNull().default(false),
@@ -422,7 +461,7 @@ export const employeeModel = mysqlTable('employees', {
   designationId: int('designation_id')
     .references(() => designationModel.designationId)
     .notNull(),
-  employmentTypeId: int('employee_type_id')
+  employmentTypeId: int('employment_type_id')
     .references(() => employmentTypeModel.employmentTypeId)
     .notNull(),
   companyId: int('company_id')
@@ -443,6 +482,12 @@ export const employeeModel = mysqlTable('employees', {
   leavePolicyMasterId: int('leave_policy_master_id').references(
     () => leavePolicyMasterModel.leavePolicyMasterId
   ),
+  attendancePolicyId: int('attendance_policy_id').references(
+    () => attendancePoliciesModel.id
+  ),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   reportingAuthorityId: int('reporting_authority_id'),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -464,6 +509,9 @@ export const employeeDesignationHistoryModel = mysqlTable(
     designationId: int('designation_id')
       .references(() => designationModel.designationId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -489,6 +537,9 @@ export const employeeDepartmentHistoryModel = mysqlTable(
     departmentId: int('department_id')
       .references(() => departmentModel.departmentId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -513,9 +564,12 @@ export const employeeSalaryStructureHistoryModel = mysqlTable(
     employeeId: int('employee_id')
       .references(() => employeeModel.employeeId)
       .notNull(),
-    salaryStructureId: int('salary_structure_id')
+    salaryStructureMasterId: int('salary_structure_master_id')
       .references(() => salaryStructureMasterModel.salaryStructureMasterId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -539,6 +593,9 @@ export const employeeShiftHistoryModel = mysqlTable('employee_shift_history', {
   shiftId: int('shift_id')
     .references(() => shiftModel.shiftId)
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   effectiveFrom: date('effective_from').notNull(),
   effectiveTo: date('effective_to'),
   changeReason: text('change_reason'),
@@ -563,6 +620,9 @@ export const employeeLeavePolicyHistoryModel = mysqlTable(
     leavePolicyId: int('leave_policy_id')
       .references(() => leavePolicyMasterModel.leavePolicyMasterId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -588,6 +648,9 @@ export const employeeEmploymentTypeHistoryModel = mysqlTable(
     employmentTypeId: int('employment_type_id')
       .references(() => employmentTypeModel.employmentTypeId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -613,6 +676,9 @@ export const employeeDesignationHistory = mysqlTable(
     designationId: int('designation_id')
       .references(() => designationModel.designationId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -637,6 +703,9 @@ export const employeeDepartmentHistory = mysqlTable(
     departmentId: int('department_id')
       .references(() => departmentModel.departmentId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -663,6 +732,9 @@ export const employeeSalaryStructureHistory = mysqlTable(
     salaryStructureMasterId: int('salary_structure_master_id').references(
       () => salaryStructureMasterModel.salaryStructureMasterId
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -682,6 +754,9 @@ export const employeeShiftHistory = mysqlTable('employee_shift_history', {
   employeeId: int('employee_id')
     .references(() => employeeModel.employeeId)
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   shiftId: int('shift_id').references(() => shiftModel.shiftId),
   effectiveFrom: date('effective_from').notNull(),
   effectiveTo: date('effective_to'),
@@ -706,6 +781,9 @@ export const employeeLeavePolicyHistory = mysqlTable(
     leavePolicyId: int('leave_policy_id').references(
       () => leavePolicyMasterModel.leavePolicyMasterId
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -730,6 +808,9 @@ export const employeeEmploymentTypeHistory = mysqlTable(
     employmentTypeId: int('employment_type_id').references(
       () => employmentTypeModel.employmentTypeId
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     changeReason: text('change_reason'),
@@ -792,6 +873,9 @@ export const employeeLifecycleEventsModel = mysqlTable(
     referenceType: varchar('reference_type', {
       length: 50,
     }),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     referenceId: int('reference_id'),
     oldValue: json('old_value'),
     newValue: json('new_value'),
@@ -809,6 +893,9 @@ export const notificationsModel = mysqlTable('notifications', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   notification: varchar('notification', { length: 255 }).notNull(),
   isRead: boolean('is_read').notNull().default(false),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -822,6 +909,9 @@ export const assetCategoryModel = mysqlTable('asset_categories', {
   categoryName: varchar('category_name', {
     length: 100,
   }).notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -837,6 +927,9 @@ export const assetsModel = mysqlTable('assets', {
   categoryId: int('category_id')
     .notNull()
     .references(() => assetCategoryModel.assetCategoryId),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   serialNumber: varchar('serial_number', { length: 100 }),
   purchaseDate: date('purchase_date'),
   purchaseValue: double('purchase_value', {
@@ -863,6 +956,9 @@ export const assetTransactionsModel = mysqlTable('asset_transactions', {
   assetId: int('asset_id')
     .notNull()
     .references(() => assetsModel.assetId),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   employeeId: int('employee_id'),
   transactionType: mysqlEnum('transaction_type', [
     'ISSUE',
@@ -888,6 +984,9 @@ export const shiftModel = mysqlTable('shift', {
   companyId: int('company_id')
     .references(() => companyModel.companyId)
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   shiftName: varchar('shift_name', { length: 100 }).notNull(),
   shiftCode: varchar('shift_code', { length: 20 }).notNull(),
   shiftType: mysqlEnum('shift_type', [
@@ -938,6 +1037,9 @@ export const shiftDayAndWeekDaysModel = mysqlTable('shift_day_and_week_days', {
   weekDayId: int('week_day_id')
     .notNull()
     .references(() => weekDayModel.weekDayId, { onDelete: 'restrict' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   dayType: mysqlEnum('day_type', ['FullDay', 'HalfDay', 'Weekend']).notNull(),
   startTime: varchar('start_time', { length: 10 }).notNull(),
   endTime: varchar('end_time', { length: 10 }).notNull(),
@@ -962,6 +1064,9 @@ export const employeeShiftAllocations = mysqlTable(
     shiftId: int('shift_id')
       .notNull()
       .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
     effectiveTo: date('effective_to', { mode: 'string' }),
     remarks: varchar('remarks', { length: 255 }),
@@ -978,6 +1083,9 @@ export const holidayCalendarModel = mysqlTable('holiday_calendars', {
   companyId: int('company_id')
     .notNull()
     .references(() => companyModel.companyId, { onDelete: 'restrict' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   year: int('year').notNull(), // e.g. 2026
   name: varchar('name', { length: 100 }), // e.g. "Bangladesh Holiday Calendar 2026"
   isActive: boolean('is_active').default(true),
@@ -990,6 +1098,9 @@ export const holidaysModel = mysqlTable('holidays', {
   calendarId: int('calendar_id')
     .notNull()
     .references(() => holidayCalendarModel.id, { onDelete: 'cascade' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   title: varchar('title', { length: 150 }).notNull(),
   date: timestamp('date', { mode: 'string' }).notNull(),
   type: varchar('type', { length: 50 }).notNull(),
@@ -1004,6 +1115,9 @@ export const leaveTypeModel = mysqlTable('leave_types', {
   companyId: int('company_id')
     .references(() => companyModel.companyId)
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   code: varchar('code', { length: 20 }).notNull(),
   name: varchar('name', { length: 100 }).notNull(),
   category: mysqlEnum('category', ['Paid', 'Unpaid', 'Special']).notNull(),
@@ -1050,6 +1164,9 @@ export const leavePolicyMasterModel = mysqlTable('leave_policy_master', {
   policyName: varchar('policy_name', {
     length: 150,
   }).notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   effectiveFrom: date('effective_from').notNull(),
   effectiveTo: date('effective_to'),
   description: text('description'),
@@ -1078,6 +1195,9 @@ export const leavePolicyDetailsModel = mysqlTable('leave_policy_details', {
     'Quarterly',
     'Yearly',
   ]).notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   accrualRate: double('accrual_rate').notNull(),
   maxBalanceAllowed: double('max_balance_allowed').notNull(),
   carryForwardLimit: double('carry_forward_limit').notNull(),
@@ -1102,6 +1222,9 @@ export const employeeLeaveAssignmentModel = mysqlTable(
     leavePolicyMasterId: int('leave_policy_master_id')
       .references(() => leavePolicyMasterModel.leavePolicyMasterId)
       .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     active: boolean('active').notNull().default(true),
@@ -1127,6 +1250,9 @@ export const employeeLeaveBalanceModel = mysqlTable('employee_leave_balance', {
   employeeLeaveAssignmentId: int('employee_leave_assignment_id')
     .references(() => employeeLeaveAssignmentModel.employeeLeaveAssignmentId)
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   year: int('year').notNull(),
   earnedDays: double('earned_days').notNull(),
   usedDays: double('used_days').notNull().default(0),
@@ -1143,6 +1269,9 @@ export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
   leaveTypeId: int('leave_type_id')
     .references(() => leaveTypeModel.leaveTypeId)
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   effectiveFrom: date('effective_from').notNull(),
   effectiveTo: date('effective_to'),
   noOfDays: int('no_of_days').notNull(),
@@ -1178,6 +1307,9 @@ export const salaryComponentsModel = mysqlTable('salary_components', {
   affectsGross: boolean('affects_gross').notNull().default(false), // Add this
   affectsNet: boolean('affects_net').notNull().default(false), // Add this
   sequenceNo: int('sequence_no').notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1201,6 +1333,9 @@ export const salaryStructureMasterModel = mysqlTable(
       'Earning',
       'Deduction',
     ]).notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     effectiveFrom: date('effective_from').notNull(),
     effectiveTo: date('effective_to'),
     active: boolean('active').notNull().default(true),
@@ -1229,6 +1364,9 @@ export const salaryStructureDetailsModel = mysqlTable(
       .references(() => salaryComponentsModel.salaryComponentId, {
         onDelete: 'restrict',
       }),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     amount: double('amount').notNull(),
     percentage: double('percentage'),
     formulaExpression: varchar('formula_expression', { length: 255 }),
@@ -1262,6 +1400,9 @@ export const employeeSalaryComponentsModel = mysqlTable(
       () => employeeLoneModel.employeeLoneId,
       { onDelete: 'restrict' }
     ),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     salaryMonth: mysqlEnum('salary_month', [
       'January',
       'February',
@@ -1305,6 +1446,9 @@ export const employeeSalaryStructureModel = mysqlTable(
       .references(() => salaryStructureMasterModel.salaryStructureMasterId, {
         onDelete: 'restrict',
       }),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
@@ -1340,6 +1484,9 @@ export const salaryModel = mysqlTable('salary', {
   designationId: int('designation_id')
     .references(() => designationModel.designationId, { onDelete: 'restrict' })
     .notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   basicSalary: double('basic_salary').notNull(),
   grossSalary: double('gross_salary').notNull(),
   netSalary: double('net_salary').notNull(),
@@ -1358,6 +1505,9 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   amount: double('amount').notNull(),
   perMonth: int('per_month').notNull(),
   loneDate: date('lone_date').notNull(),
@@ -1377,6 +1527,9 @@ export const employeeAttendanceModel = mysqlTable('employee_attendances', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   attendanceDate: date('attendance_date').notNull(),
   inTime: varchar('in_time', { length: 10 }),
   outTime: varchar('out_time', { length: 10 }),
@@ -1409,6 +1562,9 @@ export const attendancePoliciesModel = mysqlTable('attendance_policies', {
     () => holidayCalendarModel.id,
     { onDelete: 'set null' }
   ),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1427,6 +1583,9 @@ export const attendancePolicyWeekendsModel = mysqlTable(
     weekDayId: int('week_day_id')
       .notNull()
       .references(() => weekDayModel.weekDayId, { onDelete: 'restrict' }),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
@@ -1442,7 +1601,10 @@ export const attendancePunches = mysqlTable('attendance_punches', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-  punchTime: timestamp('punch_time', { mode: 'date' }).notNull(), // ✅ mode: "date"
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
+  punchTime: timestamp('punch_time', { mode: 'date' }).notNull(),
   punchType: varchar('punch_type', { length: 20 }),
   deviceId: varchar('device_id', { length: 50 }),
   source: varchar('source', { length: 50 }),
@@ -1461,6 +1623,9 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   attendanceDate: date('attendance_date').notNull(),
   firstIn: timestamp('first_in', { mode: 'date' }), // ✅ mode: "date"
   lastOut: timestamp('last_out', { mode: 'date' }), // ✅ mode: "date"
@@ -1496,12 +1661,9 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
   recordId: int('record_id'), // attendance_daily.id — কোন record change হলো
   employeeId: int('employee_id').notNull(),
   attendanceDate: date('attendance_date', { mode: 'string' }).notNull(),
-
   action: varchar('action', { length: 10 }).notNull(), // 'INSERT' | 'UPDATE'
   changedBy: int('changed_by'), // কোন userId করল
   changedAt: timestamp('changed_at').default(sql`CURRENT_TIMESTAMP`),
-
-  // ── আগের value (INSERT এর সময় এগুলো null থাকবে) ──
   oldStatus: mysqlEnum('old_status', [
     'PRESENT',
     'ABSENT',
@@ -1517,8 +1679,6 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
   oldOvertimeMinutes: int('old_overtime_minutes'),
   oldFirstIn: timestamp('old_first_in', { mode: 'date' }),
   oldLastOut: timestamp('old_last_out', { mode: 'date' }),
-
-  // ── নতুন value ──
   newStatus: mysqlEnum('new_status', [
     'PRESENT',
     'ABSENT',
@@ -1534,8 +1694,10 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
   newOvertimeMinutes: int('new_overtime_minutes').notNull(),
   newFirstIn: timestamp('new_first_in', { mode: 'date' }),
   newLastOut: timestamp('new_last_out', { mode: 'date' }),
-
-  remark: text('remark'), // optional: কেন manually change করা হলো
+  remark: text('remark'),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
 })
 
 // ========================

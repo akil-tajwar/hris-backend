@@ -15,7 +15,12 @@ export const createDivisionController = async (
 ) => {
   try {
     requirePermission(req, 'create_division')
-    const division = await createDivision(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const division = await createDivision(data)
     res.status(201).json({ status: 'success', data: division })
   } catch (err) {
     next(err)
@@ -29,7 +34,11 @@ export const getDivisionsController = async (
 ) => {
   try {
     requirePermission(req, 'view_division')
-    const divisions = await getDivisions()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const divisions = await getDivisions(tenantId)
     res.json(divisions)
   } catch (err) {
     next(err)

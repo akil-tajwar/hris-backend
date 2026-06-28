@@ -159,7 +159,7 @@ export const updateShift = async (shiftId: number, data: any) => {
    GET ALL
 ========================= */
 
-export const getAllShift = async () => {
+export const getAllShift = async (tenantId: number) => {
   const rows = await db
     .select({
       shiftId: shiftModel.shiftId,
@@ -190,6 +190,7 @@ export const getAllShift = async () => {
       weekDay: weekDayModel.day,
     })
     .from(shiftModel)
+    .where(eq(shiftModel.tenantId, tenantId))
     .leftJoin(companyModel, eq(shiftModel.companyId, companyModel.companyId))
     .leftJoin(
       shiftDayAndWeekDaysModel,

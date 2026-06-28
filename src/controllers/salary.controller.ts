@@ -19,8 +19,13 @@ export const createSalariesController = async (
     if (!Array.isArray(req.body)) {
       throw new Error('Request body must be an array of salary records');
     }
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
 
-    const result = await createSalaries(req.body);
+    const result = await createSalaries(data);
 
     res.status(201).json({
       status: 'success',
@@ -39,7 +44,13 @@ export const getSalarysController = async (
 ) => {
   try {
     requirePermission(req, 'view_salary')
-    const salarys = await getSalarys()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const salarys = await getSalarys(tenantId)
     res.json(salarys)
   } catch (err) {
     next(err)

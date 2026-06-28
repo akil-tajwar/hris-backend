@@ -15,15 +15,21 @@ export const createAttendancePolicyController = async (
 ) => {
   try {
     requirePermission(req, 'create_attendance_policy')
-    const data = await createAttendancePolicy(req.body)
-    res.status(201).json(data)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const attendancePolicy = await createAttendancePolicy(data)
+    res.status(201).json(attendancePolicy)
   } catch (error: any) {
     console.error('❌ Attendance Policy create error:', error)
     res.status(400).json({ success: false, message: error.message || 'Something went wrong' })
   }
 }
 
-// UPDATE
 // UPDATE
 export const updateAttendancePolicyController = async (
   req: Request,
@@ -45,9 +51,6 @@ export const updateAttendancePolicyController = async (
   }
 }
 
-
-
-
 // GET ALL
 export const getAllAttendancePoliciesController = async (
   req: Request,
@@ -55,7 +58,13 @@ export const getAllAttendancePoliciesController = async (
 ) => {
   try {
     requirePermission(req, 'view_attendance_policy')
-    const data = await getAllAttendancePolicies()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const data = await getAllAttendancePolicies(tenantId)
     res.json(data)
   } catch (error) {
     console.error('Get All Attendance Policies Error:', error)

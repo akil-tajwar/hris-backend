@@ -26,7 +26,7 @@ const employeeDepartment = aliasedTable(
   'employeeDepartment'
 )
 
-export const getDepartments = async () => {
+export const getDepartments = async (tenantId: number) => {
   return await db
     .select({
       // Department fields
@@ -63,6 +63,7 @@ export const getDepartments = async () => {
       designationName: designationModel.designationName,
     })
     .from(departmentModel)
+    .where(eq(departmentModel.tenantId, tenantId))
     .leftJoin(
       divisionModel,
       eq(departmentModel.divisionId, divisionModel.divisionId)

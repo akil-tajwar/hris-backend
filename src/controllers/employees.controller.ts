@@ -26,15 +26,20 @@ export const createEmployeeController = async (req: Request, res: Response) => {
     const results = []
 
     for (const item of payload) {
-      const employeeDetails =
-        typeof item.employeeDetails === 'string'
+      const tenantId = req.user?.tenantId
+      const employeeDetails = {
+        ...(typeof item.employeeDetails === 'string'
           ? JSON.parse(item.employeeDetails)
-          : item.employeeDetails
+          : item.employeeDetails),
+        tenantId,
+      }
 
-      const userData =
-        typeof item.userData === 'string'
+      const userData = {
+        ...(typeof item.userData === 'string'
           ? JSON.parse(item.userData)
-          : item.userData
+          : item.userData),
+        tenantId,
+      }
 
       // files mapping
       if (files?.photoUrl?.[0]) {
@@ -129,7 +134,11 @@ export const getAllEmployeesController = async (
   try {
     requirePermission(req, 'view_employee')
 
-    const data = await getAllEmployees()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const data = await getAllEmployees(tenantId)
     res.json(data)
   } catch (error) {
     console.error('Get All Employees Error:', error)
@@ -200,8 +209,11 @@ export const getEmployeeIdByUserIdController = async (
 ) => {
   try {
     const userId = Number(req.params.userId)
-    console.log("🚀 ~ getEmployeeIdByUserIdController ~ req.params.userId:", req.params.userId)
-    console.log("🚀 ~ getEmployeeIdByUserIdController ~ userId:", userId)
+    console.log(
+      '🚀 ~ getEmployeeIdByUserIdController ~ req.params.userId:',
+      req.params.userId
+    )
+    console.log('🚀 ~ getEmployeeIdByUserIdController ~ userId:', userId)
 
     if (!userId) {
       res.status(400).json({ message: 'Invalid userId' })

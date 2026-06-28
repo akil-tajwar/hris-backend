@@ -10,11 +10,12 @@ import {
 import { NewUser, roleModel, userModel } from '../schemas'
 
 // Find user by username
-export const findUserByUsername = async (username: string) => {
+export const findUserByEmail = async (email: string) => {
   const [user] = await db
     .select()
     .from(userModel)
-    .where(eq(userModel.username, username))
+    .where(eq(userModel.email, email))
+
   return user
 }
 
@@ -39,44 +40,53 @@ export const getUserDetailsByUserId = async (userId: number) => {
 }
 
 // Create new user
-export const createUser = async (userData: NewUser) => {
-  const existingUser = await findUserByUsername(userData.username)
+export const createUser = async (
+  dbInstance: typeof db,
+  userData: NewUser & {
+    userCompanies?: number[]
+    createdBy: number
+  }
+) => {
+  const [existingUser] = await dbInstance
+    .select()
+    .from(userModel)
+    .where(eq(userModel.username, userData.username))
 
   if (existingUser) {
     throw BadRequestError('Username already registered, Please Try Another')
   }
 
   validatePassword(userData.password)
+
   const hashedPassword = await hashPassword(userData.password)
 
-  // SQLite does not support $returningId(); use lastInsertRowid
-  const result = await db.insert(userModel).values({
+  const result = await dbInstance.insert(userModel).values({
     username: userData.username,
     password: hashedPassword,
-    active: userData.active ? true : false,
-    isPasswordResetRequired: userData.isPasswordResetRequired ? true : false,
+    active: userData.active ?? true,
+    isPasswordResetRequired: userData.isPasswordResetRequired ?? true,
     roleId: userData.roleId,
     tenantId: userData.tenantId,
     email: userData.email,
   })
 
-  const newUserId = result[0] // Drizzle returns array with inserted row ID
+  const newUserId = result[0].insertId
 
   return {
-    id: newUserId,
+    userId: newUserId,
     username: userData.username,
-    password: userData.password,
-    active: userData.active,
+    email: userData.email,
     roleId: userData.roleId,
     tenantId: userData.tenantId,
-    email: userData.email,
+    active: userData.active,
     isPasswordResetRequired: userData.isPasswordResetRequired,
+    userCompanies: userData.userCompanies ?? [],
   }
 }
 
 // Get all users
-export const getUsers = async () => {
-  const userList = await db.select().from(userModel)
+export const getUsers = async (tenantId: number) => {
+  const userList = await db.select().from(userModel).where(eq(userModel.tenantId, tenantId))
   return userList
 }
 
@@ -106,9 +116,9 @@ export const updateUser = async (
 }
 
 // Login user
-export const loginUser = async (username: string, password: string) => {
-  const user = await findUserByUsername(username)
-  console.log("🚀 ~ loginUser ~ user:", user)
+export const loginUser = async (email: string, password: string) => {
+  const user = await findUserByEmail(email)
+  console.log('🚀 ~ loginUser ~ user:', user)
 
   if (!user) {
     throw UnauthorizedError(
@@ -126,11 +136,14 @@ export const loginUser = async (username: string, password: string) => {
     )
   }
 
-  const userDetails = await getUserDetailsByUserId(user.userId) as {
+  const userDetails = (await getUserDetailsByUserId(user.userId)) as {
     role?: {
       rolePermissions?: Array<{
         permission: {
           name: string
+        }
+        userCompanies?: {
+          companyId: number[]
         }
       }>
     }

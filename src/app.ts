@@ -2,6 +2,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 import helmet from 'helmet'
+import path from 'path'
 import { errorHandler } from './middlewares/error.middleware'
 import routes from './routes'
 import 'dotenv/config';
@@ -10,7 +11,7 @@ dotenv.config()
 
 const app = express()
 
-// Middleware
+// CORS middleware - applied to ALL routes including static files
 app.use(
   cors({
     credentials: true,
@@ -33,9 +34,13 @@ app.use(
     },
   })
 );
+
 app.use(helmet())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// ✅ Serve static files with CORS (add this AFTER CORS middleware)
+app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use('/api', routes)

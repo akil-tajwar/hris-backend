@@ -15,7 +15,18 @@ export const createLeaveTypeController = async (
   try {
     requirePermission(req, 'create_leave_type')
 
-    const leaveTypes = await createLeaveType(req.body)
+    const tenantId = req.user?.tenantId
+    const data = Array.isArray(req.body)
+      ? req.body.map((item: any) => ({
+          ...item,
+          tenantId,
+        }))
+      : {
+          ...req.body,
+          tenantId,
+        }
+
+    const leaveTypes = await createLeaveType(data)
 
     res.status(201).json({
       status: 'success',
@@ -33,7 +44,13 @@ export const getLeaveTypesController = async (
 ) => {
   try {
     requirePermission(req, 'view_leave_type')
-    const leaveTypes = await getLeaveTypes()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const leaveTypes = await getLeaveTypes(tenantId)
     res.json(leaveTypes)
   } catch (err) {
     next(err)

@@ -21,6 +21,7 @@ import {
   employeeLeavePolicyHistoryModel,
   employeeSalaryStructureHistoryModel,
   employeeLifecycleEventsModel,
+  employeeLeaveAssignmentModel,
 } from '../schemas'
 import { alias } from 'drizzle-orm/mysql-core'
 import { BadRequestError } from './utils/errors.utils'
@@ -35,8 +36,9 @@ export const createEmployee = async (input: {
     leavePolicyMasterId?: number | null
     salaryStructureMasterId?: number | null
   }
-  userData: NewUser
+  userData: NewUser & { userCompanies?: number[]; createdBy: number }
 }) => {
+  console.log('🚀 ~ createEmployee ~ input:', input)
   const CACHE_KEY = 'employees:all'
 
   return await db.transaction(async (tx) => {
@@ -77,6 +79,16 @@ export const createEmployee = async (input: {
     })
 
     const employeeId = Number(employeeInsertResult[0].insertId)
+
+    // 4.1 Create leave assignment
+    await tx.insert(employeeLeaveAssignmentModel).values({
+      employeeId,
+      leavePolicyMasterId: employeeData.leavePolicyMasterId!,
+      effectiveFrom: employeeData.doj,
+      active: true,
+      tenantId: employeeData.tenantId,
+      createdBy: employeeData.createdBy,
+    })
 
     // 5. Update preboarding if exists
     if (employeeData.preboardingId != null) {
@@ -126,7 +138,7 @@ export const createEmployee = async (input: {
         newValue: JSON.stringify({
           employmentType: employmentType.employmentTypeName,
         }),
-
+        tenantId: employeeData.tenantId,
         createdBy: employeeData.createdBy,
       } as any)
     }
@@ -362,6 +374,102 @@ export const updateEmployee = async (
     await trackChange('salaryStructureMasterId', 'SALARY_STRUCTURE_CHANGE')
     await trackChange('basicSalary', 'SALARY_REVISION')
 
+    const historyInserts: Promise<any>[] = []
+
+    // Department History
+    if (
+      updateData.departmentId !== undefined &&
+      updateData.departmentId !== existing.departmentId
+    ) {
+      historyInserts.push(
+        tx.insert(employeeDepartmentHistoryModel).values({
+          employeeId,
+          departmentId: updateData.departmentId,
+          effectiveFrom: historyMeta.effectiveFrom,
+          effectiveTo: historyMeta.effectiveTo,
+          changeReason: historyMeta.changeReason,
+          approvedBy: historyMeta.approvedBy,
+          createdBy: historyMeta.createdBy,
+        })
+      )
+    }
+
+    // Designation History
+    if (
+      updateData.designationId !== undefined &&
+      updateData.designationId !== existing.designationId
+    ) {
+      historyInserts.push(
+        tx.insert(employeeDesignationHistoryModel).values({
+          employeeId,
+          designationId: updateData.designationId,
+          effectiveFrom: historyMeta.effectiveFrom,
+          effectiveTo: historyMeta.effectiveTo,
+          changeReason: historyMeta.changeReason,
+          approvedBy: historyMeta.approvedBy,
+          createdBy: historyMeta.createdBy,
+        })
+      )
+    }
+
+    // Employment Type History
+    if (
+      updateData.employmentTypeId !== undefined &&
+      updateData.employmentTypeId !== existing.employmentTypeId
+    ) {
+      historyInserts.push(
+        tx.insert(employeeEmploymentTypeHistoryModel).values({
+          employeeId,
+          employmentTypeId: updateData.employmentTypeId,
+          effectiveFrom: historyMeta.effectiveFrom,
+          effectiveTo: historyMeta.effectiveTo,
+          changeReason: historyMeta.changeReason,
+          approvedBy: historyMeta.approvedBy,
+          createdBy: historyMeta.createdBy,
+        })
+      )
+    }
+
+    // Leave Policy History
+    if (
+      updateData.leavePolicyMasterId !== undefined &&
+      updateData.leavePolicyMasterId !== existing.leavePolicyMasterId
+    ) {
+      historyInserts.push(
+        tx.insert(employeeLeavePolicyHistoryModel).values({
+          employeeId,
+          leavePolicyId: updateData.leavePolicyMasterId,
+          effectiveFrom: historyMeta.effectiveFrom,
+          effectiveTo: historyMeta.effectiveTo,
+          changeReason: historyMeta.changeReason,
+          approvedBy: historyMeta.approvedBy,
+          createdBy: historyMeta.createdBy,
+        })
+      )
+    }
+
+    // Salary Structure History
+    if (
+      updateData.salaryStructureMasterId !== undefined &&
+      updateData.salaryStructureMasterId !== existing.salaryStructureMasterId
+    ) {
+      historyInserts.push(
+        tx.insert(employeeSalaryStructureHistoryModel).values({
+          employeeId,
+          salaryStructureMasterId: updateData.salaryStructureMasterId,
+          effectiveFrom: historyMeta.effectiveFrom,
+          effectiveTo: historyMeta.effectiveTo,
+          changeReason: historyMeta.changeReason,
+          approvedBy: historyMeta.approvedBy,
+          createdBy: historyMeta.createdBy,
+        })
+      )
+    }
+
+    if (historyInserts.length > 0) {
+      await Promise.all(historyInserts)
+    }
+
     // ===========================
     // UPDATE EMPLOYEE
     // ===========================
@@ -388,7 +496,7 @@ export const updateEmployee = async (
 }
 
 //GET ALL EMPLOYEES
-export const getAllEmployees = async () => {
+export const getAllEmployees = async (tenantId: number) => {
   const CACHE_KEY = 'employees:all'
 
   // 1️⃣ CHECK CACHE FIRST
@@ -481,6 +589,7 @@ export const getAllEmployees = async () => {
       updatedAt: employeeModel.updatedAt,
     })
     .from(employeeModel)
+    .where(eq(employeeModel.tenantId, tenantId))
     .leftJoin(
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)

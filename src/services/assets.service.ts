@@ -40,7 +40,7 @@ export const createAsset = async (
 }
 
 // READ ALL
-export const getAssets = async () => {
+export const getAssets = async (tenantId: number) => {
   return await db
     .select({
       assetId: assetsModel.assetId,
@@ -63,6 +63,7 @@ export const getAssets = async () => {
       assetCategoryModel,
       eq(assetsModel.categoryId, assetCategoryModel.assetCategoryId)
     )
+    .where(eq(assetsModel.tenantId, tenantId))
 }
 
 // READ ONE
@@ -170,6 +171,7 @@ export const createAssetTransaction = async (data: {
   transactionDate: string
   remarks?: string
   approvedBy?: number
+  tenantId: number
   createdBy: number
 }) => {
   const toMySqlDate = (d: Date) => d.toISOString().split('T')[0]
@@ -296,6 +298,7 @@ export const createAssetTransaction = async (data: {
           transactionDate,
           remarks: data.remarks,
           approvedBy: data.approvedBy,
+          tenantId: data.tenantId,
           createdBy: data.createdBy,
         })
         .$returningId()
@@ -350,6 +353,7 @@ export const createAssetTransaction = async (data: {
           oldValue,
           newValue,
 
+          tenantId: data.tenantId,
           createdBy: data.createdBy,
         } as any)
       }
@@ -374,40 +378,14 @@ export const createAssetTransaction = async (data: {
   }
 }
 
-//shows all asset transactions
-// export const getAssetTransactions = async () => {
-//   return await db
-//     .select({
-//       // Asset Transactions fields
-//       assetTransactionId: assetTransactionsModel.assetTransactionId,
-//       assetId: assetTransactionsModel.assetId,
-//       employeeId: assetTransactionsModel.employeeId,
-//       transactionType: assetTransactionsModel.transactionType,
-//       transactionDate: assetTransactionsModel.transactionDate,
-//       remarks: assetTransactionsModel.remarks,
-//       approvedBy: assetTransactionsModel.approvedBy,
-//       createdBy: assetTransactionsModel.createdBy,
-//       createdAt: assetTransactionsModel.createdAt,
-//       updatedBy: assetTransactionsModel.updatedBy,
-//       updatedAt: assetTransactionsModel.updatedAt,
-//       // Assets fields (from LEFT JOIN)
-//       assetCode: assetsModel.assetCode,
-//       assetName: assetsModel.assetName,
-//     })
-//     .from(assetTransactionsModel)
-//     .leftJoin(
-//       assetsModel,
-//       eq(assetTransactionsModel.assetId, assetsModel.assetId)
-//     )
-// }
-
-export const getLatestAssetTransactions = async () => {
+export const getLatestAssetTransactions = async (tenantId: number) => {
   const latestPerAsset = db
     .select({
       assetId: assetTransactionsModel.assetId,
       maxId: sql`MAX(${assetTransactionsModel.assetTransactionId})`.as('maxId'),
     })
     .from(assetTransactionsModel)
+    .where(eq(assetTransactionsModel.tenantId, tenantId))
     .groupBy(assetTransactionsModel.assetId)
     .as('latest')
 

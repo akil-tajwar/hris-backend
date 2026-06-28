@@ -15,8 +15,15 @@ export const createAttendanceDailyController = async (
 ) => {
   try {
     requirePermission(req, 'create_attendance_daily')
-    const data = await createAttendanceDaily(req.body)
-    res.status(201).json(data)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const attendanceDaily = await createAttendanceDaily(data)
+    res.status(201).json(attendanceDaily)
   } catch (error: any) {
     console.error('❌ Attendance Daily create error:', error)
     res
@@ -53,7 +60,13 @@ export const getAllAttendanceDailyController = async (
 ) => {
   try {
     requirePermission(req, 'view_attendance_daily')
-    const data = await getAllAttendanceDaily()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const data = await getAllAttendanceDaily(tenantId)
     res.json(data)
   } catch (error) {
     console.error('❌ Get All Attendance Daily error:', error)
@@ -73,7 +86,12 @@ export const getAttendanceDailyByIdController = async (
       return
     }
 
-    const data = await getAttendanceDailyById(id)
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const data = await getAttendanceDailyById(id, tenantId)
     if (!data) {
       res.status(404).json({ success: false, message: 'Not found' })
       return
@@ -97,8 +115,12 @@ export const getAttendanceDailyByEmployeeController = async (
       res.status(400).json({ message: 'Invalid Employee ID' })
       return
     }
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
 
-    const data = await getAttendanceDailyByEmployee(employeeId)
+    const data = await getAttendanceDailyByEmployee(employeeId, tenantId)
     res.json(data)
   } catch (error) {
     console.error('❌ Get Daily By Employee error:', error)

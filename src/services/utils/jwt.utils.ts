@@ -108,6 +108,7 @@ export async function getUserPermissions(userId: number) {
   type UserRoleWithPermissions = {
     roleId: number;
     userId: number;
+    tenantId: number;
     role?: {
       rolePermissions: Array<{ permission: { name: string } }>;
     };

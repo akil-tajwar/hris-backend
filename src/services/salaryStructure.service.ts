@@ -4,50 +4,16 @@ import { eq, inArray } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   companyModel,
+  NewSalaryStructureDetails,
+  NewSalaryStructureMaster,
   salaryComponentsModel,
   salaryStructureDetailsModel,
   salaryStructureMasterModel,
 } from '../schemas'
 
-/* =========================
-   TYPES
-========================= */
-
-type SalaryStructureMasterInput = {
-  salaryStructureMasterId?: number
-  structureName: string
-  structureCode?: string | null
-  companyId: number
-  companyName?: string | null
-  structureType: 'Earning' | 'Deduction'
-  effectiveFrom: Date
-  effectiveTo?: Date | null
-  active: boolean
-  createdBy: number
-  createdAt?: Date | null
-  updatedBy?: number | null
-  updatedAt?: Date | null
-}
-
-type SalaryStructureDetailsInput = {
-  salaryStructureDetailId?: number
-  salaryStructureMasterId: number
-  salaryComponentId: number
-  salaryComponentName?: string | null
-  amount: number
-  percentage?: number | null
-  formulaExpression?: string | null
-  calculationOrder: number
-  mandatory: boolean
-  createdBy: number
-  createdAt?: Date | null
-  updatedBy?: number | null
-  updatedAt?: Date | null
-}
-
 type SalaryStructureInput = {
-  salaryStructureMaster: SalaryStructureMasterInput
-  salaryStructureDetails: SalaryStructureDetailsInput[]
+  salaryStructureMaster: NewSalaryStructureMaster
+  salaryStructureDetails: NewSalaryStructureDetails[]
 }
 
 /* =========================
@@ -80,6 +46,7 @@ export const createSalaryStructureService = async (
             ? toDate(data.salaryStructureMaster.effectiveTo)
             : null,
           active: data.salaryStructureMaster.active,
+          tenantId: data.salaryStructureMaster.tenantId,
           createdBy: data.salaryStructureMaster.createdBy,
         })
         .$returningId()
@@ -101,6 +68,7 @@ export const createSalaryStructureService = async (
             formulaExpression: item.formulaExpression,
             calculationOrder: item.calculationOrder,
             mandatory: item.mandatory,
+            tenantId: item.tenantId,
             createdBy: item.createdBy,
           }))
         )
@@ -130,11 +98,12 @@ export const createSalaryStructureService = async (
    GET ALL
 ========================= */
 
-export const getAllSalaryStructuresService = async () => {
+export const getAllSalaryStructuresService = async (tenantId: number) => {
   try {
     const masters = await db
       .select()
       .from(salaryStructureMasterModel)
+      .where(eq(salaryStructureMasterModel.tenantId, tenantId))
 
     const details = await db
       .select({
@@ -155,6 +124,7 @@ export const getAllSalaryStructuresService = async () => {
         mandatory: salaryStructureDetailsModel.mandatory,
       })
       .from(salaryStructureDetailsModel)
+      .where(eq(salaryStructureDetailsModel.tenantId, tenantId))
       .leftJoin(
         salaryComponentsModel,
         eq(

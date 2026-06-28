@@ -21,8 +21,15 @@ export const createSingleShiftAllocationController = async (
 ) => {
   try {
     requirePermission(req, 'create_shift_allocation')
-    const data = await createSingleShiftAllocation(req.body)
-    res.status(201).json(data)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const shiftAllocation = await createSingleShiftAllocation(data)
+    res.status(201).json(shiftAllocation)
   } catch (error: any) {
     console.error('❌ Single shift allocation error:', error)
     res.status(400).json({ success: false, message: error.message || 'Something went wrong' })
@@ -36,8 +43,15 @@ export const createBulkShiftAllocationController = async (
 ) => {
   try {
     requirePermission(req, 'create_shift_allocation')
-    const data = await createBulkShiftAllocation(req.body)
-    res.status(201).json(data)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const shiftAllocation = await createBulkShiftAllocation(data)
+    res.status(201).json(shiftAllocation)
   } catch (error: any) {
     console.error('❌ Bulk shift allocation error:', error)
     res.status(400).json({ success: false, message: error.message || 'Something went wrong' })
@@ -97,9 +111,14 @@ export const copyShiftAllocationController = async (
       res.status(400).json({ message: 'Invalid ID' })
       return
     }
-    const { createdBy } = req.body
-    const data = await copyShiftAllocation(id, createdBy)
-    res.status(201).json(data)
+    
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const copyShiftAllocationData = await copyShiftAllocation(id, data)
+    res.status(201).json(copyShiftAllocationData)
   } catch (error: any) {
     console.error('❌ Copy shift allocation error:', error)
     res.status(400).json({ success: false, message: error.message || 'Server error' })
@@ -114,14 +133,17 @@ export const copyAllActiveAllocationsController = async (
   try {
     requirePermission(req, 'create_shift_allocation')
     const { recurrenceType, createdBy } = req.body
-
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
     if (!recurrenceType || !['weekly', 'monthly'].includes(recurrenceType)) {
       res.status(400).json({ message: 'recurrenceType must be weekly or monthly' })
       return
     }
 
-    const data = await copyAllActiveAllocations(recurrenceType, createdBy)
-    res.status(201).json(data)
+    const copyAllActiveAllocationsData = await copyAllActiveAllocations(recurrenceType, createdBy, tenantId)
+    res.status(201).json(copyAllActiveAllocationsData)
   } catch (error: any) {
     console.error('❌ Copy all allocations error:', error)
     res.status(400).json({ success: false, message: error.message || 'Server error' })
@@ -135,7 +157,13 @@ export const getAllShiftAllocationsController = async (
 ) => {
   try {
     requirePermission(req, 'view_shift_allocation')
-    const data = await getAllShiftAllocations()
+
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const data = await getAllShiftAllocations(tenantId)
     res.json(data)
   } catch (error) {
     console.error('❌ Get All Shift Allocations Error:', error)

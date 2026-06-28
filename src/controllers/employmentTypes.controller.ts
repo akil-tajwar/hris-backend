@@ -14,8 +14,14 @@ export const createEmploymentTypeController = async (
 ) => {
   try {
     requirePermission(req, 'create_employee_type')
-    const { employmentTypeName, createdBy } = req.body
-    const employmentType = await createEmploymentType(employmentTypeName, createdBy)
+
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+
+    const employmentType = await createEmploymentType(data)
     res.status(201).json({ status: 'success', data: employmentType })
   } catch (err) {
     next(err)
@@ -29,7 +35,11 @@ export const getEmploymentTypesController = async (
 ) => {
   try {
     requirePermission(req, 'view_employee_type')
-    const employmentTypes = await getEmploymentTypes()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const employmentTypes = await getEmploymentTypes(tenantId)
     res.json(employmentTypes)
   } catch (err) {
     next(err)

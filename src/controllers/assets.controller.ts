@@ -17,8 +17,12 @@ export const createAssetController = async (
 ) => {
   try {
     requirePermission(req, 'create_asset')
-
-    const asset = await createAsset(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const asset = await createAsset(data)
 
     res.status(201).json({
       status: 'success',
@@ -37,7 +41,12 @@ export const getAssetsController = async (
   try {
     requirePermission(req, 'view_asset')
 
-    const assets = await getAssets()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const assets = await getAssets(tenantId)
 
     res.json(assets)
   } catch (err) {
@@ -113,7 +122,14 @@ export const createAssetTransactionController = async (
   try {
     requirePermission(req, 'assign_asset')
 
-    const result = await createAssetTransaction(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    console.log("🚀 ~ createAssetTransactionController ~ data:", data)
+
+    const result = await createAssetTransaction(data)
 
     res.status(200).json(result)
   } catch (err) {
@@ -129,7 +145,12 @@ export const getLatestAssetTransactionsController = async (
   try {
     requirePermission(req, 'view_assigned_asset')
 
-    const transactions = await getLatestAssetTransactions()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const transactions = await getLatestAssetTransactions(tenantId)
 
     res.json(transactions)
   } catch (err) {

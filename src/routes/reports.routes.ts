@@ -5,7 +5,6 @@ import {
   employeeActivitiesReportController,
   dailyAttendanceReportController,
   employeeAttendanceReportController,
-  loneReportController,
   salaryReportController,
   getLeaveBalanceSummaryReportController,
   leaveLedgerReportController,
@@ -25,7 +24,6 @@ router.get(
   employeeAttendanceReportController
 )
 router.get('/salary-report', authenticateUser, salaryReportController)
-router.get('/lone-report', authenticateUser, loneReportController)
 router.get(
   '/daily-attendance',
   authenticateUser,

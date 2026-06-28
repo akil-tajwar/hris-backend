@@ -109,7 +109,7 @@ export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
 }
 
 // READ ALL
-export const getEmployeeLeaveApplications = async () => {
+export const getEmployeeLeaveApplications = async (tenantId: number) => {
   return await db
     .select({
       employeeLeaveApplyId: employeeLeaveApplyModel.employeeLeaveApplyId,
@@ -135,7 +135,7 @@ export const getEmployeeLeaveApplications = async () => {
       updatedAt: employeeLeaveApplyModel.updatedAt,
     })
     .from(employeeLeaveApplyModel)
-
+    .where(eq(employeeLeaveApplyModel.tenantId, tenantId))
     // employee join
     .leftJoin(
       employeeModel,

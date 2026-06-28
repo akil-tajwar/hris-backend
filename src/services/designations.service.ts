@@ -3,12 +3,8 @@ import { Designation, designationModel, NewDesignation } from '../schemas'
 import { eq } from 'drizzle-orm'
 
 // CREATE
-export const createDesignation = async (
-  data: NewDesignation
-) => {
-  await db
-    .insert(designationModel)
-    .values(data)
+export const createDesignation = async (data: NewDesignation) => {
+  await db.insert(designationModel).values(data)
 
   const [designation] = await db
     .select()
@@ -20,13 +16,16 @@ export const createDesignation = async (
 }
 
 // READ ALL
-export const getDesignations = async () => {
-  return await db.select().from(designationModel)
+export const getDesignations = async (tenantId: number) => {
+  return await db
+    .select()
+    .from(designationModel)
+    .where(eq(designationModel.tenantId, tenantId))
 }
 
 // UPDATE
 export const updateDesignation = async (
-  data: Designation & { designationId: number },
+  data: Designation & { designationId: number }
 ) => {
   await db
     .update(designationModel)

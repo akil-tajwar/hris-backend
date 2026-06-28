@@ -70,8 +70,11 @@ export const updateCompany = async (
 }
 
 // READ ALL
-export const getCompanies = async () => {
-  return await db.select().from(companyModel)
+export const getCompanies = async (tenantId: number) => {
+  return await db
+    .select()
+    .from(companyModel)
+    .where(eq(companyModel.tenantId, tenantId))
 }
 
 // READ ONE

@@ -17,7 +17,8 @@ export type CsvPunchRow = {
 // IMPORT — save file + insert punches
 export const importAttendancePunchesFromCsv = async (
   file: Express.Multer.File,
-  createdBy: number
+  createdBy: number,
+  tenantId: number
 ) => {
   const fileContent = fs.readFileSync(file.path, 'utf-8')
 
@@ -56,6 +57,7 @@ export const importAttendancePunchesFromCsv = async (
       deviceId: row.device_id || null,
       source: row.verify_mode || null,
       punchType: null,
+      tenantId,
       createdBy,
     })
   }

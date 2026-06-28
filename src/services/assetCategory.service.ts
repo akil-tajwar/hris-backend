@@ -22,11 +22,16 @@ export const createAssetCategory = async (
   }
 }
 
-export const getAllAssetCategories = async () => {
-  const assetCategories = await db.select().from(assetCategoryModel)
+export const getAllAssetCategories = async (tenantId: number) => {
+  const assetCategories = await db
+    .select()
+    .from(assetCategoryModel)
+    .where(eq(assetCategoryModel.tenantId, tenantId))
+
   if (!assetCategories.length) {
     throw BadRequestError('No asset categories found')
   }
+
   return assetCategories
 }
 

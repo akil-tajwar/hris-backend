@@ -15,7 +15,7 @@ import {
 } from '../services/auth.service'
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
+  email: z.string().min(1, 'email is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
@@ -56,8 +56,8 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const { username, password } = loginSchema.parse(req.body)
-    const result = await loginUser(username, password)
+    const { email, password } = loginSchema.parse(req.body)
+    const result = await loginUser(email, password)
     res.json(result)
   } catch (error) {
     next(error)
@@ -70,10 +70,25 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    const { username, password, active, roleId, tenantId, email, isPasswordResetRequired } = registerSchema.parse(
-      req.body
-    )
-    const user = await createUser({ username, password, active, roleId, tenantId, email, isPasswordResetRequired })
+    const {
+      username,
+      password,
+      active,
+      roleId,
+      tenantId,
+      email,
+      isPasswordResetRequired,
+    } = registerSchema.parse(req.body)
+    const user = await createUser(db, {
+      username,
+      password,
+      active,
+      roleId,
+      tenantId,
+      email,
+      isPasswordResetRequired,
+      createdBy: req?.user?.userId || 0,
+    })
 
     res.status(201).json({
       status: 'success',
@@ -162,6 +177,10 @@ export const getUsersWithRoles = async (
   next: NextFunction
 ) => {
   try {
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
     const usersWithRoles = await db
       .select({
         userId: userModel.userId,
@@ -171,6 +190,7 @@ export const getUsersWithRoles = async (
       })
       .from(userModel)
       .innerJoin(roleModel, eq(userModel.roleId, roleModel.roleId))
+      .where(eq(userModel.tenantId, tenantId))
 
     res.status(200).json({
       status: 'success',
@@ -194,7 +214,11 @@ export const getUserList = async (
   next: NextFunction
 ) => {
   try {
-    const users = await getUsers()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const users = await getUsers(tenantId)
     res.json(users)
   } catch (err) {
     next(err)

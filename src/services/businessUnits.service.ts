@@ -16,7 +16,7 @@ export const createBusinessUnit = async (data: NewBusinessUnit) => {
 }
 
 // READ ALL
-export const getBusinessUnits = async () => {
+export const getBusinessUnits = async (tenantId: number) => {
   return await db
     .select({
       // Business Unit fields
@@ -41,10 +41,11 @@ export const getBusinessUnits = async () => {
     .leftJoin(companyModel, eq(businessUnitsModel.companyId, companyModel.companyId))
     .leftJoin(employeeModel, eq(businessUnitsModel.headEmployeeId, employeeModel.employeeId))
     .leftJoin(departmentModel, eq(employeeModel.departmentId, departmentModel.departmentId))
-    .leftJoin(designationModel, eq(employeeModel.designationId, designationModel.designationId));
+    .leftJoin(designationModel, eq(employeeModel.designationId, designationModel.designationId))
+    .where(eq(businessUnitsModel.tenantId, tenantId));
 };
 
-// UPDATE
+// UPDATEassetTransactionsModel
 export const updateBusinessUnit = async (
   data: { businessUnitId: number } & { businessUnitName: string; updatedBy: number }
 ) => {

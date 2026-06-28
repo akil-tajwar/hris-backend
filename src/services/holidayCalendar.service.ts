@@ -27,6 +27,7 @@ export const createHolidayCalendar = async (
 export const getAllHolidayCalendars = async (filters?: {
   companyId?: number
   year?: number
+  tenantId: number
 }) => {
   const conditions = []
 
@@ -36,6 +37,10 @@ export const getAllHolidayCalendars = async (filters?: {
 
   if (filters?.year) {
     conditions.push(eq(holidayCalendarModel.year, filters.year))
+  }
+
+  if (filters?.tenantId !== undefined) {
+    conditions.push(eq(holidayCalendarModel.tenantId, filters.tenantId))
   }
 
   if (conditions.length) {

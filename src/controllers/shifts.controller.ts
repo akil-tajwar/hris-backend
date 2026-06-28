@@ -18,7 +18,12 @@ export const createShiftController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'create_shift')
 
-    const result = await createShift(req.body)
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
+    const result = await createShift(data)
 
     res.status(201).json({
       status: 'success',
@@ -76,7 +81,12 @@ export const getShiftController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'view_shift')
 
-    const data = await getAllShift()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const data = await getAllShift(tenantId)
 
     res.json(data)
   } catch (error: any) {

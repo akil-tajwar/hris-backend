@@ -4,6 +4,7 @@ import { eq, inArray } from 'drizzle-orm'
 
 // CREATE
 export const createLeaveType = async (data: NewLeaveType | NewLeaveType[]) => {
+  console.log("🚀 ~ createLeaveType ~ data:", data)
   // normalize to array
   const values = Array.isArray(data) ? data : [data]
 
@@ -24,7 +25,7 @@ export const createLeaveType = async (data: NewLeaveType | NewLeaveType[]) => {
 }
 
 // READ ALL
-export const getLeaveTypes = async () => {
+export const getLeaveTypes = async (tenantId: number) => {
   return await db
     .select({
       leaveTypeId: leaveTypeModel.leaveTypeId,
@@ -55,6 +56,7 @@ export const getLeaveTypes = async () => {
       updatedAt: leaveTypeModel.updatedAt,
     })
     .from(leaveTypeModel)
+    .where(eq(leaveTypeModel.tenantId, tenantId))
     .leftJoin(
       companyModel,
       eq(leaveTypeModel.companyId, companyModel.companyId)
