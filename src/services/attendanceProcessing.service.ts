@@ -229,6 +229,7 @@ const upsertAttendanceDaily = async (
       attendanceDate: data.attendanceDate, // ← 'YYYY-MM-DD' string
       action: 'UPDATE',
       changedBy,
+      tenantId: data.tenantId,
       oldStatus: old.status,
       oldWorkedMinutes: old.workedMinutes ?? 0,
       oldLateMinutes: old.lateMinutes ?? 0,
@@ -265,6 +266,7 @@ const upsertAttendanceDaily = async (
       attendanceDate: data.attendanceDate, // ← 'YYYY-MM-DD' string
       action: 'INSERT',
       changedBy,
+      tenantId: data.tenantId,
       oldStatus: null,
       oldWorkedMinutes: null,
       oldLateMinutes: null,
