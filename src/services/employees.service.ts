@@ -126,7 +126,7 @@ export const createEmployee = async (input: {
 
         remarks,
 
-        performedBy: employeeData.employeeId ?? null,
+        performedBy:  employeeData.createdBy,
         approvedBy: null,
 
         referenceType: 'EMPLOYEE_CREATION',
