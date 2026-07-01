@@ -1,5 +1,11 @@
 import { db } from '../config/database'
-import { costCenterModel, departmentModel, designationModel, divisionModel, employeeModel, NewDepartment } from '../schemas'
+import {
+  departmentModel,
+  designationModel,
+  divisionModel,
+  employeeModel,
+  NewDepartment,
+} from '../schemas'
 import { aliasedTable, eq } from 'drizzle-orm'
 
 // CREATE
@@ -16,15 +22,9 @@ export const createDepartment = async (data: NewDepartment) => {
 }
 
 // READ ALL
-const parentDepartment = aliasedTable(
-  departmentModel,
-  'parentDepartment'
-)
+const parentDepartment = aliasedTable(departmentModel, 'parentDepartment')
 
-const employeeDepartment = aliasedTable(
-  departmentModel,
-  'employeeDepartment'
-)
+const employeeDepartment = aliasedTable(departmentModel, 'employeeDepartment')
 
 export const getDepartments = async (tenantId: number) => {
   return await db
@@ -35,7 +35,6 @@ export const getDepartments = async (tenantId: number) => {
       departmentCode: departmentModel.departmentCode,
       divisionId: departmentModel.divisionId,
       parentDepartmentId: departmentModel.parentDepartmentId,
-      costCenterId: departmentModel.costCenterId,
       headEmployeeId: departmentModel.headEmployeeId,
       status: departmentModel.status,
       createdBy: departmentModel.createdBy,
@@ -50,7 +49,7 @@ export const getDepartments = async (tenantId: number) => {
       parentDepartmentName: parentDepartment.departmentName,
 
       // Cost Center
-      costCenterName: costCenterModel.costCenterName,
+
 
       // Head Employee
       empCode: employeeModel.empCode,
@@ -70,14 +69,7 @@ export const getDepartments = async (tenantId: number) => {
     )
     .leftJoin(
       parentDepartment,
-      eq(
-        departmentModel.parentDepartmentId,
-        parentDepartment.departmentId
-      )
-    )
-    .leftJoin(
-      costCenterModel,
-      eq(departmentModel.costCenterId, costCenterModel.costCenterId)
+      eq(departmentModel.parentDepartmentId, parentDepartment.departmentId)
     )
     .leftJoin(
       employeeModel,
@@ -85,10 +77,7 @@ export const getDepartments = async (tenantId: number) => {
     )
     .leftJoin(
       employeeDepartment,
-      eq(
-        employeeModel.departmentId,
-        employeeDepartment.departmentId
-      )
+      eq(employeeModel.departmentId, employeeDepartment.departmentId)
     )
     .leftJoin(
       designationModel,

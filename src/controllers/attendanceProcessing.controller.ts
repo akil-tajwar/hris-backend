@@ -7,6 +7,7 @@ import {
 export const processDateController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { date } = req.body
+    console.log("🚀 ~ processDateController ~ req.body:", req.body)
     const changedBy = (req as any).user?.userId ?? 1
 
     if (!date) {

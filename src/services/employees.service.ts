@@ -8,8 +8,6 @@ import {
   NewEmployee,
   companyModel,
   divisionModel,
-  costCenterModel,
-  workStationModel,
   NewUser,
   userModel,
   employeePreboardingModel,
@@ -128,7 +126,7 @@ export const createEmployee = async (input: {
 
         remarks,
 
-        performedBy: employeeData.employeeId ?? null,
+        performedBy:  employeeData.createdBy,
         approvedBy: null,
 
         referenceType: 'EMPLOYEE_CREATION',
@@ -565,9 +563,7 @@ export const getAllEmployees = async (tenantId: number) => {
       employmentTypeId: employeeModel.employmentTypeId,
       probationMonths: employeeModel.probationMonths,
       companyId: employeeModel.companyId,
-      workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
-      costCenterId: employeeModel.costCenterId,
       reportingAuthorityId: employeeModel.reportingAuthorityId,
       leavePolicyMasterId: employeeModel.leavePolicyMasterId,
       salaryStructureMasterId: employeeModel.salaryStructureMasterId,
@@ -576,9 +572,7 @@ export const getAllEmployees = async (tenantId: number) => {
       designationName: designationModel.designationName,
       employmentTypeName: employmentTypeModel.employmentTypeName,
       companyName: companyModel.companyName,
-      workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
-      costCenterName: costCenterModel.costCenterName,
       reportingAuthorityName: reportingAuthority.empFullName,
       leavePolicyName: leavePolicyMasterModel.policyName,
       salaryStructureName: salaryStructureMasterModel.structureName,
@@ -604,16 +598,8 @@ export const getAllEmployees = async (tenantId: number) => {
     )
     .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
     .leftJoin(
-      workStationModel,
-      eq(employeeModel.workStationId, workStationModel.workStationId)
-    )
-    .leftJoin(
       divisionModel,
       eq(employeeModel.divisionId, divisionModel.divisionId)
-    )
-    .leftJoin(
-      costCenterModel,
-      eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
     .leftJoin(
       reportingAuthority,
@@ -707,9 +693,7 @@ export const getEmployeeById = async (employeeId: number) => {
       employmentTypeId: employeeModel.employmentTypeId,
       probationMonths: employeeModel.probationMonths,
       companyId: employeeModel.companyId,
-      workStationId: employeeModel.workStationId,
       divisionId: employeeModel.divisionId,
-      costCenterId: employeeModel.costCenterId,
       reportingAuthorityId: employeeModel.reportingAuthorityId,
       leavePolicyMasterId: employeeModel.leavePolicyMasterId,
       salaryStructureMasterId: employeeModel.salaryStructureMasterId,
@@ -719,9 +703,7 @@ export const getEmployeeById = async (employeeId: number) => {
       designationName: designationModel.designationName,
       employmentTypeName: employmentTypeModel.employmentTypeName,
       companyName: companyModel.companyName,
-      workStationName: workStationModel.workStationName,
       divisionName: divisionModel.divisionName,
-      costCenterName: costCenterModel.costCenterName,
       leavePolicyName: leavePolicyMasterModel.policyName,
       salaryStructureName: salaryStructureMasterModel.structureName,
 
@@ -750,16 +732,8 @@ export const getEmployeeById = async (employeeId: number) => {
     )
     .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
     .leftJoin(
-      workStationModel,
-      eq(employeeModel.workStationId, workStationModel.workStationId)
-    )
-    .leftJoin(
       divisionModel,
       eq(employeeModel.divisionId, divisionModel.divisionId)
-    )
-    .leftJoin(
-      costCenterModel,
-      eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
     .leftJoin(
       reportingAuthority,

@@ -7,7 +7,7 @@ import {
   hashPassword,
   validatePassword,
 } from './utils/password.utils'
-import { NewUser, roleModel, userModel } from '../schemas'
+import { NewUser, roleModel, userModel, userRolesModel } from '../schemas'
 
 // Find user by username
 export const findUserByEmail = async (email: string) => {
@@ -60,6 +60,10 @@ export const createUser = async (
 
   const hashedPassword = await hashPassword(userData.password)
 
+  if (userData.roleId == null) {
+    throw BadRequestError('Role ID is required')
+  }
+
   const result = await dbInstance.insert(userModel).values({
     username: userData.username,
     password: hashedPassword,
@@ -71,6 +75,11 @@ export const createUser = async (
   })
 
   const newUserId = result[0].insertId
+
+  await dbInstance.insert(userRolesModel).values({
+    userId: newUserId,
+    roleId: userData.roleId,
+  })
 
   return {
     userId: newUserId,
@@ -86,7 +95,10 @@ export const createUser = async (
 
 // Get all users
 export const getUsers = async (tenantId: number) => {
-  const userList = await db.select().from(userModel).where(eq(userModel.tenantId, tenantId))
+  const userList = await db
+    .select()
+    .from(userModel)
+    .where(eq(userModel.tenantId, tenantId))
   return userList
 }
 

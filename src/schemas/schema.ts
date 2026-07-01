@@ -115,12 +115,6 @@ export const departmentModel: MySqlTableWithColumns<any> = mysqlTable(
         onDelete: 'restrict',
       }
     ),
-    costCenterId: int('cost_center_id').references(
-      () => costCenterModel.costCenterId,
-      {
-        onDelete: 'restrict',
-      }
-    ),
     headEmployeeId: int('head_employee_id').references(
       () => employeeModel.employeeId,
       { onDelete: 'restrict' }
@@ -172,24 +166,9 @@ export const companyModel = mysqlTable('companies', {
   address: text('address'),
   logoUrl: varchar('logo_url', { length: 500 }),
   timezone: varchar('timezone', { length: 100 }).default('UTC'),
-  currency: varchar('currency', { length: 3 }).default('USD'),
+  currency: varchar('currency', { length: 100 }).default('USD'),
   status: boolean('status').default(true),
   createdBy: int('created_by'),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
-export const workStationModel = mysqlTable('work_stations', {
-  workStationId: int('work_station_id').primaryKey().autoincrement(),
-  workStationNumber: int('work_station_number').notNull(),
-  workStationName: varchar('work_station_name', { length: 100 }).notNull(),
-  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-    onDelete: 'restrict',
-  }),
-  createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
   updatedAt: timestamp('updated_at').default(
@@ -251,20 +230,6 @@ export const divisionModel: MySqlTableWithColumns<any> = mysqlTable(
     ),
   }
 )
-
-export const costCenterModel = mysqlTable('cost_centers', {
-  costCenterId: int('cost_center_id').primaryKey().autoincrement(),
-  costCenterName: varchar('cost_center_name', { length: 100 }).notNull(),
-  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-    onDelete: 'restrict',
-  }),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
 
 export const employmentTypeModel = mysqlTable('employment_types', {
   employmentTypeId: int('employment_type_id').primaryKey().autoincrement(),
@@ -346,9 +311,11 @@ export const employeePreboardingModel = mysqlTable('employee_preboarding', {
   salaryStructureMasterId: int('salary_structure_master_id').references(
     () => salaryStructureMasterModel.salaryStructureMasterId
   ),
-  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-    onDelete: 'restrict',
-  }).notNull(),
+  tenantId: int('tenant_id')
+    .references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    })
+    .notNull(),
   offeredSalary: double('offered_salary'),
   probationMonths: int('probation_months'),
   isConfirmed: boolean('is_confirmed').notNull().default(false),
@@ -467,14 +434,8 @@ export const employeeModel = mysqlTable('employees', {
   companyId: int('company_id')
     .references(() => companyModel.companyId)
     .notNull(),
-  workStationId: int('work_station_id')
-    .references(() => workStationModel.workStationId)
-    .notNull(),
   divisionId: int('division_id')
     .references(() => divisionModel.divisionId)
-    .notNull(),
-  costCenterId: int('cost_center_id')
-    .references(() => costCenterModel.costCenterId)
     .notNull(),
   salaryStructureMasterId: int('salary_structure_master_id').references(
     () => salaryStructureMasterModel.salaryStructureMasterId
@@ -959,7 +920,7 @@ export const assetTransactionsModel = mysqlTable('asset_transactions', {
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
     onDelete: 'restrict',
   }),
-  employeeId: int('employee_id'),
+  employeeId: int('employee_id').references(() => employeeModel.employeeId),
   transactionType: mysqlEnum('transaction_type', [
     'ISSUE',
     'RETURN',
@@ -970,7 +931,7 @@ export const assetTransactionsModel = mysqlTable('asset_transactions', {
   ]).notNull(),
   transactionDate: date('transaction_date').notNull(),
   remarks: text('remarks'),
-  approvedBy: int('approved_by'),
+  approvedBy: int('approved_by').references(() => employeeModel.employeeId),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1780,10 +1741,6 @@ export const departmentRelations = relations(departmentModel, ({ one }) => ({
     fields: [departmentModel.divisionId],
     references: [divisionModel.divisionId],
   }),
-  costCenter: one(costCenterModel, {
-    fields: [departmentModel.costCenterId],
-    references: [costCenterModel.costCenterId],
-  }),
   headEmployee: one(employeeModel, {
     fields: [departmentModel.headEmployeeId],
     references: [employeeModel.employeeId],
@@ -1889,17 +1846,9 @@ export const employeeRelations = relations(employeeModel, ({ one }) => ({
     fields: [employeeModel.companyId],
     references: [companyModel.companyId],
   }),
-  workStation: one(workStationModel, {
-    fields: [employeeModel.workStationId],
-    references: [workStationModel.workStationId],
-  }),
   division: one(divisionModel, {
     fields: [employeeModel.divisionId],
     references: [divisionModel.divisionId],
-  }),
-  costCenter: one(costCenterModel, {
-    fields: [employeeModel.costCenterId],
-    references: [costCenterModel.costCenterId],
   }),
   SalaryStructure: one(salaryStructureMasterModel, {
     fields: [employeeModel.salaryStructureMasterId],
@@ -2189,14 +2138,10 @@ export type Designation = typeof designationModel.$inferSelect
 export type NewDesignation = typeof designationModel.$inferInsert
 export type Company = typeof companyModel.$inferSelect
 export type NewCompany = typeof companyModel.$inferInsert
-export type WorkStation = typeof workStationModel.$inferSelect
 export type BusinessUnit = typeof businessUnitsModel.$inferSelect
 export type NewBusinessUnit = typeof businessUnitsModel.$inferInsert
-export type NewWorkStation = typeof workStationModel.$inferInsert
 export type Division = typeof divisionModel.$inferSelect
 export type NewDivision = typeof divisionModel.$inferInsert
-export type CostCenter = typeof costCenterModel.$inferSelect
-export type NewCostCenter = typeof costCenterModel.$inferInsert
 export type EmploymentType = typeof employmentTypeModel.$inferSelect
 export type NewEmploymentType = typeof employmentTypeModel.$inferInsert
 export type EmployeePreboarding = typeof employeePreboardingModel.$inferSelect
