@@ -2,14 +2,11 @@ import { Router } from 'express'
 import authRoutes from './auth.routes'
 import roleRoutes from './role.routes'
 import tenantRoutes from './tenant.routes'
-import customerRoutes from './customer.routes'
 import departmentsRoutes from './departments.routes'
 import designationsRoutes from './designations.routes'
 import companyRoutes from './company.routes'
 import businessUnitsRoutes from './businessUnits.routes'
 import divisionRoutes from './division.routes'
-import workStationRoutes from './workStation.routes'
-import costCenterRoutes from './costCenter.routes'
 import employmentTypeRoutes from './employmentTypes.routes'
 import weekDayRoutes from './weekdays.routes'
 import employeePreboardingRoutes from './employeePreboarding.routes'
@@ -43,14 +40,11 @@ const router = Router()
 router.use('/auth', authRoutes)
 router.use('/roles', roleRoutes)
 router.use('/tenants', tenantRoutes)
-router.use('/customers', customerRoutes)
 router.use('/departments', departmentsRoutes)
 router.use('/designations', designationsRoutes)
 router.use('/company', companyRoutes)
 router.use('/business-units', businessUnitsRoutes)
 router.use('/divisions', divisionRoutes)
-router.use('/workStations', workStationRoutes)
-router.use('/costCenters', costCenterRoutes)
 router.use('/employmentTypes', employmentTypeRoutes)
 router.use('/weekDays', weekDayRoutes)
 router.use('/employeePreboarding', employeePreboardingRoutes)
