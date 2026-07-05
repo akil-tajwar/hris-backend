@@ -24,6 +24,7 @@ app.use(
         "http://localhost:3000",
         "http://srv938571.hstgr.cloud:6070",
         "https://www.srv938571.hstgr.cloud:6070",
+        "https://hris-frontend-swart.vercel.app",
       ];
 
       // Allow non-browser requests (no origin) and whitelisted domains
