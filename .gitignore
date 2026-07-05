@@ -3,5 +3,5 @@ dist
 *.log
 .env
 migrations
-uploads
+uploads/*
 config.bat
