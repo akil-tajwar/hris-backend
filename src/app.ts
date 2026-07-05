@@ -6,6 +6,7 @@ import path from 'path'
 import { errorHandler } from './middlewares/error.middleware'
 import routes from './routes'
 import 'dotenv/config';
+import Redis from 'ioredis'
 
 dotenv.config()
 
@@ -34,6 +35,18 @@ app.use(
     },
   })
 );
+
+const redisUrl = process.env.REDIS_URL
+if (!redisUrl) {
+  throw new Error('REDIS_URL must be defined')
+}
+
+const redis = new Redis(redisUrl, {
+  keyPrefix: process.env.REDIS_PREFIX, // Automatically prefixes everything with "app_one:"
+});
+
+// This saves globally as "app_one:session:xyz"
+redis.set('session:xyz', 'active').catch(console.error)
 
 app.use(helmet())
 app.use(express.json())

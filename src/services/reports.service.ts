@@ -2,7 +2,6 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   companyModel,
-  costCenterModel,
   departmentModel,
   designationModel,
   divisionModel,
@@ -14,7 +13,6 @@ import {
   employmentTypeModel,
   salaryComponentsModel,
   salaryModel,
-  workStationModel,
   attendanceDaily,
   employeeLeaveBalanceModel,
   leaveTypeModel,
@@ -80,14 +78,8 @@ export const employeeActivitiesReport = async (
       companyId: companyModel.companyId,
       companyName: companyModel.companyName,
 
-      workStationId: workStationModel.workStationId,
-      workStationName: workStationModel.workStationName,
-
       divisionId: divisionModel.divisionId,
       divisionName: divisionModel.divisionName,
-
-      costCenterId: costCenterModel.costCenterId,
-      costCenterName: costCenterModel.costCenterName,
     })
     .from(employeeModel)
     .leftJoin(
@@ -104,16 +96,8 @@ export const employeeActivitiesReport = async (
     )
     .leftJoin(companyModel, eq(employeeModel.companyId, companyModel.companyId))
     .leftJoin(
-      workStationModel,
-      eq(employeeModel.workStationId, workStationModel.workStationId)
-    )
-    .leftJoin(
       divisionModel,
       eq(employeeModel.divisionId, divisionModel.divisionId)
-    )
-    .leftJoin(
-      costCenterModel,
-      eq(employeeModel.costCenterId, costCenterModel.costCenterId)
     )
     .where(
       and(
