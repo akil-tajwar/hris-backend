@@ -1,17 +1,7 @@
 import Redis from 'ioredis'
 
-export const redis = new Redis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  password: process.env.REDIS_PASSWORD,
-  maxRetriesPerRequest: null,
+export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
-  retryStrategy(times) {
-    return Math.min(times * 50, 2000)
-  },
-
-  reconnectOnError(err) {
-    const targetError = 'READONLY'
-    return err.message.includes(targetError)
-  },
-})
+(async () => {
+	await redis.set('foo', 'bar');
+})();
