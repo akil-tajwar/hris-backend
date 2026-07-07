@@ -495,7 +495,7 @@ export const updateEmployee = async (
 
 //GET ALL EMPLOYEES
 export const getAllEmployees = async (tenantId: number) => {
-  const CACHE_KEY = 'employees:all'
+  const CACHE_KEY = `employees:all:${tenantId}`
 
   // 1️⃣ CHECK CACHE FIRST
   const cachedData = await getCache(CACHE_KEY)
