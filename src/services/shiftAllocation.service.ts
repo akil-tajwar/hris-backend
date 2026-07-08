@@ -7,6 +7,8 @@ import {
   shiftDayAndWeekDaysModel,
   weekDayModel,
   NewEmployeeShiftAllocation,
+  designationModel,
+  departmentModel,
 } from '../schemas/schema'
 import { redis } from '../middlewares/redis'
 import { getCache, setCache } from '../middlewares/cache'
@@ -496,7 +498,10 @@ export const getAllShiftAllocations = async (tenantId: number) => {
     .select({
       id: employeeShiftAllocations.id,
       employeeId: employeeShiftAllocations.employeeId,
+      empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
+      empDesignation: designationModel.designationName,
+      empDepartment: departmentModel.departmentName,
       shiftId: employeeShiftAllocations.shiftId,
       shiftName: shiftModel.shiftName,
       effectiveFrom: employeeShiftAllocations.effectiveFrom,
@@ -518,6 +523,14 @@ export const getAllShiftAllocations = async (tenantId: number) => {
       shiftModel,
       eq(employeeShiftAllocations.shiftId, shiftModel.shiftId)
     )
+    .leftJoin(
+      designationModel,
+      eq(employeeModel.designationId, designationModel.designationId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
+    )
 
   await setCache(CACHE_KEY, result, 300)
   return result
@@ -529,6 +542,7 @@ export const getShiftAllocationById = async (id: number) => {
     .select({
       id: employeeShiftAllocations.id,
       employeeId: employeeShiftAllocations.employeeId,
+      empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
       shiftId: employeeShiftAllocations.shiftId,
       shiftName: shiftModel.shiftName,
