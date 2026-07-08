@@ -8,6 +8,7 @@ import {
   salaryReportController,
   getLeaveBalanceSummaryReportController,
   leaveLedgerReportController,
+  shiftReportController,
 } from '../controllers/reports.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
@@ -43,6 +44,11 @@ router.get(
   '/leave-ledger-report',
   authenticateUser,
   leaveLedgerReportController
+)
+router.get(
+  '/shift-report',
+  authenticateUser,
+  shiftReportController
 )
 
 export default router
