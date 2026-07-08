@@ -5,6 +5,7 @@ import {
   attendanceSummaryReport,
   getLeaveBalanceSummaryReport,
   leaveLedgerReport,
+  shiftReport,
 } from '../services/reports.service'
 import {
   employeeActivitiesReport,
@@ -271,6 +272,52 @@ export const leaveLedgerReportController = async (
     res.status(500).json({
       success: false,
       message: 'Failed to fetch leave ledger report',
+    })
+  }
+}
+
+export const shiftReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    requirePermission(req, 'view_report')
+
+    const tenantId = req.user?.tenantId
+
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const { date } = req.query
+
+    if (!date || typeof date !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'date is required',
+      })
+      return
+    }
+
+    const parsedDate = new Date(date)
+
+    if (isNaN(parsedDate.getTime())) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Use YYYY-MM-DD',
+      })
+      return
+    }
+
+    const data = await shiftReport(date, tenantId)
+
+    res.status(200).json(data)
+  } catch (error) {
+    console.error('Shift report error:', error)
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch shift report',
     })
   }
 }

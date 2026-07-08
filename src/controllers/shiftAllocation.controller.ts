@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
 import { requirePermission } from '../services/utils/jwt.utils'
 import {
-  createSingleShiftAllocation,
   createBulkShiftAllocation,
   updateShiftAllocation,
   updateRecurrenceSetting,
@@ -12,10 +11,11 @@ import {
   getShiftAllocationsByEmployee,
   deleteShiftAllocation,
   getEmployeeWeekDaysByUserId,
+  createShiftAllocation,
 } from '../services/shiftAllocation.service'
 
 // ─── CREATE SINGLE ────────────────────────────────────────────────
-export const createSingleShiftAllocationController = async (
+export const createShiftAllocationController = async (
   req: Request,
   res: Response
 ) => {
@@ -23,16 +23,26 @@ export const createSingleShiftAllocationController = async (
     requirePermission(req, 'create_shift_allocation')
 
     const tenantId = req.user?.tenantId
-    const data = {
-      ...req.body,
-      tenantId,
+
+    if (!Array.isArray(req.body)) {
+      throw new Error('Request body must be an array')
     }
 
-    const shiftAllocation = await createSingleShiftAllocation(data)
-    res.status(201).json(shiftAllocation)
+    const data = req.body.map((item: any) => ({
+      ...item,
+      tenantId,
+    }))
+
+    const result = await createShiftAllocation(data)
+
+    res.status(201).json(result)
   } catch (error: any) {
-    console.error('❌ Single shift allocation error:', error)
-    res.status(400).json({ success: false, message: error.message || 'Something went wrong' })
+    console.error('❌ Shift allocation error:', error)
+
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Something went wrong',
+    })
   }
 }
 

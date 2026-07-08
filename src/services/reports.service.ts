@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   companyModel,
@@ -18,6 +18,8 @@ import {
   leaveTypeModel,
   employeeLeaveApplyModel,
   employeeLeaveAssignmentModel,
+  shiftModel,
+  employeeShiftAllocations,
 } from '../schemas'
 
 export const employeeActivitiesReport = async (
@@ -700,4 +702,65 @@ export const leaveLedgerReport = async (tenantId: number) => {
     console.error('LEAVE LEDGER REPORT ERROR:', error)
     throw error
   }
+}
+
+export const shiftReport = async (
+  reportDate: string,
+  tenantId: number
+) => {
+  const data = await db
+    .select({
+      employeeId: employeeModel.employeeId,
+      empCode: employeeModel.empCode,
+      employeeName: employeeModel.empFullName,
+
+      shiftId: shiftModel.shiftId,
+      shiftName: shiftModel.shiftName,
+      shiftCode: shiftModel.shiftCode,
+      shiftType: shiftModel.shiftType,
+
+      startTime: shiftModel.startTime,
+      endTime: shiftModel.endTime,
+      breakMinutes: shiftModel.breakMinutes,
+      expectedWorkHours: shiftModel.expectedWorkHours,
+      minimumHoursForPresent: shiftModel.minimumHoursForPresent,
+
+      crossDay: shiftModel.crossDay,
+      isFlexible: shiftModel.isFlexible,
+      flexibleInFrom: shiftModel.flexibleInFrom,
+      flexibleInTo: shiftModel.flexibleInTo,
+
+      effectiveFrom: employeeShiftAllocations.effectiveFrom,
+      effectiveTo: employeeShiftAllocations.effectiveTo,
+      remarks: employeeShiftAllocations.remarks,
+      recurrenceType: employeeShiftAllocations.recurrenceType,
+      recurrenceActive: employeeShiftAllocations.recurrenceActive,
+    })
+    .from(employeeShiftAllocations)
+    .innerJoin(
+      employeeModel,
+      eq(
+        employeeShiftAllocations.employeeId,
+        employeeModel.employeeId
+      )
+    )
+    .innerJoin(
+      shiftModel,
+      eq(employeeShiftAllocations.shiftId, shiftModel.shiftId)
+    )
+    .where(
+      and(
+        eq(employeeShiftAllocations.tenantId, tenantId),
+
+        lte(employeeShiftAllocations.effectiveFrom, reportDate),
+
+        or(
+          isNull(employeeShiftAllocations.effectiveTo),
+          gte(employeeShiftAllocations.effectiveTo, reportDate)
+        )
+      )
+    )
+    .orderBy(employeeModel.empCode)
+
+  return data
 }
