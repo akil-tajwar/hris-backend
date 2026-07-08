@@ -7,6 +7,7 @@ import {
   shiftDayAndWeekDaysModel,
   weekDayModel,
   NewEmployeeShiftAllocation,
+  designationModel,
   departmentModel,
 } from '../schemas/schema'
 import { redis } from '../middlewares/redis'
@@ -513,7 +514,10 @@ export const getAllShiftAllocations = async (tenantId: number) => {
     .select({
       id: employeeShiftAllocations.id,
       employeeId: employeeShiftAllocations.employeeId,
+      empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
+      empDesignation: designationModel.designationName,
+      empDepartment: departmentModel.departmentName,
       departmentId: employeeModel.departmentId,
       departmentName: departmentModel.departmentName,
       shiftId: employeeShiftAllocations.shiftId,
@@ -538,6 +542,14 @@ export const getAllShiftAllocations = async (tenantId: number) => {
       eq(employeeShiftAllocations.shiftId, shiftModel.shiftId)
     )
     .leftJoin(
+      designationModel,
+      eq(employeeModel.designationId, designationModel.designationId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
+    )
+    .leftJoin(
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
@@ -552,6 +564,7 @@ export const getShiftAllocationById = async (id: number) => {
     .select({
       id: employeeShiftAllocations.id,
       employeeId: employeeShiftAllocations.employeeId,
+      empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
       shiftId: employeeShiftAllocations.shiftId,
       shiftName: shiftModel.shiftName,
