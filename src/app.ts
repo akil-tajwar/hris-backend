@@ -46,6 +46,10 @@ const redis = new Redis(redisUrl, {
   keyPrefix: process.env.REDIS_PREFIX, // Automatically prefixes everything with "app_one:"
 });
 
+const bcrypt = require("bcrypt");
+
+bcrypt.hash("A123456a!", 10).then(console.log);
+
 // This saves globally as "app_one:session:xyz"
 redis.set('session:xyz', 'active').catch(console.error)
 

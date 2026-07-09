@@ -269,6 +269,7 @@ export const checklistDetailsModel = mysqlTable('checklist_details', {
   checklistDetailsName: varchar('checklist_details_name', {
     length: 255,
   }).notNull(),
+  requiredDays: int('required_days').notNull(),
   checklistMasterId: int('checklist_master_id').references(
     () => checklistMasterModel.checklistMasterId
   ),

@@ -39,6 +39,7 @@ export const createChecklistService = async (data: ChecklistInput) => {
           data.checklistDetails.map((item) => ({
             checklistMasterId: insertId,
             checklistDetailsName: item.checklistDetailsName,
+            requiredDays: item.requiredDays,
             responsibleEmployeeId: item.responsibleEmployeeId || 0,
             tenantId: item.tenantId,
             createdBy: item.createdBy,
@@ -124,6 +125,7 @@ export const updateChecklistService = async (
           .update(checklistDetailsModel)
           .set({
             checklistDetailsName: item.checklistDetailsName,
+            requiredDays: item.requiredDays,
             responsibleEmployeeId: item.responsibleEmployeeId,
             updatedBy: item.updatedBy,
           })
@@ -137,6 +139,8 @@ export const updateChecklistService = async (
         await tx.insert(checklistDetailsModel).values({
           checklistMasterId,
           checklistDetailsName: item.checklistDetailsName,
+          requiredDays: item.requiredDays,
+          tenantId: item.tenantId,
           responsibleEmployeeId: item.responsibleEmployeeId,
           createdBy: item.createdBy,
         })
@@ -198,6 +202,7 @@ export const getAllChecklistsService = async (
       checklistDetailsId: checklistDetailsModel.checklistDetailsId,
       checklistMasterId: checklistDetailsModel.checklistMasterId,
       checklistDetailsName: checklistDetailsModel.checklistDetailsName,
+      requiredDays: checklistDetailsModel.requiredDays,
       responsibleEmployeeId: checklistDetailsModel.responsibleEmployeeId,
       responsibleEmployeeName: employeeModel.empFullName,
       createdBy: checklistDetailsModel.createdBy,
