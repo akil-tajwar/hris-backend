@@ -10,6 +10,7 @@ import {
   NewEmployeePreboardingChecklist,
   employeePreboardingChecklistModel,
   checklistDetailsModel,
+  notificationsModel,
 } from '../schemas'
 
 import { aliasedTable, desc, eq } from 'drizzle-orm'
@@ -19,7 +20,7 @@ const reportingEmployee = aliasedTable(employeeModel, 'reportingEmployee')
 
 // CREATE
 export const createEmployeePreboarding = async (data: any) => {
-  console.log("🚀 ~ createEmployeePreboarding ~ data:", data)
+  console.log('🚀 ~ createEmployeePreboarding ~ data:', data)
   // Get latest preboarding record
   const [lastRecord] = await db
     .select({
@@ -176,13 +177,32 @@ export const assignChecklistToPreboardingService = async (
     preboardingId: item.preboardingId,
     checklistDetailsId: item.checklistDetailsId,
     responsibleEmployeeId: item.responsibleEmployeeId || null,
+    deadlineDate: new Date(item.deadlineDate),
     completionDate: item.completionDate ? new Date(item.completionDate) : null,
     status: item.status,
     tenantId: item.tenantId,
     createdBy: item.createdBy,
   }))
 
-  await db.insert(employeePreboardingChecklistModel).values(values)
+  // Assuming all checklist items are assigned to the same employee
+  const firstItem = data[0]
+
+  if (!firstItem?.responsibleEmployeeId || !firstItem?.tenantId) {
+    throw new Error('Responsible employee or tenant is missing.')
+  }
+
+  const notification = {
+    employeeId: firstItem.responsibleEmployeeId,
+    tenantId: firstItem.tenantId,
+    notification: "You've been assigned a checklist.",
+    isRead: false,
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(employeePreboardingChecklistModel).values(values)
+
+    await tx.insert(notificationsModel).values(notification)
+  })
 
   return true
 }
@@ -196,7 +216,7 @@ export const updateAssignedChecklistService = async (
       .update(employeePreboardingChecklistModel)
       .set({
         responsibleEmployeeId: item.responsibleEmployeeId || null,
-
+        deadlineDate: new Date(item.deadlineDate),
         completionDate: item.completionDate
           ? new Date(item.completionDate)
           : null,
@@ -227,6 +247,7 @@ export const getAssignedChecklistService = async (preboardingId: number) => {
       checklistDetailsName: checklistDetailsModel.checklistDetailsName,
       responsibleEmployeeId:
         employeePreboardingChecklistModel.responsibleEmployeeId,
+        deadlineDate: employeePreboardingChecklistModel.deadlineDate,
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
@@ -257,7 +278,7 @@ export const getAssignedChecklistService = async (preboardingId: number) => {
 
 // Get employee preboarding checklists by userId
 export const getAssignedChecklistByUserService = async (userId: number) => {
-  console.log("🚀 ~ getAssignedChecklistByUserService ~ userId:", userId)
+  console.log('🚀 ~ getAssignedChecklistByUserService ~ userId:', userId)
   // Step 1: Find employee by userId
   const employee = await db.query.employeeModel.findFirst({
     where: eq(employeeModel.userId, userId),
@@ -265,7 +286,7 @@ export const getAssignedChecklistByUserService = async (userId: number) => {
       employeeId: true,
     },
   })
-  console.log("🚀 ~ getAssignedChecklistByUserService ~ employee:", employee)
+  console.log('🚀 ~ getAssignedChecklistByUserService ~ employee:', employee)
 
   if (!employee) {
     throw new Error('Employee not found for this user')
@@ -278,12 +299,12 @@ export const getAssignedChecklistByUserService = async (userId: number) => {
         employeePreboardingChecklistModel.employeePreboardingChecklistId,
       preboardingId: employeePreboardingChecklistModel.preboardingId,
       preboardingFullName: employeePreboardingModel.fullName,
-      checklistDetailsId:
-        employeePreboardingChecklistModel.checklistDetailsId,
+      checklistDetailsId: employeePreboardingChecklistModel.checklistDetailsId,
       checklistDetailsName: checklistDetailsModel.checklistDetailsName,
       responsibleEmployeeId:
         employeePreboardingChecklistModel.responsibleEmployeeId,
-        responsibleEmployeeName: employeeModel.empFullName,
+      responsibleEmployeeName: employeeModel.empFullName,
+      deadlineDate: employeePreboardingChecklistModel.deadlineDate,
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
