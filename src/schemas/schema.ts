@@ -346,7 +346,8 @@ export const employeePreboardingChecklistModel = mysqlTable(
     ),
     tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
       onDelete: 'restrict',
-    }),
+    }).notNull(),
+    deadlineDate: date('deadline_date').notNull(),
     completionDate: date('completion_date'),
     isComplete: boolean('is_complete').notNull().default(false),
     status: boolean('status').notNull().default(false),

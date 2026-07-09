@@ -177,6 +177,7 @@ export const assignChecklistToPreboardingService = async (
     preboardingId: item.preboardingId,
     checklistDetailsId: item.checklistDetailsId,
     responsibleEmployeeId: item.responsibleEmployeeId || null,
+    deadlineDate: new Date(item.deadlineDate),
     completionDate: item.completionDate ? new Date(item.completionDate) : null,
     status: item.status,
     tenantId: item.tenantId,
@@ -215,7 +216,7 @@ export const updateAssignedChecklistService = async (
       .update(employeePreboardingChecklistModel)
       .set({
         responsibleEmployeeId: item.responsibleEmployeeId || null,
-
+        deadlineDate: new Date(item.deadlineDate),
         completionDate: item.completionDate
           ? new Date(item.completionDate)
           : null,
@@ -246,6 +247,7 @@ export const getAssignedChecklistService = async (preboardingId: number) => {
       checklistDetailsName: checklistDetailsModel.checklistDetailsName,
       responsibleEmployeeId:
         employeePreboardingChecklistModel.responsibleEmployeeId,
+        deadlineDate: employeePreboardingChecklistModel.deadlineDate,
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
@@ -302,6 +304,7 @@ export const getAssignedChecklistByUserService = async (userId: number) => {
       responsibleEmployeeId:
         employeePreboardingChecklistModel.responsibleEmployeeId,
       responsibleEmployeeName: employeeModel.empFullName,
+      deadlineDate: employeePreboardingChecklistModel.deadlineDate,
       completionDate: employeePreboardingChecklistModel.completionDate,
       isComplete: employeePreboardingChecklistModel.isComplete,
       status: employeePreboardingChecklistModel.status,
