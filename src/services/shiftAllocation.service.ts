@@ -156,58 +156,74 @@ const getShiftWeekRange = async (shiftId: number, fromDate: string) => {
 }
 
 // ─── CREATE SINGLE ────────────────────────────────────────────────
-export const createSingleShiftAllocation = async (
-  data: NewEmployeeShiftAllocation
+export const createShiftAllocation = async (
+  data: NewEmployeeShiftAllocation[]
 ) => {
-  const employee = await db.query.employeeModel.findFirst({
-    where: eq(employeeModel.employeeId, data.employeeId),
-  })
-  if (!employee) throw new Error(`Employee ${data.employeeId} পাওয়া যায়নি`)
+  return await db.transaction(async (tx) => {
+    for (const item of data) {
+      // Employee exists
+      const employee = await tx.query.employeeModel.findFirst({
+        where: eq(employeeModel.employeeId, item.employeeId),
+      })
 
-  const shift = await db.query.shiftModel.findFirst({
-    where: eq(shiftModel.shiftId, data.shiftId),
-  })
-  if (!shift) throw new Error(`Shift ${data.shiftId} পাওয়া যায়নি`)
+      if (!employee) {
+        throw new Error(`Employee ${item.employeeId} not found`)
+      }
 
-  // Duplicate check
-  const existing = await db
-    .select()
-    .from(employeeShiftAllocations)
-    .where(
-      and(
-        eq(employeeShiftAllocations.employeeId, data.employeeId),
-        eq(
-          employeeShiftAllocations.effectiveFrom,
-          toDateString(data.effectiveFrom)
+      // Shift exists
+      const shift = await tx.query.shiftModel.findFirst({
+        where: eq(shiftModel.shiftId, item.shiftId),
+      })
+
+      if (!shift) {
+        throw new Error(`Shift ${item.shiftId} not found`)
+      }
+
+      // Duplicate allocation
+      const existing = await tx
+        .select()
+        .from(employeeShiftAllocations)
+        .where(
+          and(
+            eq(employeeShiftAllocations.employeeId, item.employeeId),
+            eq(
+              employeeShiftAllocations.effectiveFrom,
+              toDateString(item.effectiveFrom)
+            )
+          )
         )
-      )
-    )
-    .limit(1)
+        .limit(1)
 
-  if (existing.length > 0)
-    throw new Error(
-      `এই employee এর জন্য ${toDateString(data.effectiveFrom)} তারিখে ইতিমধ্যে allocation আছে`
-    )
+      if (existing.length > 0) {
+        throw new Error(
+          `Already have allocation for Employee ${item.employeeId} in ${toDateString(
+            item.effectiveFrom
+          )}`
+        )
+      }
 
-  const [result] = await db.insert(employeeShiftAllocations).values({
-    employeeId: data.employeeId,
-    shiftId: data.shiftId,
-    effectiveFrom: toDateString(data.effectiveFrom),
-    effectiveTo: data.effectiveTo ? toDateString(data.effectiveTo) : null,
-    remarks: data.remarks ?? null,
-    approvedBy: data.approvedBy ?? null,
-    createdBy: data.createdBy,
-    recurrenceType: data.recurrenceType ?? null,
-    recurrenceActive: data.recurrenceActive ?? 0,
+      await tx.insert(employeeShiftAllocations).values({
+        employeeId: item.employeeId,
+        shiftId: item.shiftId,
+        effectiveFrom: toDateString(item.effectiveFrom),
+        effectiveTo: item.effectiveTo ? toDateString(item.effectiveTo) : null,
+        remarks: item.remarks ?? null,
+        approvedBy: item.approvedBy ?? null,
+        createdBy: item.createdBy,
+        recurrenceType: item.recurrenceType ?? null,
+        recurrenceActive: item.recurrenceActive ?? 0,
+        tenantId: item.tenantId,
+      })
+    }
+
+    await redis.del(CACHE_KEY)
+
+    return {
+      success: true,
+      insertedCount: data.length,
+      message: `${data.length} shift allocation successfully created`,
+    }
   })
-
-  await redis.del(CACHE_KEY)
-
-  return {
-    success: true,
-    insertedId: Number(result.insertId),
-    message: 'Shift allocation সফল হয়েছে',
-  }
 }
 
 // ─── CREATE BULK ──────────────────────────────────────────────────
@@ -502,6 +518,8 @@ export const getAllShiftAllocations = async (tenantId: number) => {
       employeeName: employeeModel.empFullName,
       empDesignation: designationModel.designationName,
       empDepartment: departmentModel.departmentName,
+      departmentId: employeeModel.departmentId,
+      departmentName: departmentModel.departmentName,
       shiftId: employeeShiftAllocations.shiftId,
       shiftName: shiftModel.shiftName,
       effectiveFrom: employeeShiftAllocations.effectiveFrom,
@@ -526,6 +544,10 @@ export const getAllShiftAllocations = async (tenantId: number) => {
     .leftJoin(
       designationModel,
       eq(employeeModel.designationId, designationModel.designationId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
     )
     .leftJoin(
       departmentModel,

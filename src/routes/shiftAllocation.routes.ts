@@ -1,7 +1,7 @@
 import express from 'express'
 import { authenticateUser } from '../middlewares/auth.middleware'
 import {
-  createSingleShiftAllocationController,
+  createShiftAllocationController,
   createBulkShiftAllocationController,
   updateShiftAllocationController,
   updateRecurrenceSettingController,
@@ -19,7 +19,7 @@ const router = express.Router()
 router.post(
   '/create/single',
   authenticateUser,
-  createSingleShiftAllocationController
+  createShiftAllocationController
 )
 router.post(
   '/create/bulk',
