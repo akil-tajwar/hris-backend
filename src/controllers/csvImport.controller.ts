@@ -27,16 +27,18 @@ export const importCsvController = async (req: Request, res: Response) => {
       throw new Error('Tenant ID is required')
     }
 
-    const result = await importAttendancePunchesFromCsv(req.file, createdBy, tenantId)
+    const result = await importAttendancePunchesFromCsv(
+      req.file,
+      createdBy,
+      tenantId
+    )
 
-    res.status(200).json({
-      success: true,
-      message: `Import complete. ${result.inserted} inserted, ${result.failed} failed.`,
-      data: result,
-    })
+    res.status(200).json(result)
   } catch (error: any) {
     console.error('❌ CSV Import error:', error)
-    res.status(400).json({ success: false, message: error.message || 'Import failed' })
+    res
+      .status(400)
+      .json({ success: false, message: error.message || 'Import failed' })
   }
 }
 
@@ -45,9 +47,11 @@ export const listCsvFilesController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'view_attendance_punch')
     const files = listCsvFiles()
-    res.json({ success: true, data: files })
+    res.json(files)
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message || 'Server error' })
+    res
+      .status(500)
+      .json({ success: false, message: error.message || 'Server error' })
   }
 }
 
@@ -60,6 +64,8 @@ export const downloadCsvController = async (req: Request, res: Response) => {
     const filePath = getCsvFilePath(filename)
     res.download(filePath)
   } catch (error: any) {
-    res.status(404).json({ success: false, message: error.message || 'File not found' })
+    res
+      .status(404)
+      .json({ success: false, message: error.message || 'File not found' })
   }
 }

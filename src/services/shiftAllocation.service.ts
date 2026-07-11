@@ -549,10 +549,6 @@ export const getAllShiftAllocations = async (tenantId: number) => {
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
-    .leftJoin(
-      departmentModel,
-      eq(employeeModel.departmentId, departmentModel.departmentId)
-    )
 
   await setCache(CACHE_KEY, result, 300)
   return result
