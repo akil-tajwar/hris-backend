@@ -25,7 +25,7 @@ export const createAttendancePunch = async (data: NewAttendancePunch) => {
 
   const result = await db.insert(attendancePunches).values({
     employeeId: data.employeeId,
-    punchTime: punchTime,
+    punchTime: punchTime.toISOString(),
     punchType: data.punchType ?? null,
     deviceId: data.deviceId ?? null,
     source: data.source ?? null,
@@ -57,7 +57,7 @@ export const updateAttendancePunch = async (
     .update(attendancePunches)
     .set({
       ...data,
-      punchTime: data.punchTime ? new Date(data.punchTime) : undefined,
+      punchTime: data.punchTime ? new Date(data.punchTime).toISOString() : undefined,
     })
     .where(eq(attendancePunches.id, id))
 

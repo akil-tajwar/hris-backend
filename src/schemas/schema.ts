@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
   date,
+  datetime,
   double,
   json,
   MySqlTableWithColumns,
@@ -1567,7 +1568,7 @@ export const attendancePunches = mysqlTable('attendance_punches', {
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
     onDelete: 'restrict',
   }),
-  punchTime: timestamp('punch_time', { mode: 'date' }).notNull(),
+  punchTime: datetime('punch_time', { mode: 'string' }).notNull(),
   punchType: varchar('punch_type', { length: 20 }),
   deviceId: varchar('device_id', { length: 50 }),
   source: varchar('source', { length: 50 }),
