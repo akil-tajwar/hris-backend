@@ -19,10 +19,18 @@ export const createShiftController = async (req: Request, res: Response) => {
     requirePermission(req, 'create_shift')
 
     const tenantId = req.user?.tenantId
+
     const data = {
-      ...req.body,
-      tenantId,
+      shift: {
+        ...req.body.shift,
+        tenantId,
+      },
+      shiftDayAndWeekDays: req.body.shiftDayAndWeekDays.map((item: any) => ({
+        ...item,
+        tenantId,
+      })),
     }
+
     const result = await createShift(data)
 
     res.status(201).json({
