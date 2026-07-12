@@ -66,13 +66,18 @@ type AttendanceStatus =
   | 'ON_LEAVE'
 
 // ─── Get employee's active shift ──────────────────────────────────────────────
-const getEmployeeShift = async (employeeId: number, attendanceDate: string) => {
+const getEmployeeShift = async (
+  employeeId: number,
+  attendanceDate: string,
+  tenantId: number
+) => {
   const allocation = await db
     .select()
     .from(employeeShiftAllocations)
     .where(
       and(
         eq(employeeShiftAllocations.employeeId, employeeId),
+        eq(employeeShiftAllocations.tenantId, tenantId),
         lte(employeeShiftAllocations.effectiveFrom, attendanceDate),
         or(
           isNull(employeeShiftAllocations.effectiveTo),
@@ -80,15 +85,22 @@ const getEmployeeShift = async (employeeId: number, attendanceDate: string) => {
         )
       )
     )
-    .orderBy(employeeShiftAllocations.effectiveFrom)
+    .orderBy(desc(employeeShiftAllocations.effectiveFrom))
     .limit(1)
 
-  if (!allocation.length) return null
+  if (!allocation.length) {
+    return null
+  }
 
   const shift = await db
     .select()
     .from(shiftModel)
-    .where(eq(shiftModel.shiftId, allocation[0].shiftId))
+    .where(
+      and(
+        eq(shiftModel.shiftId, allocation[0].shiftId),
+        eq(shiftModel.tenantId, tenantId)
+      )
+    )
     .limit(1)
 
   return shift[0] ?? null
@@ -299,9 +311,8 @@ export const processAttendanceForDate = async (
     throw new Error('Tenant ID is required')
   }
 
-  const [y, mo, d] = attendanceDate.split('-').map(Number)
-  const startOfDay = new Date(y, mo - 1, d, 0, 0, 0)
-  const endOfDay = new Date(y, mo - 1, d, 23, 59, 59)
+  const startOfDay = `${attendanceDate} 00:00:00`
+  const endOfDay = `${attendanceDate} 23:59:59`
 
   const punches = await db
     .select()
@@ -314,6 +325,15 @@ export const processAttendanceForDate = async (
       )
     )
     .orderBy(attendancePunches.employeeId, attendancePunches.punchTime)
+
+  const testPunch = punches[0]
+  if (testPunch) {
+    console.log('raw from driver:', testPunch.punchTime)
+    console.log('is Date instance:', testPunch.punchTime)
+    console.log('toISOString:', new Date(testPunch.punchTime).toISOString())
+    console.log('toString (local):', new Date(testPunch.punchTime).toString())
+  }
+  console.log('raw from driver:', testPunch.punchTime, 'typeof:', typeof testPunch.punchTime)
 
   const grouped = new Map<number, typeof punches>()
 
@@ -408,7 +428,13 @@ export const processAttendanceForDate = async (
     }
 
     // PRIORITY 3: Normal attendance
-    const shift = await getEmployeeShift(employeeId, attendanceDate)
+    const shift = await getEmployeeShift(employeeId, attendanceDate, tenantId)
+    console.log({
+      employeeId,
+      punchCount: employeePunches.length,
+      punches: employeePunches.map((p) => p.punchTime),
+      shift,
+    })
 
     if (!employeePunches.length || !shift) {
       await upsertAttendanceDaily(
@@ -432,11 +458,12 @@ export const processAttendanceForDate = async (
     }
 
     const firstIn = toSafeDate(employeePunches[0].punchTime)
-    const lastOut = toSafeDate(
-      employeePunches[employeePunches.length - 1].punchTime
-    )
+    const lastOut =
+      employeePunches.length > 1
+        ? toSafeDate(employeePunches[employeePunches.length - 1].punchTime)
+        : null // only one punch recorded — no punch-out yet, don't treat firstIn as lastOut
 
-    if (!firstIn || !lastOut) {
+    if (!firstIn) {
       await upsertAttendanceDaily(
         {
           employeeId,
@@ -457,18 +484,62 @@ export const processAttendanceForDate = async (
       continue
     }
 
-    const workedMinutes = differenceInMinutes(lastOut, firstIn)
-
     const shiftStart = combineDateAndTime(attendanceDate, shift.startTime)
-
     const shiftEnd = combineDateAndTime(attendanceDate, shift.endTime)
-
     const graceMinutes = policy?.graceMinutes ?? 0
-
     const allowedStart = new Date(shiftStart.getTime() + graceMinutes * 60000)
-
     const lateMinutes =
       firstIn > allowedStart ? differenceInMinutes(firstIn, allowedStart) : 0
+
+    if (!lastOut) {
+      const isToday = attendanceDate === formatDate(new Date())
+
+      if (isToday) {
+        // Day still in progress — employee has checked in, no punch-out expected yet
+        const status: AttendanceStatus = lateMinutes > 0 ? 'LATE' : 'PRESENT'
+
+        await upsertAttendanceDaily(
+          {
+            employeeId,
+            tenantId,
+            attendanceDate,
+            firstIn,
+            lastOut: null,
+            workedMinutes: 0,
+            lateMinutes,
+            earlyOutMinutes: 0,
+            overtimeMinutes: 0,
+            status,
+          },
+          changedBy
+        )
+
+        results.push({ employeeId, status })
+      } else {
+        // Past date with only a check-in and no check-out — data anomaly, not a normal absence
+        await upsertAttendanceDaily(
+          {
+            employeeId,
+            tenantId,
+            attendanceDate,
+            firstIn,
+            lastOut: null,
+            workedMinutes: 0,
+            lateMinutes,
+            earlyOutMinutes: 0,
+            overtimeMinutes: 0,
+            status: 'PRESENT', // flagged via lastOut: null, see note below
+          },
+          changedBy
+        )
+
+        results.push({ employeeId, status: 'PRESENT' })
+      }
+
+      continue
+    }
+
+    const workedMinutes = differenceInMinutes(lastOut, firstIn)
 
     const earlyOutMinutes =
       lastOut < shiftEnd ? differenceInMinutes(shiftEnd, lastOut) : 0

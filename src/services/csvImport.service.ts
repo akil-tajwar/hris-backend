@@ -53,7 +53,7 @@ export const importAttendancePunchesFromCsv = async (
 
     toInsert.push({
       employeeId,
-      punchTime,
+      punchTime: punchTime.toISOString(),
       deviceId: row.device_id || null,
       source: row.verify_mode || null,
       punchType: null,
