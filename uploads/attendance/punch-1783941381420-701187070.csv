@@ -1,0 +1,10 @@
+device_id,employee_id,punch_time,verify_mode
+F23,23,2026-07-12 02:02:40,Fingerprint
+F23,24,2026-07-12 02:03:40,Fingerprint
+F23,25,2026-07-12 02:01:39,Fingerprint
+F23,23,2026-07-12 05:01:39,Fingerprint
+F23,25,2026-07-12 04:01:40,Fingerprint
+F23,24,2026-07-12 06:01:39,Fingerprint
+F23,23,2026-07-12 12:01:39,Fingerprint
+F23,24,2026-07-12 12:19:40,Fingerprint
+F23,25,2026-07-12 12:19:40,Fingerprint
