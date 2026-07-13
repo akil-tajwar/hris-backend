@@ -205,7 +205,7 @@ const upsertAttendanceDaily = async (
   changedBy: number = 1
 ) => {
   const dateObj = toDateObj(data.attendanceDate)
-
+  
   const existing = await db
     .select()
     .from(attendanceDaily)
