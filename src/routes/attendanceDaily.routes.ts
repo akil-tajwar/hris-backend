@@ -5,7 +5,7 @@ import {
   updateAttendanceDailyController,
   getAllAttendanceDailyController,
   getAttendanceDailyByIdController,
-  getAttendanceDailyByEmployeeController,
+  getAttendanceDailyByUserIdController,
   deleteAttendanceDailyController,
 } from '../controllers/attendanceDaily.controller'
 
@@ -15,7 +15,7 @@ router.post('/create', authenticateUser, createAttendanceDailyController)
 router.patch('/edit/:id', authenticateUser, updateAttendanceDailyController)
 router.get('/getAll', authenticateUser, getAllAttendanceDailyController)
 router.get('/getById/:id', authenticateUser, getAttendanceDailyByIdController)
-router.get('/getByEmployee/:employeeId', authenticateUser, getAttendanceDailyByEmployeeController)
+router.get('/getByUserId/:userId', authenticateUser, getAttendanceDailyByUserIdController)
 router.delete('/delete/:id', authenticateUser, deleteAttendanceDailyController)
 
 export default router

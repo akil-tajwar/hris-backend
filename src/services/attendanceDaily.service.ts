@@ -160,11 +160,23 @@ export const getAttendanceDailyById = async (id: number, tenantId: number) => {
   return rows[0]
 }
 
-// GET DAILY BY EMPLOYEE ID (with employee name + empCode)
-export const getAttendanceDailyByEmployee = async (
-  employeeId: number,
+export const getAttendanceDailyByUserId = async (
+  userId: number,
   tenantId: number
 ) => {
+  // Find employee by userId
+  const employee = await db.query.employeeModel.findFirst({
+    where: and(
+      eq(employeeModel.userId, userId),
+      eq(employeeModel.tenantId, tenantId)
+    ),
+  })
+
+  if (!employee) {
+    return null
+  }
+
+  // Get attendance using employeeId
   const records = await db
     .select(dailyWithEmployeeSelect)
     .from(attendanceDaily)
@@ -174,7 +186,7 @@ export const getAttendanceDailyByEmployee = async (
     )
     .where(
       and(
-        eq(attendanceDaily.id, employeeId),
+        eq(attendanceDaily.employeeId, employee.employeeId),
         eq(attendanceDaily.tenantId, tenantId)
       )
     )
