@@ -1,10 +1,8 @@
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import { attendanceDaily, employeeModel, NewAttendanceDaily } from '../schemas'
 import { redis } from '../middlewares/redis'
 import { getCache, setCache } from '../middlewares/cache'
-
-const DAILY_CACHE_KEY = 'attendance_daily:all'
 
 // ── Common select shape with employee join ──────────────────────────────
 const dailyWithEmployeeSelect = {
@@ -18,6 +16,7 @@ const dailyWithEmployeeSelect = {
   earlyOutMinutes: attendanceDaily.earlyOutMinutes,
   overtimeMinutes: attendanceDaily.overtimeMinutes,
   status: attendanceDaily.status,
+  tenantId: attendanceDaily.tenantId,
   createdBy: attendanceDaily.createdBy,
   createdAt: attendanceDaily.createdAt,
   updatedBy: attendanceDaily.updatedBy,
@@ -25,6 +24,8 @@ const dailyWithEmployeeSelect = {
   employeeName: employeeModel.empFullName,
   empCode: employeeModel.empCode,
 }
+
+const DAILY_CACHE_KEY = `attendance_daily:${dailyWithEmployeeSelect.tenantId}:all`
 
 // CREATE DAILY
 export const createAttendanceDaily = async (data: NewAttendanceDaily) => {
@@ -117,11 +118,11 @@ export const getAllAttendanceDaily = async (
   }
 
   if (fromDate) {
-    conditions.push(gte(attendanceDaily.attendanceDate, new Date(fromDate)))
+    conditions.push(sql`${attendanceDaily.attendanceDate} >= ${fromDate}`)
   }
 
   if (toDate) {
-    conditions.push(lte(attendanceDaily.attendanceDate, new Date(toDate)))
+    conditions.push(sql`${attendanceDaily.attendanceDate} <= ${toDate}`)
   }
 
   const records = await db
