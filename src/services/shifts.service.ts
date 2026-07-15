@@ -29,6 +29,7 @@ export const createShift = async (data: any) => {
       flexibleInTo: data.shift.flexibleInTo || null,
       minimumHoursForPresent: data.shift.minimumHoursForPresent,
       status: data.shift.status ?? true,
+      tenantId: data.shift.tenantId,
       createdBy: data.shift.createdBy,
     })
 
@@ -69,6 +70,7 @@ export const createShift = async (data: any) => {
           ? 0
           : (item.minimumHoursForPresent ?? data.shift.minimumHoursForPresent),
 
+      tenantId: data.shift.tenantId,
       createdBy: data.shift.createdBy,
     }))
 

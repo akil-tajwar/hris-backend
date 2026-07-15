@@ -43,6 +43,13 @@ export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
       const effectiveFrom = formatDate(data.effectiveFrom)
       const year = new Date(effectiveFrom!).getFullYear()
 
+      console.log({
+        employeeId: employee.employeeId,
+        leaveTypeId: data.leaveTypeId,
+        effectiveFrom,
+        year,
+      })
+
       // 2. Get balance BEFORE inserting leave
       const [balance] = await tx
         .select()
@@ -55,6 +62,13 @@ export const createEmployeeLeaveApply = async (data: NewEmployeeLeaveApply) => {
           )
         )
         .limit(1)
+
+      const allBalances = await tx
+        .select()
+        .from(employeeLeaveBalanceModel)
+        .where(eq(employeeLeaveBalanceModel.employeeId, employee.employeeId))
+
+      console.table(allBalances)
 
       console.log('💰 Balance found:', balance)
 
@@ -219,10 +233,7 @@ export const approveLeaveByRepAuth = async (
     // 4. Send notifications
     await Promise.all(
       hrEmployees.map((emp) =>
-        notifyEmployee(
-          emp.employeeId,
-          'You have a pending leave approval'
-        )
+        notifyEmployee(emp.employeeId, 'You have a pending leave approval')
       )
     )
 

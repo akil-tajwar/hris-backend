@@ -5,7 +5,7 @@ import {
   updateAttendanceDaily,
   getAllAttendanceDaily,
   getAttendanceDailyById,
-  getAttendanceDailyByEmployee,
+  getAttendanceDailyByUserId,
   deleteAttendanceDaily,
 } from '../services/attendanceDaily.service'
 
@@ -28,7 +28,10 @@ export const createAttendanceDailyController = async (
     console.error('❌ Attendance Daily create error:', error)
     res
       .status(400)
-      .json({ success: false, message: error.message || 'Something went wrong' })
+      .json({
+        success: false,
+        message: error.message || 'Something went wrong',
+      })
   }
 }
 
@@ -50,7 +53,10 @@ export const updateAttendanceDailyController = async (
     console.error('❌ Attendance Daily update error:', error)
     res
       .status(500)
-      .json({ success: false, message: error.message || 'Internal server error' })
+      .json({
+        success: false,
+        message: error.message || 'Internal server error',
+      })
   }
 }
 
@@ -66,7 +72,18 @@ export const getAllAttendanceDailyController = async (
       throw new Error('Tenant ID is required')
     }
 
-    const data = await getAllAttendanceDaily(tenantId)
+    const employeeId = Number(req.query.employeeId) || undefined
+
+    const fromDate = (req.query.fromDate as string) || undefined
+    const toDate = (req.query.toDate as string) || undefined
+
+    const data = await getAllAttendanceDaily(
+      tenantId,
+      employeeId,
+      fromDate,
+      toDate
+    )
+
     res.json(data)
   } catch (error) {
     console.error('❌ Get All Attendance Daily error:', error)
@@ -104,27 +121,41 @@ export const getAttendanceDailyByIdController = async (
   }
 }
 
-export const getAttendanceDailyByEmployeeController = async (
+export const getAttendanceDailyByUserIdController = async (
   req: Request,
   res: Response
 ) => {
   try {
     requirePermission(req, 'view_attendance_daily')
-    const employeeId = Number(req.params.employeeId)
-    if (!employeeId) {
-      res.status(400).json({ message: 'Invalid Employee ID' })
+
+    const userId = Number(req.params.userId)
+    if (!userId) {
+      res.status(400).json({ message: 'Invalid User ID' })
       return
     }
+
     const tenantId = req.user?.tenantId
     if (tenantId === undefined) {
       throw new Error('Tenant ID is required')
     }
 
-    const data = await getAttendanceDailyByEmployee(employeeId, tenantId)
+    const data = await getAttendanceDailyByUserId(userId, tenantId)
+
+    if (!data) {
+      res.status(404).json({
+        success: false,
+        message: 'Employee not found for this user',
+      })
+      return
+    }
+
     res.json(data)
   } catch (error) {
-    console.error('❌ Get Daily By Employee error:', error)
-    res.status(500).json({ success: false, message: 'Server error' })
+    console.error('❌ Get Daily By User ID error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    })
   }
 }
 

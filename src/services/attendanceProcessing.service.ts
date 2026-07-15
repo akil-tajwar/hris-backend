@@ -12,6 +12,7 @@ import {
   holidayCalendarModel,
   weekDayModel,
   attendanceDailyAudit,
+  employeeLeaveApplyModel,
 } from '../schemas/schema'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -189,6 +190,36 @@ const isWeekendDate = async (
   return weekendDayIds.includes(weekDay[0].weekDayId)
 }
 
+// ─── Check Approved Leave ─────────────────────────────────────────────────────
+// An employee is "on leave" for attendanceDate if they have an Approved leave
+// application where effectiveFrom <= attendanceDate AND either:
+//   - effectiveTo >= attendanceDate, or
+//   - effectiveTo is null (treated as a single-day leave on effectiveFrom)
+const isOnLeaveDate = async (
+  employeeId: number,
+  attendanceDate: string,
+  tenantId: number
+): Promise<boolean> => {
+  const leaves = await db
+    .select({ id: employeeLeaveApplyModel.employeeLeaveApplyId })
+    .from(employeeLeaveApplyModel)
+    .where(
+      and(
+        eq(employeeLeaveApplyModel.employeeId, employeeId),
+        eq(employeeLeaveApplyModel.tenantId, tenantId),
+        eq(employeeLeaveApplyModel.status, 'Approved'),
+        lte(employeeLeaveApplyModel.effectiveFrom, new Date(attendanceDate)),
+        or(
+          isNull(employeeLeaveApplyModel.effectiveTo),
+          gte(employeeLeaveApplyModel.effectiveTo, new Date(attendanceDate))
+        )
+      )
+    )
+    .limit(1)
+
+  return leaves.length > 0
+}
+
 const upsertAttendanceDaily = async (
   data: {
     employeeId: number
@@ -326,15 +357,6 @@ export const processAttendanceForDate = async (
     )
     .orderBy(attendancePunches.employeeId, attendancePunches.punchTime)
 
-  const testPunch = punches[0]
-  if (testPunch) {
-    console.log('raw from driver:', testPunch.punchTime)
-    console.log('is Date instance:', testPunch.punchTime)
-    console.log('toISOString:', new Date(testPunch.punchTime).toISOString())
-    console.log('toString (local):', new Date(testPunch.punchTime).toString())
-  }
-  console.log('raw from driver:', testPunch.punchTime, 'typeof:', typeof testPunch.punchTime)
-
   const grouped = new Map<number, typeof punches>()
 
   for (const punch of punches) {
@@ -362,12 +384,6 @@ export const processAttendanceForDate = async (
     const employeePunches = grouped.get(employeeId) ?? []
 
     const policy = await getEmployeeAttendancePolicy(employeeId)
-
-    console.log({
-      employeeId,
-      tenantId,
-      attendanceDate,
-    })
 
     // PRIORITY 1: Holiday
     const isHoliday = await isHolidayDate(
@@ -427,14 +443,34 @@ export const processAttendanceForDate = async (
       continue
     }
 
-    // PRIORITY 3: Normal attendance
+    // PRIORITY 3: Approved Leave
+    // Checked before any punch/shift logic so a leave day is never miscounted
+    // as ABSENT, regardless of whether stray punches exist for that date.
+    const onLeave = await isOnLeaveDate(employeeId, attendanceDate, tenantId)
+
+    if (onLeave) {
+      await upsertAttendanceDaily(
+        {
+          employeeId,
+          tenantId,
+          attendanceDate,
+          firstIn: null,
+          lastOut: null,
+          workedMinutes: 0,
+          lateMinutes: 0,
+          earlyOutMinutes: 0,
+          overtimeMinutes: 0,
+          status: 'ON_LEAVE',
+        },
+        changedBy
+      )
+
+      results.push({ employeeId, status: 'ON_LEAVE' })
+      continue
+    }
+
+    // PRIORITY 4: Normal attendance
     const shift = await getEmployeeShift(employeeId, attendanceDate, tenantId)
-    console.log({
-      employeeId,
-      punchCount: employeePunches.length,
-      punches: employeePunches.map((p) => p.punchTime),
-      shift,
-    })
 
     if (!employeePunches.length || !shift) {
       await upsertAttendanceDaily(
@@ -596,6 +632,7 @@ export const processAttendanceForDate = async (
     summary: {
       holiday: results.filter((r) => r.status === 'HOLIDAY').length,
       weekend: results.filter((r) => r.status === 'WEEKEND').length,
+      onLeave: results.filter((r) => r.status === 'ON_LEAVE').length,
       present: results.filter((r) => r.status === 'PRESENT').length,
       late: results.filter((r) => r.status === 'LATE').length,
       halfDay: results.filter((r) => r.status === 'HALF_DAY').length,

@@ -1,34 +1,31 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
-import {
-  attendanceDaily,
-  employeeModel,
-  NewAttendanceDaily,
-} from '../schemas'
+import { attendanceDaily, employeeModel, NewAttendanceDaily } from '../schemas'
 import { redis } from '../middlewares/redis'
 import { getCache, setCache } from '../middlewares/cache'
 
-const DAILY_CACHE_KEY = 'attendance_daily:all'
-
 // ── Common select shape with employee join ──────────────────────────────
 const dailyWithEmployeeSelect = {
-  id:              attendanceDaily.id,
-  employeeId:      attendanceDaily.employeeId,
-  attendanceDate:  attendanceDaily.attendanceDate,
-  firstIn:         attendanceDaily.firstIn,
-  lastOut:         attendanceDaily.lastOut,
-  workedMinutes:   attendanceDaily.workedMinutes,
-  lateMinutes:     attendanceDaily.lateMinutes,
+  id: attendanceDaily.id,
+  employeeId: attendanceDaily.employeeId,
+  attendanceDate: attendanceDaily.attendanceDate,
+  firstIn: attendanceDaily.firstIn,
+  lastOut: attendanceDaily.lastOut,
+  workedMinutes: attendanceDaily.workedMinutes,
+  lateMinutes: attendanceDaily.lateMinutes,
   earlyOutMinutes: attendanceDaily.earlyOutMinutes,
   overtimeMinutes: attendanceDaily.overtimeMinutes,
-  status:          attendanceDaily.status,
-  createdBy:       attendanceDaily.createdBy,
-  createdAt:       attendanceDaily.createdAt,
-  updatedBy:       attendanceDaily.updatedBy,
-  updatedAt:       attendanceDaily.updatedAt,
-  employeeName:    employeeModel.empFullName,
-  empCode:         employeeModel.empCode,
+  status: attendanceDaily.status,
+  tenantId: attendanceDaily.tenantId,
+  createdBy: attendanceDaily.createdBy,
+  createdAt: attendanceDaily.createdAt,
+  updatedBy: attendanceDaily.updatedBy,
+  updatedAt: attendanceDaily.updatedAt,
+  employeeName: employeeModel.empFullName,
+  empCode: employeeModel.empCode,
 }
+
+const DAILY_CACHE_KEY = `attendance_daily:${dailyWithEmployeeSelect.tenantId}:all`
 
 // CREATE DAILY
 export const createAttendanceDaily = async (data: NewAttendanceDaily) => {
@@ -51,7 +48,10 @@ export const createAttendanceDaily = async (data: NewAttendanceDaily) => {
   const rows = await db
     .select(dailyWithEmployeeSelect)
     .from(attendanceDaily)
-    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
     .where(eq(attendanceDaily.id, insertId))
     .limit(1)
 
@@ -83,7 +83,10 @@ export const updateAttendanceDaily = async (
   const rows = await db
     .select(dailyWithEmployeeSelect)
     .from(attendanceDaily)
-    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
     .where(eq(attendanceDaily.id, id))
     .limit(1)
 
@@ -91,22 +94,51 @@ export const updateAttendanceDaily = async (
 }
 
 // GET ALL DAILY (with employee name + empCode)
-export const getAllAttendanceDaily = async (tenantId: number) => {
-  const cached = await getCache(DAILY_CACHE_KEY)
-  if (cached) {
-    console.log('⚡ Redis HIT')
-    return cached
+export const getAllAttendanceDaily = async (
+  tenantId: number,
+  employeeId?: number,
+  fromDate?: string,
+  toDate?: string
+) => {
+  // ❌ Don't use cache when filters are applied
+  if (!employeeId && !fromDate && !toDate) {
+    const cached = await getCache(DAILY_CACHE_KEY)
+    if (cached) {
+      console.log('⚡ Redis HIT')
+      return cached
+    }
   }
 
   console.log('🐢 MySQL QUERY (CACHE MISS)')
 
+  const conditions = [eq(attendanceDaily.tenantId, tenantId)]
+
+  if (employeeId) {
+    conditions.push(eq(attendanceDaily.employeeId, employeeId))
+  }
+
+  if (fromDate) {
+    conditions.push(sql`${attendanceDaily.attendanceDate} >= ${fromDate}`)
+  }
+
+  if (toDate) {
+    conditions.push(sql`${attendanceDaily.attendanceDate} <= ${toDate}`)
+  }
+
   const records = await db
     .select(dailyWithEmployeeSelect)
     .from(attendanceDaily)
-    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
-    .where(eq(attendanceDaily.tenantId, tenantId))
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
+    .where(and(...conditions))
 
-  await setCache(DAILY_CACHE_KEY, records, 300)
+  // Cache only unfiltered results
+  if (!employeeId && !fromDate && !toDate) {
+    await setCache(DAILY_CACHE_KEY, records, 300)
+  }
+
   return records
 }
 
@@ -115,21 +147,49 @@ export const getAttendanceDailyById = async (id: number, tenantId: number) => {
   const rows = await db
     .select(dailyWithEmployeeSelect)
     .from(attendanceDaily)
-    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
-    .where(and(eq(attendanceDaily.id, id), eq(attendanceDaily.tenantId, tenantId)))
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
+    .where(
+      and(eq(attendanceDaily.id, id), eq(attendanceDaily.tenantId, tenantId))
+    )
     .limit(1)
-    
-    if (!rows || rows.length === 0) return null
-    return rows[0]
+
+  if (!rows || rows.length === 0) return null
+  return rows[0]
+}
+
+export const getAttendanceDailyByUserId = async (
+  userId: number,
+  tenantId: number
+) => {
+  // Find employee by userId
+  const employee = await db.query.employeeModel.findFirst({
+    where: and(
+      eq(employeeModel.userId, userId),
+      eq(employeeModel.tenantId, tenantId)
+    ),
+  })
+
+  if (!employee) {
+    return null
   }
-  
-  // GET DAILY BY EMPLOYEE ID (with employee name + empCode)
-  export const getAttendanceDailyByEmployee = async (employeeId: number, tenantId: number) => {
-    const records = await db
+
+  // Get attendance using employeeId
+  const records = await db
     .select(dailyWithEmployeeSelect)
     .from(attendanceDaily)
-    .leftJoin(employeeModel, eq(attendanceDaily.employeeId, employeeModel.employeeId))
-    .where(and(eq(attendanceDaily.id, employeeId), eq(attendanceDaily.tenantId, tenantId)))
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
+    .where(
+      and(
+        eq(attendanceDaily.employeeId, employee.employeeId),
+        eq(attendanceDaily.tenantId, tenantId)
+      )
+    )
 
   return records
 }
