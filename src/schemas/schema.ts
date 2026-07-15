@@ -345,9 +345,11 @@ export const employeePreboardingChecklistModel = mysqlTable(
     responsibleEmployeeId: int('responsible_employee_id').references(
       () => employeeModel.employeeId
     ),
-    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-      onDelete: 'restrict',
-    }).notNull(),
+    tenantId: int('tenant_id')
+      .references(() => tenantModel.tenantId, {
+        onDelete: 'restrict',
+      })
+      .notNull(),
     deadlineDate: date('deadline_date').notNull(),
     completionDate: date('completion_date'),
     isComplete: boolean('is_complete').notNull().default(false),
@@ -1664,6 +1666,46 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
   }),
 })
 
+export const attendanceDailyApply = mysqlTable('attendance_daily_apply', {
+  id: int('id').autoincrement().primaryKey(),
+  employeeId: int('employee_id')
+  .notNull()
+  .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+  attendanceDailyId: int('attendance_daily_id')
+    .notNull()
+    .references(() => attendanceDaily.id),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
+  attendanceDate: date('attendance_date').notNull(),
+  firstIn: timestamp('first_in', { mode: 'date' }), // ✅ mode: "date"
+  lastOut: timestamp('last_out', { mode: 'date' }), // ✅ mode: "date"
+  workedMinutes: int('worked_minutes'),
+  lateMinutes: int('late_minutes'),
+  earlyOutMinutes: int('early_out_minutes'),
+  overtimeMinutes: int('overtime_minutes'),
+  // ✅ varchar থেকে enum এ convert
+  status: mysqlEnum('status', [
+    'PRESENT',
+    'ABSENT',
+    'LATE',
+    'HALF_DAY',
+    'HOLIDAY',
+    'WEEKEND',
+    'ON_LEAVE',
+  ]).notNull(),
+  applyType: mysqlEnum('apply_type', ['CREATE', 'UPDATE']).notNull(),
+  applyStatus: mysqlEnum('apply_status', ['Pending', 'Approved', 'Rejected'])
+    .notNull()
+    .default('Pending'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 // ========================
 // Relations (unchanged)
 // ========================
@@ -2218,6 +2260,8 @@ export type AttendancePunch = typeof attendancePunches.$inferSelect
 export type NewAttendancePunch = typeof attendancePunches.$inferInsert
 export type AttendanceDaily = typeof attendanceDaily.$inferSelect
 export type NewAttendanceDaily = typeof attendanceDaily.$inferInsert
+export type AttendanceDailyApply = typeof attendanceDailyApply.$inferSelect
+export type NewAttendanceDailyApply = typeof attendanceDailyApply.$inferInsert
 
 // Types for Employee Shift Allocations
 export type EmployeeShiftAllocation =

@@ -29,6 +29,7 @@ import assetsRoutes from './assets.routes'
 import attendancePolicyRoutes from './attendancePolicy.routes'
 import attendancePunchRoutes from './attendancePunch.routes'
 import attendanceDailyRoutes from './attendanceDaily.routes'
+import attendanceDailyApplyRoutes from './attendanceDailyApply.routes'
 import csvImportRoutes from './csvImport.routes'
 import shiftAllocationRoutes from './shiftAllocation.routes'
 import attendanceProcessingRoutes from './attendanceProcessing.routes'
@@ -69,6 +70,7 @@ router.use('/assets', assetsRoutes)
 router.use('/attendancePolicies', attendancePolicyRoutes)
 router.use('/attendancePunches', attendancePunchRoutes)
 router.use('/attendanceDaily', attendanceDailyRoutes)
+router.use('/attendanceDailyApply', attendanceDailyApplyRoutes)
 router.use('/csv', csvImportRoutes)
 router.use('/shiftAllocation', shiftAllocationRoutes)
 router.use('/attendanceProcessing', attendanceProcessingRoutes)
