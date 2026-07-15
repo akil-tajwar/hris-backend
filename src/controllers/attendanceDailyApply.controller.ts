@@ -6,6 +6,7 @@ import {
   acceptedAttendanceApplyByRepAuth,
   acceptedAttendanceApplyByByHr,
   rejectAttendanceApply,
+  getAllAttendanceApply,
 } from '../services/attendanceDailyApply.service'
 import { requirePermission } from '../services/utils/jwt.utils'
 
@@ -24,9 +25,15 @@ export const createAttendanceDailyApplyController = async (
       tenantId,
     }
     const attendanceDailyId = req.params.attendanceDailyId
-    console.log("🚀 ~ createAttendanceDailyApplyController ~ attendanceDailyId:", attendanceDailyId)
+    console.log(
+      '🚀 ~ createAttendanceDailyApplyController ~ attendanceDailyId:',
+      attendanceDailyId
+    )
 
-    const applyRecord = await createAttendanceDailyApply(data, Number(attendanceDailyId))
+    const applyRecord = await createAttendanceDailyApply(
+      data,
+      Number(attendanceDailyId)
+    )
 
     res.status(201).json({
       status: 'success',
@@ -79,6 +86,25 @@ export const getAttendanceApplyByUserIdController = async (
       Number(userId),
       tenantId
     )
+
+    res.json(applyRecords)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getAllAttendanceApplyController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // requirePermission(req, 'view_attendance_daily_apply')
+
+    const { userId } = req.params
+    const tenantId = req.user?.tenantId
+
+    const applyRecords = await getAllAttendanceApply(tenantId)
 
     res.json(applyRecords)
   } catch (err) {

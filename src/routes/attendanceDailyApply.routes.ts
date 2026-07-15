@@ -6,6 +6,7 @@ import {
   acceptedAttendanceApplyByRepAuthController,
   acceptedAttendanceApplyByByHrController,
   rejectAttendanceApplyController,
+  getAllAttendanceApplyController,
 } from '../controllers/attendanceDailyApply.controller'
 import { authenticateUser } from '../middlewares/auth.middleware'
 
@@ -21,6 +22,11 @@ router.get(
   '/getByUserId/:userId',
   authenticateUser,
   getAttendanceApplyByUserIdController
+)
+router.get(
+  '/getAll',
+  authenticateUser,
+  getAllAttendanceApplyController
 )
 router.patch(
   '/approve-rep-auth/:attendanceDailyApplyId',

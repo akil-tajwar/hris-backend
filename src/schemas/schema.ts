@@ -1695,6 +1695,8 @@ export const attendanceDailyApply = mysqlTable('attendance_daily_apply', {
     'ON_LEAVE',
   ]).notNull(),
   applyType: mysqlEnum('apply_type', ['CREATE', 'UPDATE']).notNull(),
+  approvedByRepAuth: boolean('approved_by_rep_auth').notNull().default(false),
+  approvedByHr: boolean('approved_by_hr').notNull().default(false),
   applyStatus: mysqlEnum('apply_status', ['Pending', 'Approved', 'Rejected'])
     .notNull()
     .default('Pending'),

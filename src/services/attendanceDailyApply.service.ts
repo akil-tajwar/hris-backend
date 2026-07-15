@@ -2,7 +2,9 @@ import { db } from '../config/database'
 import { eq, and, desc } from 'drizzle-orm'
 import {
   attendanceDaily,
+  AttendanceDailyApply,
   attendanceDailyApply,
+  attendanceDailyAudit,
   employeeModel,
   NewAttendanceDailyApply,
 } from '../schemas'
@@ -70,34 +72,31 @@ export const createAttendanceDailyApply = async (
 // ---------------------------------------------------------------------------
 export const editAttendanceDailyApply = async (
   id: number,
-  data: Partial<{
-    employeeId: number // if present, this is still a userId — resolve it
-    attendanceDailyId: number
-    attendanceDate: string
-    firstIn: Date | null
-    lastOut: Date | null
-    workedMinutes: number
-    lateMinutes: number
-    earlyOutMinutes: number
-    overtimeMinutes: number
-    status:
-      | 'PRESENT'
-      | 'ABSENT'
-      | 'LATE'
-      | 'HALF_DAY'
-      | 'HOLIDAY'
-      | 'WEEKEND'
-      | 'ON_LEAVE'
-    updatedBy: number
-  }>
+  data: AttendanceDailyApply
 ) => {
   const updatePayload: Record<string, unknown> = { ...data }
 
-  if (data.employeeId !== undefined) {
-    updatePayload.employeeId = await resolveEmployeeIdFromUserId(
-      data.employeeId
-    )
+  // immutable fields
+  delete updatePayload.id
+  delete updatePayload.employeeId
+  delete updatePayload.createdAt
+  delete updatePayload.updatedAt
+  delete updatePayload.tenantId
+  delete updatePayload.createdBy
+
+  if (data.firstIn) {
+    updatePayload.firstIn = new Date(data.firstIn)
   }
+
+  if (data.lastOut) {
+    updatePayload.lastOut = new Date(data.lastOut)
+  }
+
+  if (data.attendanceDate) {
+    updatePayload.attendanceDate = new Date(data.attendanceDate)
+  }
+
+  console.log(updatePayload)
 
   await db
     .update(attendanceDailyApply)
@@ -136,40 +135,45 @@ export const getAttendanceApplyByUserId = async (
     .orderBy(desc(attendanceDailyApply.createdAt))
 }
 
-// ---------------------------------------------------------------------------
-// Internal helper: once an apply record is fully approved, push the change
-// into the real attendanceDaily table (CREATE -> insert, UPDATE -> update).
-// ---------------------------------------------------------------------------
-const applyChangeToAttendanceDaily = async (
-  applyRecord: typeof attendanceDailyApply.$inferSelect
+export const getAllAttendanceApply = async (
+  tenantId?: number
 ) => {
-  if (applyRecord.applyType === 'CREATE') {
-    await db.insert(attendanceDaily).values({
-      employeeId: applyRecord.employeeId,
-      tenantId: applyRecord.tenantId,
-      attendanceDate: applyRecord.attendanceDate,
-      firstIn: applyRecord.firstIn,
-      lastOut: applyRecord.lastOut,
-      workedMinutes: applyRecord.workedMinutes,
-      lateMinutes: applyRecord.lateMinutes,
-      earlyOutMinutes: applyRecord.earlyOutMinutes,
-      overtimeMinutes: applyRecord.overtimeMinutes,
-      status: applyRecord.status,
+  const query = db
+    .select({
+      id: attendanceDailyApply.id,
+      employeeId: attendanceDailyApply.employeeId,
+      empCode: employeeModel.empCode,
+      employeeName: employeeModel.empFullName,
+      attendanceDailyId: attendanceDailyApply.attendanceDailyId,
+      tenantId: attendanceDailyApply.tenantId,
+      attendanceDate: attendanceDailyApply.attendanceDate,
+      firstIn: attendanceDailyApply.firstIn,
+      lastOut: attendanceDailyApply.lastOut,
+      workedMinutes: attendanceDailyApply.workedMinutes,
+      lateMinutes: attendanceDailyApply.lateMinutes,
+      earlyOutMinutes: attendanceDailyApply.earlyOutMinutes,
+      overtimeMinutes: attendanceDailyApply.overtimeMinutes,
+      status: attendanceDailyApply.status,
+      applyType: attendanceDailyApply.applyType,
+      applyStatus: attendanceDailyApply.applyStatus,
+      approvedByRepAuth: attendanceDailyApply.approvedByRepAuth,
+      approvedByHr: attendanceDailyApply.approvedByHr,
+      createdBy: attendanceDailyApply.createdBy,
+      createdAt: attendanceDailyApply.createdAt,
+      updatedBy: attendanceDailyApply.updatedBy,
+      updatedAt: attendanceDailyApply.updatedAt,
     })
-  } else {
-    await db
-      .update(attendanceDaily)
-      .set({
-        firstIn: applyRecord.firstIn,
-        lastOut: applyRecord.lastOut,
-        workedMinutes: applyRecord.workedMinutes,
-        lateMinutes: applyRecord.lateMinutes,
-        earlyOutMinutes: applyRecord.earlyOutMinutes,
-        overtimeMinutes: applyRecord.overtimeMinutes,
-        status: applyRecord.status,
-      })
-      .where(eq(attendanceDaily.id, applyRecord.attendanceDailyId))
+    .from(attendanceDailyApply)
+    .innerJoin(
+      employeeModel,
+      eq(attendanceDailyApply.employeeId, employeeModel.employeeId)
+    )
+
+  if (tenantId !== undefined) {
+    query.where(eq(attendanceDailyApply.tenantId, tenantId))
   }
+
+  return query.orderBy(desc(attendanceDailyApply.createdAt))
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +185,7 @@ export const acceptedAttendanceApplyByRepAuth = async (
 ) => {
   await db
     .update(attendanceDailyApply)
-    .set({ applyStatus: 'Approved', updatedBy })
+    .set({ updatedBy, approvedByRepAuth: true })
     .where(eq(attendanceDailyApply.id, id))
 
   const [updated] = await db
@@ -200,22 +204,95 @@ export const acceptedAttendanceApplyByByHr = async (
   id: number,
   updatedBy: number
 ) => {
-  await db
-    .update(attendanceDailyApply)
-    .set({ applyStatus: 'Approved', updatedBy })
-    .where(eq(attendanceDailyApply.id, id))
-
-  const [updated] = await db
+  const [apply] = await db
     .select()
     .from(attendanceDailyApply)
     .where(eq(attendanceDailyApply.id, id))
     .limit(1)
 
-  if (updated) {
-    await applyChangeToAttendanceDaily(updated)
+  if (!apply) {
+    throw new Error('Attendance apply not found')
   }
 
-  return updated
+  // approve apply
+  await db
+    .update(attendanceDailyApply)
+    .set({
+      applyStatus: 'Approved',
+      updatedBy,
+      approvedByHr: true,
+    })
+    .where(eq(attendanceDailyApply.id, id))
+
+
+  // find original attendance data
+  const [attendance] = await db
+    .select()
+    .from(attendanceDaily)
+    .where(eq(attendanceDaily.id, apply.attendanceDailyId))
+    .limit(1)
+
+  if (!attendance) {
+    throw new Error('Attendance daily record not found')
+  }
+
+  // insert audit before updating
+  const auditPayload = {
+    recordId: apply.attendanceDailyId,
+    employeeId: attendance.employeeId,
+    attendanceDate:
+      apply.attendanceDate instanceof Date
+        ? apply.attendanceDate.toISOString().slice(0, 10)
+        : apply.attendanceDate,
+    action: 'UPDATE',
+    changedBy: updatedBy,
+
+    oldStatus: attendance.status,
+    oldWorkedMinutes: attendance.workedMinutes,
+    oldLateMinutes: attendance.lateMinutes,
+    oldEarlyOutMinutes: attendance.earlyOutMinutes,
+    oldOvertimeMinutes: attendance.overtimeMinutes,
+    oldFirstIn: attendance.firstIn,
+    oldLastOut: attendance.lastOut,
+
+    newStatus: apply.status,
+    newWorkedMinutes: apply.workedMinutes ?? 0,
+    newLateMinutes: apply.lateMinutes ?? 0,
+    newEarlyOutMinutes: apply.earlyOutMinutes ?? 0,
+    newOvertimeMinutes: apply.overtimeMinutes ?? 0,
+    newFirstIn: apply.firstIn,
+    newLastOut: apply.lastOut,
+
+    remark: 'Attendance updated from HR approved apply',
+    tenantId: apply.tenantId,
+  }
+
+  await db.insert(attendanceDailyAudit).values(auditPayload as any)
+
+
+  // update attendance_daily with approved data
+  await db
+    .update(attendanceDaily)
+    .set({
+      firstIn: apply.firstIn,
+      lastOut: apply.lastOut,
+      workedMinutes: apply.workedMinutes,
+      lateMinutes: apply.lateMinutes,
+      earlyOutMinutes: apply.earlyOutMinutes,
+      overtimeMinutes: apply.overtimeMinutes,
+      status: apply.status,
+      updatedBy,
+    })
+    .where(eq(attendanceDaily.id, apply.attendanceDailyId))
+
+
+  const [updatedApply] = await db
+    .select()
+    .from(attendanceDailyApply)
+    .where(eq(attendanceDailyApply.id, id))
+    .limit(1)
+
+  return updatedApply
 }
 
 // ---------------------------------------------------------------------------
