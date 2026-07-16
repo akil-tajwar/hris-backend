@@ -5,9 +5,9 @@ import {
   attendanceDaily,
   employeeShiftAllocations,
   shiftModel,
+  shiftDayAndWeekDaysModel,
   employeeModel,
   attendancePoliciesModel,
-  attendancePolicyWeekendsModel,
   holidaysModel,
   holidayCalendarModel,
   weekDayModel,
@@ -108,6 +108,9 @@ const getEmployeeShift = async (
 }
 
 // ─── Get employee's active attendance policy ──────────────────────────────────
+// NOTE: this still has no tenant/company scoping on attendancePoliciesModel —
+// flagging again since it affects holiday resolution below. Fix separately
+// once we confirm the columns on that table.
 const getEmployeeAttendancePolicy = async (employeeId: number) => {
   const employee = await db
     .select({ companyId: employeeModel.companyId })
@@ -125,15 +128,42 @@ const getEmployeeAttendancePolicy = async (employeeId: number) => {
 
   if (!policy.length) return null
 
-  const weekends = await db
-    .select({ weekDayId: attendancePolicyWeekendsModel.weekDayId })
-    .from(attendancePolicyWeekendsModel)
-    .where(eq(attendancePolicyWeekendsModel.policyId, policy[0].id))
+  return policy[0]
+}
 
-  return {
-    ...policy[0],
-    weekendDayIds: weekends.map((w) => w.weekDayId),
-  }
+// ─── Resolve the employee's holiday calendar via their company ───────────────
+// Holiday calendars are per-company (holiday_calendars.company_id), not tied
+// to attendance_policies — that table has no company scoping and shouldn't be
+// used to resolve holidays.
+const getEmployeeHolidayCalendarId = async (
+  employeeId: number,
+  attendanceDate: string,
+  tenantId: number
+): Promise<number | null> => {
+  const employee = await db
+    .select({ companyId: employeeModel.companyId })
+    .from(employeeModel)
+    .where(eq(employeeModel.employeeId, employeeId))
+    .limit(1)
+
+  if (!employee.length) return null
+
+  const year = Number(attendanceDate.split('-')[0])
+
+  const calendar = await db
+    .select({ id: holidayCalendarModel.id })
+    .from(holidayCalendarModel)
+    .where(
+      and(
+        eq(holidayCalendarModel.companyId, employee[0].companyId),
+        eq(holidayCalendarModel.tenantId, tenantId),
+        eq(holidayCalendarModel.year, year),
+        eq(holidayCalendarModel.isActive, true)
+      )
+    )
+    .limit(1)
+
+  return calendar[0]?.id ?? null
 }
 
 // ─── Check Holiday ────────────────────────────────────────────────────────────
@@ -170,13 +200,15 @@ const isHolidayDate = async (
   })
 }
 
-// ─── Check Weekend ────────────────────────────────────────────────────────────
-const isWeekendDate = async (
+// ─── Check Weekend (from the employee's shift, not the policy) ───────────────
+// Every employee eventually resolves to a shift (falling back to "General
+// Shift" if nothing else is assigned), so weekend is derived from
+// shift_day_and_week_days.dayType for the day-of-week of attendanceDate.
+const isWeekendDateFromShift = async (
+  shiftId: number,
   attendanceDate: string,
-  weekendDayIds: number[]
+  tenantId: number
 ): Promise<boolean> => {
-  if (!weekendDayIds.length) return false
-
   const dayName = getDayName(attendanceDate)
 
   const weekDay = await db
@@ -187,14 +219,23 @@ const isWeekendDate = async (
 
   if (!weekDay.length) return false
 
-  return weekendDayIds.includes(weekDay[0].weekDayId)
+  const shiftDay = await db
+    .select({ dayType: shiftDayAndWeekDaysModel.dayType })
+    .from(shiftDayAndWeekDaysModel)
+    .where(
+      and(
+        eq(shiftDayAndWeekDaysModel.shiftId, shiftId),
+        eq(shiftDayAndWeekDaysModel.weekDayId, weekDay[0].weekDayId)
+      )
+    )
+    .limit(1)
+
+  if (!shiftDay.length) return false
+
+  return shiftDay[0].dayType === 'Weekend'
 }
 
 // ─── Check Approved Leave ─────────────────────────────────────────────────────
-// An employee is "on leave" for attendanceDate if they have an Approved leave
-// application where effectiveFrom <= attendanceDate AND either:
-//   - effectiveTo >= attendanceDate, or
-//   - effectiveTo is null (treated as a single-day leave on effectiveFrom)
 const isOnLeaveDate = async (
   employeeId: number,
   attendanceDate: string,
@@ -269,7 +310,7 @@ const upsertAttendanceDaily = async (
     await db.insert(attendanceDailyAudit).values({
       recordId: old.id,
       employeeId: data.employeeId,
-      attendanceDate: data.attendanceDate, // ← 'YYYY-MM-DD' string
+      attendanceDate: data.attendanceDate,
       action: 'UPDATE',
       changedBy,
       tenantId: data.tenantId,
@@ -291,7 +332,7 @@ const upsertAttendanceDaily = async (
   } else {
     const inserted = await db.insert(attendanceDaily).values({
       employeeId: data.employeeId,
-      tenantId: data.tenantId, // <-- ADD THIS
+      tenantId: data.tenantId,
       attendanceDate: dateObj,
       firstIn: data.firstIn,
       lastOut: data.lastOut,
@@ -306,7 +347,7 @@ const upsertAttendanceDaily = async (
     await db.insert(attendanceDailyAudit).values({
       recordId: Number((inserted as any).insertId) || null,
       employeeId: data.employeeId,
-      attendanceDate: data.attendanceDate, // ← 'YYYY-MM-DD' string
+      attendanceDate: data.attendanceDate,
       action: 'INSERT',
       changedBy,
       tenantId: data.tenantId,
@@ -385,11 +426,20 @@ export const processAttendanceForDate = async (
 
     const policy = await getEmployeeAttendancePolicy(employeeId)
 
-    // PRIORITY 1: Holiday
-    const isHoliday = await isHolidayDate(
+    // Fetched up front now — weekend resolution (priority 2) needs the
+    // shift's shiftId, and normal attendance processing (priority 4) needs
+    // it too. Every employee should resolve to a shift eventually (falling
+    // back to "General Shift"), but we still guard against null below.
+    const shift = await getEmployeeShift(employeeId, attendanceDate, tenantId)
+
+    // PRIORITY 1: Holiday — calendar resolved from the employee's company,
+    // not from attendance_policies (that table has no company scoping).
+    const holidayCalendarId = await getEmployeeHolidayCalendarId(
+      employeeId,
       attendanceDate,
-      policy?.holidayCalendarId ?? null
+      tenantId
     )
+    const isHoliday = await isHolidayDate(attendanceDate, holidayCalendarId)
 
     if (isHoliday) {
       await upsertAttendanceDaily(
@@ -416,11 +466,12 @@ export const processAttendanceForDate = async (
       continue
     }
 
-    // PRIORITY 2: Weekend
-    const isWeekend = await isWeekendDate(
-      attendanceDate,
-      policy?.weekendDayIds ?? []
-    )
+    // PRIORITY 2: Weekend — now derived from the employee's shift config
+    // (shift_day_and_week_days.dayType === 'Weekend'), not the policy's
+    // weekend list.
+    const isWeekend = shift
+      ? await isWeekendDateFromShift(shift.shiftId, attendanceDate, tenantId)
+      : false
 
     if (isWeekend) {
       await upsertAttendanceDaily(
@@ -470,8 +521,6 @@ export const processAttendanceForDate = async (
     }
 
     // PRIORITY 4: Normal attendance
-    const shift = await getEmployeeShift(employeeId, attendanceDate, tenantId)
-
     if (!employeePunches.length || !shift) {
       await upsertAttendanceDaily(
         {

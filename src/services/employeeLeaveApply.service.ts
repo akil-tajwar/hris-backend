@@ -13,6 +13,8 @@ import {
   weekDayModel,
   employeeLeaveBalanceModel,
   userModel,
+  attendanceDaily,
+  attendanceDailyAudit,
 } from '../schemas'
 import { and, eq, inArray } from 'drizzle-orm'
 
@@ -273,7 +275,6 @@ export const approveLeaveByHr = async (
     }
 
     if (leave.status === 'Approved') {
-      console.log('⚠️ Leave already approved')
       throw new Error('Leave already approved')
     }
 
@@ -350,7 +351,75 @@ export const approveLeaveByHr = async (
 
     console.log('✅ Leave marked as approved')
 
-    // 6. Final fetch
+    // 6. Update attendance_daily and create audit logs
+    const startDate = new Date(leave.effectiveFrom)
+    const endDate = new Date(leave.effectiveTo ?? leave.effectiveFrom)
+
+    for (
+      const current = new Date(startDate);
+      current <= endDate;
+      current.setDate(current.getDate() + 1)
+    ) {
+      const attendanceDate = new Date(current)
+      attendanceDate.setHours(0, 0, 0, 0)
+
+      // Holiday/Weekend won't have attendance record
+      const [attendance] = await tx
+        .select()
+        .from(attendanceDaily)
+        .where(
+          and(
+            eq(attendanceDaily.employeeId, leave.employeeId),
+            eq(attendanceDaily.tenantId, leave.tenantId!),
+            eq(attendanceDaily.attendanceDate, attendanceDate)
+          )
+        )
+        .limit(1)
+
+      if (!attendance) continue
+
+      // Skip if already ON_LEAVE
+      if (attendance.status === 'ON_LEAVE') continue
+
+      // Update attendance
+      await tx
+        .update(attendanceDaily)
+        .set({
+          status: 'ON_LEAVE',
+          updatedBy,
+        })
+        .where(eq(attendanceDaily.id, attendance.id))
+
+      // Insert audit log
+      await tx.insert(attendanceDailyAudit).values({
+        recordId: attendance.id,
+        employeeId: attendance.employeeId,
+        attendanceDate: attendance.attendanceDate.toISOString().split('T')[0],
+        action: 'UPDATE',
+        changedBy: updatedBy,
+
+        oldStatus: attendance.status,
+        oldWorkedMinutes: attendance.workedMinutes,
+        oldLateMinutes: attendance.lateMinutes,
+        oldEarlyOutMinutes: attendance.earlyOutMinutes,
+        oldOvertimeMinutes: attendance.overtimeMinutes,
+        oldFirstIn: attendance.firstIn,
+        oldLastOut: attendance.lastOut,
+
+        newStatus: 'ON_LEAVE',
+        newWorkedMinutes: attendance.workedMinutes ?? 0,
+        newLateMinutes: attendance.lateMinutes ?? 0,
+        newEarlyOutMinutes: attendance.earlyOutMinutes ?? 0,
+        newOvertimeMinutes: attendance.overtimeMinutes ?? 0,
+        newFirstIn: attendance.firstIn,
+        newLastOut: attendance.lastOut,
+
+        remark: 'Attendance updated automatically after HR approved leave.',
+        tenantId: attendance.tenantId,
+      })
+    }
+
+    // 7. Final fetch
     const [updated] = await tx
       .select()
       .from(employeeLeaveApplyModel)

@@ -39,7 +39,11 @@ export const createHolidayRangeController = async (
     }
 
     const rangeData = createHolidayRangeSchema.parse(data)
-    const result = await createHolidayRange(rangeData)
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const result = await createHolidayRange({ ...rangeData, tenantId })
 
     res.status(201).json({
       status: 'success',

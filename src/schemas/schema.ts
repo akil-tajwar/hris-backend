@@ -1618,10 +1618,8 @@ export const attendanceDaily = mysqlTable('attendance_daily', {
     sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
   ),
 })
-// ─── attendance_daily_audit table ────────────────────────────────────────────
-// প্রতিবার attendance_daily তে INSERT বা UPDATE হলে এখানে একটা row জমা হবে
-// কে করল, কখন করল, আগে কী ছিল, পরে কী হলো — সব এখানে থাকবে
 
+// ─── attendance_daily_audit table ────────────────────────────────────────────
 export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
   id: int('id').autoincrement().primaryKey(),
   recordId: int('record_id'), // attendance_daily.id — কোন record change হলো
