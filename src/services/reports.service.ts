@@ -1,4 +1,15 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   companyModel,
@@ -704,10 +715,7 @@ export const leaveLedgerReport = async (tenantId: number) => {
   }
 }
 
-export const shiftReport = async (
-  reportDate: string,
-  tenantId: number
-) => {
+export const shiftReport = async (reportDate: string, tenantId: number) => {
   const data = await db
     .select({
       employeeId: employeeModel.employeeId,
@@ -739,10 +747,7 @@ export const shiftReport = async (
     .from(employeeShiftAllocations)
     .innerJoin(
       employeeModel,
-      eq(
-        employeeShiftAllocations.employeeId,
-        employeeModel.employeeId
-      )
+      eq(employeeShiftAllocations.employeeId, employeeModel.employeeId)
     )
     .innerJoin(
       shiftModel,
@@ -763,4 +768,65 @@ export const shiftReport = async (
     .orderBy(employeeModel.empCode)
 
   return data
+}
+
+export const getIndividualAttendanceSummary = async (
+  tenantId: number,
+  fromDate: string,
+  toDate: string
+) => {
+  const from = new Date(String(fromDate))
+  const to = new Date(String(toDate))
+  return db
+    .select({
+      employeeId: attendanceDaily.employeeId,
+      empCode: employeeModel.empCode,
+      empFullName: employeeModel.empFullName,
+
+      present: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'PRESENT' THEN 1 ELSE 0 END)
+      `,
+
+      late: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'LATE' THEN 1 ELSE 0 END)
+      `,
+
+      absent: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'ABSENT' THEN 1 ELSE 0 END)
+      `,
+
+      halfDay: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'HALF_DAY' THEN 1 ELSE 0 END)
+      `,
+
+      weekend: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'WEEKEND' THEN 1 ELSE 0 END)
+      `,
+
+      holiday: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'HOLIDAY' THEN 1 ELSE 0 END)
+      `,
+
+      onLeave: sql<number>`
+        SUM(CASE WHEN ${attendanceDaily.status} = 'ON_LEAVE' THEN 1 ELSE 0 END)
+      `,
+    })
+    .from(attendanceDaily)
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
+    .where(
+      and(
+        eq(attendanceDaily.tenantId, tenantId),
+        gte(attendanceDaily.attendanceDate, from),
+        lte(attendanceDaily.attendanceDate, to)
+      )
+    )
+    .groupBy(
+      attendanceDaily.employeeId,
+      employeeModel.empCode,
+      employeeModel.empFullName
+    )
+    .orderBy(employeeModel.empCode)
 }
