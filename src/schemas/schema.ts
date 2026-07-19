@@ -1388,8 +1388,6 @@ export const employeeSalaryDetailsModel = mysqlTable(
     ]).notNull(),
     salaryYear: int('salary_year').notNull(),
     amount: double('amount').notNull(),
-    isDraft: boolean('is_draft').notNull().default(true),
-    isSalaryGiven: boolean('is_salary_given').notNull().default(false),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),

@@ -183,7 +183,7 @@ export const createSalaries = async (
         salaryMonth: salary.salaryMonth,
         salaryYear: salary.salaryYear,
         amount: component.amount,
-        isAuthorized: true,
+        isDraft: true,
         isSalaryGiven: false,
         createdBy: salary.createdBy,
         createdAt: new Date(),
@@ -202,7 +202,7 @@ export const createSalaries = async (
         grossSalary,
         netSalary,
         doj: salary.doj,
-        isDraft: false,
+        isDraft: true,
         isSalaryGiven: false,
         createdBy: salary.createdBy,
         createdAt: new Date(),
@@ -253,8 +253,8 @@ export const getSalarys = async (tenantId: number) => {
       employeeSalaryDetailsId:
         employeeSalaryDetailsModel.employeeSalaryDetailsId,
       amount: employeeSalaryDetailsModel.amount,
-      isDraft: employeeSalaryDetailsModel.isDraft,
-      isSalaryGiven: employeeSalaryDetailsModel.isSalaryGiven,
+      isDraft: salaryModel.isDraft,
+      isSalaryGiven: salaryModel.isSalaryGiven,
       // Salary Component
       salaryComponentId: salaryComponentsModel.salaryComponentId,
       componentName: salaryComponentsModel.componentName,
@@ -341,51 +341,151 @@ export const getSalarys = async (tenantId: number) => {
 }
 
 // UPDATE
+type ComponentType = {
+  salaryComponentId: number
+  componentType: string
+  amount: number
+}
 type UpdateSalaryPayload = {
-  salary: Partial<NewSalary>
-  otherSalary?: NewEmployeeSalaryComponent[]
+  employeeId: number
+  salaryMonth: NewSalary['salaryMonth']
+  salaryYear: number
+  departmentId: number
+  designationId: number
+  basicSalary: number
+  grossSalary?: number
+  netSalary?: number
+  doj: string
+  updatedBy: number
+  components?: ComponentType[]
 }
 export const updateSalaryWithSalaryComponents = async (
-  salaryId: number,
   data: UpdateSalaryPayload
 ) => {
   return await db.transaction(async (tx) => {
+    const {
+      employeeId,
+      salaryMonth,
+      salaryYear,
+      components = [],
+      ...salaryData
+    } = data
+
+    /* ---------------- find salary ---------------- */
+
+    const [existingSalary] = await tx
+      .select()
+      .from(salaryModel)
+      .where(
+        and(
+          eq(salaryModel.employeeId, employeeId),
+          eq(salaryModel.salaryMonth, salaryMonth),
+          eq(salaryModel.salaryYear, salaryYear)
+        )
+      )
+
+    if (!existingSalary) {
+      throw new Error('Salary record not found.')
+    }
+
+    /* ---------------- calculate salary ---------------- */
+
+    const totalAllowance = components
+      .filter((component) => component.componentType === 'Allowance')
+      .reduce((sum, component) => sum + component.amount, 0)
+
+    const totalDeduction = components
+      .filter((component) => component.componentType === 'Deduction')
+      .reduce((sum, component) => sum + component.amount, 0)
+
+    const grossSalary = data.basicSalary + totalAllowance
+
+    const netSalary = grossSalary - totalDeduction
+
     /* ---------------- update salary ---------------- */
+
     await tx
       .update(salaryModel)
-      .set(data.salary)
-      .where(eq(salaryModel.salaryId, salaryId))
+      .set({
+        ...salaryData,
+        grossSalary,
+        netSalary,
+        updatedBy: data.updatedBy,
+      })
+      .where(eq(salaryModel.salaryId, existingSalary.salaryId))
 
-    /* ---------------- delete old other salary components ---------------- */
+    /* ---------------- get existing salary details ---------------- */
+
+    const existingDetails = await tx
+      .select()
+      .from(employeeSalaryDetailsModel)
+      .where(
+        and(
+          eq(employeeSalaryDetailsModel.employeeId, employeeId),
+          eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
+          eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
+        )
+      )
+
+    /* ---------------- delete old salary details ---------------- */
+
     await tx
       .delete(employeeSalaryDetailsModel)
       .where(
         and(
-          eq(employeeSalaryDetailsModel.employeeId, data.salary.employeeId!),
-          eq(employeeSalaryDetailsModel.salaryMonth, data.salary.salaryMonth!),
-          eq(employeeSalaryDetailsModel.salaryYear, data.salary.salaryYear!)
+          eq(employeeSalaryDetailsModel.employeeId, employeeId),
+          eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
+          eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
         )
       )
 
-    /* ---------------- insert new other salary components ---------------- */
-    if (data.otherSalary && data.otherSalary.length > 0) {
-      await tx.insert(employeeSalaryDetailsModel).values(data.otherSalary)
+    /* ---------------- recreate salary details ---------------- */
+
+    if (components.length > 0) {
+      if (existingDetails.length !== components.length) {
+        throw new Error('Salary components count mismatch.')
+      }
+
+      const rows = components.map((component, index) => {
+        const existing = existingDetails[index]
+
+        return {
+          employeeId,
+          tenantId: existing.tenantId,
+          salaryMonth,
+          salaryYear,
+
+          // keep old structure IDs
+          salaryStructureMasterId: existing.salaryStructureMasterId,
+
+          salaryStructureDetailId: existing.salaryStructureDetailId,
+
+          amount: component.amount,
+
+          createdBy: existing.createdBy,
+
+          updatedBy: data.updatedBy,
+        }
+      })
+
+      await tx.insert(employeeSalaryDetailsModel).values(rows)
     }
 
-    /* ---------------- fetch updated data ---------------- */
+    /* ---------------- fetch updated salary ---------------- */
+
     const [salary] = await tx
       .select()
       .from(salaryModel)
-      .where(eq(salaryModel.salaryId, salaryId))
+      .where(eq(salaryModel.salaryId, existingSalary.salaryId))
 
     const otherSalary = await tx
       .select()
       .from(employeeSalaryDetailsModel)
       .where(
         and(
-          eq(employeeSalaryDetailsModel.employeeId, salary.employeeId),
-          eq(employeeSalaryDetailsModel.salaryMonth, salary.salaryMonth),
-          eq(employeeSalaryDetailsModel.salaryYear, salary.salaryYear)
+          eq(employeeSalaryDetailsModel.employeeId, employeeId),
+          eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
+          eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
         )
       )
 
@@ -421,4 +521,75 @@ export const deleteSalaryWithSalaryComponents = async (salaryId: number) => {
     /* ---------------- delete salary ---------------- */
     await tx.delete(salaryModel).where(eq(salaryModel.salaryId, salaryId))
   })
+}
+
+export const giveSalary = async (salaryId: number, tenantId: number) => {
+  const salary = await db.query.salaryModel.findFirst({
+    where: and(
+      eq(salaryModel.salaryId, salaryId),
+      eq(salaryModel.tenantId, tenantId)
+    ),
+  })
+
+  if (!salary) {
+    throw new Error('Salary record not found.')
+  }
+
+  if (salary.isSalaryGiven) {
+    throw new Error('Salary has already been given.')
+  }
+
+  await db
+    .update(salaryModel)
+    .set({
+      isSalaryGiven: true,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(salaryModel.salaryId, salaryId),
+        eq(salaryModel.tenantId, tenantId)
+      )
+    )
+
+  return {
+    message: 'Salary marked as given successfully.',
+  }
+}
+
+export const makeSalaryPermanent = async (
+  salaryId: number,
+  tenantId: number
+) => {
+  const salary = await db.query.salaryModel.findFirst({
+    where: and(
+      eq(salaryModel.salaryId, salaryId),
+      eq(salaryModel.tenantId, tenantId)
+    ),
+  })
+
+  if (!salary) {
+    throw new Error('Salary record not found.')
+  }
+
+  if (!salary.isDraft) {
+    throw new Error('Salary is already permanent.')
+  }
+
+  await db
+    .update(salaryModel)
+    .set({
+      isDraft: false,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(salaryModel.salaryId, salaryId),
+        eq(salaryModel.tenantId, tenantId)
+      )
+    )
+
+  return {
+    message: 'Salary made permanent successfully.',
+  }
 }
