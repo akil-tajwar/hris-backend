@@ -6,6 +6,7 @@ import {
   getLeaveBalanceSummaryReport,
   leaveLedgerReport,
   shiftReport,
+  getIndividualAttendanceSummary,
 } from '../services/reports.service'
 import {
   employeeActivitiesReport,
@@ -318,6 +319,45 @@ export const shiftReportController = async (
     res.status(500).json({
       success: false,
       message: 'Failed to fetch shift report',
+    })
+  }
+}
+
+export const getIndividualAttendanceSummaryController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    requirePermission(req, 'view_report')
+
+    const tenantId = req.user?.tenantId
+
+    if (!tenantId) {
+      res.status(400).json({
+        message: 'Tenant not found',
+      })
+      return
+    }
+
+    const { fromDate, toDate } = req.query
+
+    if (!fromDate || !toDate) {
+      res.status(400).json({
+        message: 'fromDate and toDate are required',
+      })
+    }
+
+    const data = await getIndividualAttendanceSummary(
+      tenantId,
+      String(fromDate),
+      String(toDate)
+    )
+
+    res.json(data)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({
+      message: 'Internal Server Error',
     })
   }
 }

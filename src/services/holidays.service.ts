@@ -38,6 +38,7 @@ export const createHolidayRange = async (rangeData: {
   isRecurring?: boolean
   isOptional?: boolean
   description?: string
+  tenantId: number
 }) => {
   const {
     calendarId,
@@ -48,6 +49,7 @@ export const createHolidayRange = async (rangeData: {
     isRecurring = false,
     isOptional = false,
     description,
+    tenantId,
   } = rangeData
 
   // ensure calendar exists
@@ -92,6 +94,7 @@ export const createHolidayRange = async (rangeData: {
       isRecurring,
       isOptional,
       description,
+      tenantId
     })
 
     current.setDate(current.getDate() + 1)
