@@ -23,12 +23,14 @@ export const createSalaryStructureController = async (
         ...req.body.salaryStructureMaster,
         tenantId,
       },
-      salaryStructureDetails: req.body.salaryStructureDetails.map((detail: any) => ({
-        ...detail,
-        tenantId,
-      })),
+      salaryStructureDetails: req.body.salaryStructureDetails.map(
+        (detail: any) => ({
+          ...detail,
+          tenantId,
+        })
+      ),
     }
-    console.log("🚀 ~ createSalaryStructureController ~ data:", data)
+    console.log('🚀 ~ createSalaryStructureController ~ data:', data)
 
     const result = await createSalaryStructureService(data)
 
@@ -49,24 +51,25 @@ export const getAllSalaryStructuresController = async (
   res: Response
 ) => {
   try {
-    requirePermission(req, 'view_salary_structure');
+    requirePermission(req, 'view_salary_structure')
 
     const tenantId = req.user?.tenantId
     if (tenantId === undefined) {
       throw new Error('Tenant ID is required')
     }
 
-    const result = await getAllSalaryStructuresService(tenantId);
+    const result = await getAllSalaryStructuresService(tenantId)
 
-    res.status(200).json(result);
+    res.status(200).json(result)
   } catch (error: any) {
     // Extract the message string so JSON serialization doesn't wipe it out
     res.status(500).json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'An unknown error occurred',
-    });
+      message:
+        error instanceof Error ? error.message : 'An unknown error occurred',
+    })
   }
-};
+}
 
 export const getSalaryStructureByIdController = async (
   req: Request,
@@ -115,16 +118,15 @@ export const updateSalaryStructureController = async (
     const { id } = req.params
 
     await updateSalaryStructureService(Number(id), req.body)
+    console.log('🚀 ~ updateSalaryStructureController ~ req.body:', req.body)
 
     res.status(200).json({
       status: 'success',
       message: 'Salary structure updated successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error,
-    })
+    console.error('updateSalaryStructureController:', error)
+    throw error
   }
 }
 

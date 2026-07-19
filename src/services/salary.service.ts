@@ -30,7 +30,7 @@ export const createSalaries = async (
 
       if (existingSalary) {
         throw new Error(
-          `Salary already exists for employee ID ${salary.employeeId} for ${salary.salaryMonth} ${salary.salaryYear}`
+          `Salary already exists of ${employeeModel.empFullName} for ${salary.salaryMonth} ${salary.salaryYear}`
         )
       }
     }
@@ -38,34 +38,11 @@ export const createSalaries = async (
     // Prepare salaries with timestamps as Date objects
     const salariesWithTimestamps = salariesData.map((salary) => ({
       ...salary,
-      createdAt: new Date(), // Use Date object instead of timestamp
+      createdAt: new Date(),
     }))
 
     // Insert salaries
     const result = await db.insert(salaryModel).values(salariesWithTimestamps)
-
-    // Update employee other salary components
-    for (const salary of salariesData) {
-      await db
-        .update(employeeSalaryComponentsModel)
-        .set({
-          isSalaryGiven: true,
-          updatedAt: new Date(), // Use Date object
-        })
-        .where(
-          and(
-            eq(
-              employeeSalaryComponentsModel.employeeId,
-              salary.employeeId
-            ),
-            eq(
-              employeeSalaryComponentsModel.salaryMonth,
-              salary.salaryMonth
-            ),
-            eq(employeeSalaryComponentsModel.salaryYear, salary.salaryYear)
-          )
-        )
-    }
 
     // Return inserted data with generated IDs
     return salariesWithTimestamps.map((salary, index) => ({

@@ -1457,6 +1457,8 @@ export const salaryModel = mysqlTable('salary', {
   grossSalary: double('gross_salary').notNull(),
   netSalary: double('net_salary').notNull(),
   doj: text('doj').notNull(),
+  isDraft: boolean().notNull().default(true),
+  isSalaryGiven: boolean().notNull().default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
