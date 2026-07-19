@@ -1347,28 +1347,31 @@ export const salaryStructureDetailsModel = mysqlTable(
   }
 )
 
-//for storing an employees salary data for a particular month and year based on the salary components assigned to them either through salary structure or individually
-export const employeeSalaryComponentsModel = mysqlTable(
-  'employee_salary_components',
+//for storing an employee's salary component data for a particular month and year
+export const employeeSalaryDetailsModel = mysqlTable(
+  'employee_salary_details',
   {
-    employeeSalaryComponentId: int('employee_salary_component_id')
+    employeeSalaryDetailsId: int('employee_salary_details_id')
       .primaryKey()
       .autoincrement(),
     employeeId: int('employee_id')
       .notNull()
       .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-    salaryComponentId: int('salary_component_id')
+    salaryStructureMasterId: int('salary_structure_master_id')
       .notNull()
-      .references(() => salaryComponentsModel.salaryComponentId, {
+      .references(() => salaryStructureMasterModel.salaryStructureMasterId, {
         onDelete: 'restrict',
       }),
-    employeeLoneId: int('employee_lone_id').references(
-      () => employeeLoneModel.employeeLoneId,
-      { onDelete: 'restrict' }
-    ),
-    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-      onDelete: 'restrict',
-    }),
+    salaryStructureDetailId: int('salary_structure_detail_id')
+      .notNull()
+      .references(() => salaryStructureDetailsModel.salaryStructureDetailId, {
+        onDelete: 'restrict',
+      }),
+    tenantId: int('tenant_id')
+      .notNull()
+      .references(() => tenantModel.tenantId, {
+        onDelete: 'restrict',
+      }),
     salaryMonth: mysqlEnum('salary_month', [
       'January',
       'February',
@@ -1385,36 +1388,8 @@ export const employeeSalaryComponentsModel = mysqlTable(
     ]).notNull(),
     salaryYear: int('salary_year').notNull(),
     amount: double('amount').notNull(),
-    isAuthorized: boolean('is_authorized').notNull().default(false),
-    isSkipped: boolean('is_skipped').notNull().default(false),
+    isDraft: boolean('is_draft').notNull().default(true),
     isSalaryGiven: boolean('is_salary_given').notNull().default(false),
-    createdBy: int('created_by').notNull(),
-    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-    updatedBy: int('updated_by'),
-    updatedAt: timestamp('updated_at').default(
-      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-    ),
-  }
-)
-
-//for assigning salary structure to an employee
-export const employeeSalaryStructureModel = mysqlTable(
-  'employee_salary_structure',
-  {
-    employeeSalaryStructureId: int('employee_salary_structure_id')
-      .primaryKey()
-      .autoincrement(),
-    employeeId: int('employee_id')
-      .notNull()
-      .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-    salaryStructureMasterId: int('salary_structure_master_id')
-      .notNull()
-      .references(() => salaryStructureMasterModel.salaryStructureMasterId, {
-        onDelete: 'restrict',
-      }),
-    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-      onDelete: 'restrict',
-    }),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
@@ -1457,29 +1432,8 @@ export const salaryModel = mysqlTable('salary', {
   grossSalary: double('gross_salary').notNull(),
   netSalary: double('net_salary').notNull(),
   doj: text('doj').notNull(),
-  isDraft: boolean().notNull().default(true),
-  isSalaryGiven: boolean().notNull().default(false),
-  createdBy: int('created_by').notNull(),
-  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: int('updated_by'),
-  updatedAt: timestamp('updated_at').default(
-    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-  ),
-})
-
-export const employeeLoneModel = mysqlTable('employee_lones', {
-  employeeLoneId: int('employee_lone_id').primaryKey().autoincrement(),
-  employeeLoneName: text('employee_lone_name').notNull(),
-  employeeId: int('employee_id')
-    .notNull()
-    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
-  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-    onDelete: 'restrict',
-  }),
-  amount: double('amount').notNull(),
-  perMonth: int('per_month').notNull(),
-  loneDate: date('lone_date').notNull(),
-  description: text('description'),
+  isDraft: boolean('is_draft').notNull().default(true),
+  isSalaryGiven: boolean('is_salary_given').notNull().default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
@@ -1669,8 +1623,8 @@ export const attendanceDailyAudit = mysqlTable('attendance_daily_audit', {
 export const attendanceDailyApply = mysqlTable('attendance_daily_apply', {
   id: int('id').autoincrement().primaryKey(),
   employeeId: int('employee_id')
-  .notNull()
-  .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+    .notNull()
+    .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
   attendanceDailyId: int('attendance_daily_id')
     .notNull()
     .references(() => attendanceDaily.id),
@@ -1939,19 +1893,19 @@ export const employeeAttendanceRelations = relations(
 )
 
 export const employeeSalaryComponentsRelations = relations(
-  employeeSalaryComponentsModel,
+  employeeSalaryDetailsModel,
   ({ one }) => ({
     employee: one(employeeModel, {
-      fields: [employeeSalaryComponentsModel.employeeId],
+      fields: [employeeSalaryDetailsModel.employeeId],
       references: [employeeModel.employeeId],
     }),
-    salaryComponent: one(salaryComponentsModel, {
-      fields: [employeeSalaryComponentsModel.salaryComponentId],
-      references: [salaryComponentsModel.salaryComponentId],
+    salaryStructureMaster: one(salaryStructureMasterModel, {
+      fields: [employeeSalaryDetailsModel.salaryStructureMasterId],
+      references: [salaryStructureMasterModel.salaryStructureMasterId],
     }),
-    employeeLone: one(employeeLoneModel, {
-      fields: [employeeSalaryComponentsModel.employeeLoneId],
-      references: [employeeLoneModel.employeeLoneId],
+    salaryStructureDetails: one(salaryStructureDetailsModel, {
+      fields: [employeeSalaryDetailsModel.salaryStructureDetailId],
+      references: [salaryStructureDetailsModel.salaryStructureDetailId],
     }),
   })
 )
@@ -1971,13 +1925,6 @@ export const salaryRelations = relations(salaryModel, ({ one }) => ({
   }),
 }))
 
-export const loneRelations = relations(employeeLoneModel, ({ one }) => ({
-  employee: one(employeeModel, {
-    fields: [employeeLoneModel.employeeId],
-    references: [employeeModel.employeeId],
-  }),
-}))
-
 export const salaryStructureDetailsRelations = relations(
   salaryStructureDetailsModel,
   ({ one }) => ({
@@ -1988,20 +1935,6 @@ export const salaryStructureDetailsRelations = relations(
     salaryComponent: one(salaryComponentsModel, {
       fields: [salaryStructureDetailsModel.salaryComponentId],
       references: [salaryComponentsModel.salaryComponentId],
-    }),
-  })
-)
-
-export const employeeSalaryStructureRelations = relations(
-  employeeSalaryStructureModel,
-  ({ one }) => ({
-    employee: one(employeeModel, {
-      fields: [employeeSalaryStructureModel.employeeId],
-      references: [employeeModel.employeeId],
-    }),
-    salaryStructureMaster: one(salaryStructureMasterModel, {
-      fields: [employeeSalaryStructureModel.salaryStructureMasterId],
-      references: [salaryStructureMasterModel.salaryStructureMasterId],
     }),
   })
 )
@@ -2225,13 +2158,11 @@ export type NewEmployeeAttendance = typeof employeeAttendanceModel.$inferInsert
 export type SalaryComponent = typeof salaryComponentsModel.$inferSelect
 export type NewSalaryComponent = typeof salaryComponentsModel.$inferInsert
 export type EmployeeSalaryComponent =
-  typeof employeeSalaryComponentsModel.$inferSelect
+  typeof employeeSalaryDetailsModel.$inferSelect
 export type NewEmployeeSalaryComponent =
-  typeof employeeSalaryComponentsModel.$inferInsert
+  typeof employeeSalaryDetailsModel.$inferInsert
 export type Salary = typeof salaryModel.$inferSelect
 export type NewSalary = typeof salaryModel.$inferInsert
-export type Lone = typeof employeeLoneModel.$inferSelect
-export type NewLone = typeof employeeLoneModel.$inferInsert
 export type SalaryStructureMaster =
   typeof salaryStructureMasterModel.$inferSelect
 export type NewSalaryStructureMaster =
@@ -2240,10 +2171,6 @@ export type SalaryStructureDetails =
   typeof salaryStructureDetailsModel.$inferSelect
 export type NewSalaryStructureDetails =
   typeof salaryStructureDetailsModel.$inferInsert
-export type EmployeeSalaryStructure =
-  typeof employeeSalaryStructureModel.$inferSelect
-export type NewEmployeeSalaryStructure =
-  typeof employeeSalaryStructureModel.$inferInsert
 export type AssetCategory = typeof assetCategoryModel.$inferSelect
 export type NewAssetCategory = typeof assetCategoryModel.$inferInsert
 export type Assets = typeof assetsModel.$inferSelect

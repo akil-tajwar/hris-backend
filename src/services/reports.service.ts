@@ -20,7 +20,7 @@ import {
   employeeLifecycleEventsModel,
   employeeLoneModel,
   employeeModel,
-  employeeSalaryComponentsModel,
+  employeeSalaryDetailsModel,
   employmentTypeModel,
   salaryComponentsModel,
   salaryModel,
@@ -273,43 +273,43 @@ export const salaryReport = async (
 
   const salaryComponents = await db
     .select({
-      employeeSalaryComponentId:
-        employeeSalaryComponentsModel.employeeSalaryComponentId,
-      employeeId: employeeSalaryComponentsModel.employeeId,
+      employeeSalaryDetailsId:
+        employeeSalaryDetailsModel.employeeSalaryDetailsId,
+      employeeId: employeeSalaryDetailsModel.employeeId,
       empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
-      salaryComponentId: employeeSalaryComponentsModel.salaryComponentId,
+      salaryComponentId: employeeSalaryDetailsModel.salaryComponentId,
       componentName: salaryComponentsModel.componentName,
       componentType: salaryComponentsModel.componentType,
-      amount: employeeSalaryComponentsModel.amount,
-      salaryMonth: employeeSalaryComponentsModel.salaryMonth,
-      salaryYear: employeeSalaryComponentsModel.salaryYear,
-      createdBy: employeeSalaryComponentsModel.createdBy,
-      createdAt: employeeSalaryComponentsModel.createdAt,
-      updatedBy: employeeSalaryComponentsModel.updatedBy,
-      updatedAt: employeeSalaryComponentsModel.updatedAt,
+      amount: employeeSalaryDetailsModel.amount,
+      salaryMonth: employeeSalaryDetailsModel.salaryMonth,
+      salaryYear: employeeSalaryDetailsModel.salaryYear,
+      createdBy: employeeSalaryDetailsModel.createdBy,
+      createdAt: employeeSalaryDetailsModel.createdAt,
+      updatedBy: employeeSalaryDetailsModel.updatedBy,
+      updatedAt: employeeSalaryDetailsModel.updatedAt,
     })
-    .from(employeeSalaryComponentsModel)
+    .from(employeeSalaryDetailsModel)
     .innerJoin(
       salaryComponentsModel,
       eq(
-        employeeSalaryComponentsModel.salaryComponentId,
+        employeeSalaryDetailsModel.salaryComponentId,
         salaryComponentsModel.salaryComponentId
       )
     )
     .innerJoin(
       employeeModel,
-      eq(employeeSalaryComponentsModel.employeeId, employeeModel.employeeId)
+      eq(employeeSalaryDetailsModel.employeeId, employeeModel.employeeId)
     )
     .where(
       and(
-        inArray(employeeSalaryComponentsModel.employeeId, employeeIds),
-        eq(employeeSalaryComponentsModel.salaryMonth, salaryMonth),
-        eq(employeeSalaryComponentsModel.salaryYear, salaryYear)
+        inArray(employeeSalaryDetailsModel.employeeId, employeeIds),
+        eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
+        eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
       )
     )
     .orderBy(
-      employeeSalaryComponentsModel.employeeId,
+      employeeSalaryDetailsModel.employeeId,
       salaryComponentsModel.componentType,
       salaryComponentsModel.componentName
     )
