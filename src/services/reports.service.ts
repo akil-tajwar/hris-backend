@@ -18,7 +18,6 @@ import {
   divisionModel,
   employeeAttendanceModel,
   employeeLifecycleEventsModel,
-  employeeLoneModel,
   employeeModel,
   employeeSalaryDetailsModel,
   employmentTypeModel,
@@ -278,7 +277,7 @@ export const salaryReport = async (
       employeeId: employeeSalaryDetailsModel.employeeId,
       empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
-      salaryComponentId: employeeSalaryDetailsModel.salaryComponentId,
+      salaryStructureDetailId: employeeSalaryDetailsModel.salaryStructureDetailId,
       componentName: salaryComponentsModel.componentName,
       componentType: salaryComponentsModel.componentType,
       amount: employeeSalaryDetailsModel.amount,
@@ -293,7 +292,7 @@ export const salaryReport = async (
     .innerJoin(
       salaryComponentsModel,
       eq(
-        employeeSalaryDetailsModel.salaryComponentId,
+        employeeSalaryDetailsModel.salaryStructureDetailId,
         salaryComponentsModel.salaryComponentId
       )
     )
@@ -340,7 +339,7 @@ export const salaryReport = async (
     employeeId: component.employeeId,
     empCode: component.empCode,
     employeeName: component.employeeName,
-    salaryComponentId: component.salaryComponentId,
+    salaryStructureDetailId: component.salaryStructureDetailId,
     componentName: component.componentName,
     componentType: component.componentType as 'Allowance' | 'Deduction',
     salaryMonth: component.salaryMonth,
