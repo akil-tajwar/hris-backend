@@ -30,6 +30,7 @@ import {
   employeeLeaveAssignmentModel,
   shiftModel,
   employeeShiftAllocations,
+  salaryStructureDetailsModel,
 } from '../schemas'
 
 export const employeeActivitiesReport = async (
@@ -215,13 +216,13 @@ type SalaryMonth =
   | 'December'
 
 export const salaryReport = async (
-  salaryMonth: SalaryMonth,
-  salaryYear: number,
-  tenantId: number
+  tenantId: number,
+  salaryMonth: string,
+  salaryYear: number
 ) => {
-  // Get main salary data with employee, department, and designation details
-  const salaryData = await db
+  const rows = await db
     .select({
+      // Salary
       salaryId: salaryModel.salaryId,
       salaryMonth: salaryModel.salaryMonth,
       salaryYear: salaryModel.salaryYear,
@@ -229,134 +230,117 @@ export const salaryReport = async (
       grossSalary: salaryModel.grossSalary,
       netSalary: salaryModel.netSalary,
       doj: salaryModel.doj,
-      employeeId: salaryModel.employeeId,
+      createdAt: salaryModel.createdAt,
+
+      // Employee
+      employeeId: employeeModel.employeeId,
       empCode: employeeModel.empCode,
       employeeName: employeeModel.empFullName,
-      departmentId: salaryModel.departmentId,
+
+      // Department
+      departmentId: departmentModel.departmentId,
       departmentName: departmentModel.departmentName,
-      designationId: salaryModel.designationId,
+
+      // Designation
+      designationId: designationModel.designationId,
       designationName: designationModel.designationName,
-      createdBy: salaryModel.createdBy,
-      createdAt: salaryModel.createdAt,
-      updatedBy: salaryModel.updatedBy,
-      updatedAt: salaryModel.updatedAt,
+
+      // Employee Salary Details
+      employeeSalaryDetailsId:
+        employeeSalaryDetailsModel.employeeSalaryDetailsId,
+      amount: employeeSalaryDetailsModel.amount,
+      isDraft: salaryModel.isDraft,
+      isSalaryGiven: salaryModel.isSalaryGiven,
+
+      // Salary Component
+      salaryComponentId: salaryComponentsModel.salaryComponentId,
+      componentName: salaryComponentsModel.componentName,
+      componentType: salaryComponentsModel.componentType,
     })
     .from(salaryModel)
-    .innerJoin(
-      employeeModel,
-      eq(salaryModel.employeeId, employeeModel.employeeId)
-    )
-    .innerJoin(
-      departmentModel,
-      eq(salaryModel.departmentId, departmentModel.departmentId)
-    )
-    .innerJoin(
-      designationModel,
-      eq(salaryModel.designationId, designationModel.designationId)
-    )
     .where(
       and(
         eq(salaryModel.tenantId, tenantId),
-        eq(salaryModel.salaryMonth, salaryMonth),
+        eq(salaryModel.salaryMonth, salaryMonth as SalaryMonth),
         eq(salaryModel.salaryYear, salaryYear)
       )
     )
-    .orderBy(salaryModel.employeeId)
-
-  if (salaryData.length === 0) {
-    return null
-  }
-
-  // Get all other salary components for the employees in this salary period
-  const employeeIds = salaryData.map((s) => s.employeeId)
-
-  const salaryComponents = await db
-    .select({
-      employeeSalaryDetailsId:
-        employeeSalaryDetailsModel.employeeSalaryDetailsId,
-      employeeId: employeeSalaryDetailsModel.employeeId,
-      empCode: employeeModel.empCode,
-      employeeName: employeeModel.empFullName,
-      salaryStructureDetailId: employeeSalaryDetailsModel.salaryStructureDetailId,
-      componentName: salaryComponentsModel.componentName,
-      componentType: salaryComponentsModel.componentType,
-      amount: employeeSalaryDetailsModel.amount,
-      salaryMonth: employeeSalaryDetailsModel.salaryMonth,
-      salaryYear: employeeSalaryDetailsModel.salaryYear,
-      createdBy: employeeSalaryDetailsModel.createdBy,
-      createdAt: employeeSalaryDetailsModel.createdAt,
-      updatedBy: employeeSalaryDetailsModel.updatedBy,
-      updatedAt: employeeSalaryDetailsModel.updatedAt,
-    })
-    .from(employeeSalaryDetailsModel)
-    .innerJoin(
-      salaryComponentsModel,
+    .leftJoin(
+      employeeModel,
+      eq(salaryModel.employeeId, employeeModel.employeeId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(salaryModel.departmentId, departmentModel.departmentId)
+    )
+    .leftJoin(
+      designationModel,
+      eq(salaryModel.designationId, designationModel.designationId)
+    )
+    .leftJoin(
+      employeeSalaryDetailsModel,
+      and(
+        eq(salaryModel.employeeId, employeeSalaryDetailsModel.employeeId),
+        eq(salaryModel.salaryMonth, employeeSalaryDetailsModel.salaryMonth),
+        eq(salaryModel.salaryYear, employeeSalaryDetailsModel.salaryYear),
+        eq(salaryModel.tenantId, employeeSalaryDetailsModel.tenantId)
+      )
+    )
+    .leftJoin(
+      salaryStructureDetailsModel,
       eq(
         employeeSalaryDetailsModel.salaryStructureDetailId,
+        salaryStructureDetailsModel.salaryStructureDetailId
+      )
+    )
+    .leftJoin(
+      salaryComponentsModel,
+      eq(
+        salaryStructureDetailsModel.salaryComponentId,
         salaryComponentsModel.salaryComponentId
       )
     )
-    .innerJoin(
-      employeeModel,
-      eq(employeeSalaryDetailsModel.employeeId, employeeModel.employeeId)
-    )
-    .where(
-      and(
-        inArray(employeeSalaryDetailsModel.employeeId, employeeIds),
-        eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
-        eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
-      )
-    )
-    .orderBy(
-      employeeSalaryDetailsModel.employeeId,
-      salaryComponentsModel.componentType,
-      salaryComponentsModel.componentName
-    )
 
-  // Transform salary data to match the schema
-  const transformedSalary = salaryData.map((salary) => ({
-    salaryMonth: salary.salaryMonth,
-    salaryYear: salary.salaryYear,
-    employeeId: salary.employeeId,
-    empCode: salary.empCode,
-    employeeName: salary.employeeName,
-    departmentId: salary.departmentId,
-    departmentName: salary.departmentName,
-    designationId: salary.designationId,
-    designationName: salary.designationName,
-    basicSalary: salary.basicSalary,
-    grossSalary: salary.grossSalary,
-    netSalary: salary.netSalary,
-    doj: salary.doj,
-    createdBy: salary.createdBy,
-    createdAt: salary.createdAt,
-    updatedBy: salary.updatedBy,
-    updatedAt: salary.updatedAt,
-  }))
+  const salaryMap = new Map<number, any>()
 
-  // Transform other salary components
-  const transformedOtherSalary = salaryComponents.map((component) => ({
-    employeeId: component.employeeId,
-    empCode: component.empCode,
-    employeeName: component.employeeName,
-    salaryStructureDetailId: component.salaryStructureDetailId,
-    componentName: component.componentName,
-    componentType: component.componentType as 'Allowance' | 'Deduction',
-    salaryMonth: component.salaryMonth,
-    salaryYear: component.salaryYear,
-    amount: component.amount,
-    createdBy: component.createdBy,
-    createdAt: component.createdAt,
-    updatedBy: component.updatedBy,
-    updatedAt: component.updatedAt,
-  }))
+  for (const row of rows) {
+    if (!salaryMap.has(row.salaryId)) {
+      salaryMap.set(row.salaryId, {
+        salary: {
+          salaryId: row.salaryId,
+          salaryMonth: row.salaryMonth,
+          salaryYear: row.salaryYear,
+          basicSalary: row.basicSalary,
+          grossSalary: row.grossSalary,
+          netSalary: row.netSalary,
+          doj: row.doj,
+          employeeId: row.employeeId,
+          empCode: row.empCode,
+          employeeName: row.employeeName,
+          departmentId: row.departmentId,
+          departmentName: row.departmentName,
+          designationId: row.designationId,
+          designationName: row.designationName,
+          isDraft: row.isDraft,
+          isSalaryGiven: row.isSalaryGiven,
+          createdAt: row.createdAt,
+        },
+        otherSalary: [],
+      })
+    }
 
-  // Return in the format expected by the schema
-  return {
-    salary:
-      transformedSalary.length === 1 ? transformedSalary[0] : transformedSalary,
-    otherSalary: transformedOtherSalary,
+    if (row.employeeSalaryDetailsId) {
+      salaryMap.get(row.salaryId).otherSalary.push({
+        employeeSalaryDetailsId: row.employeeSalaryDetailsId,
+        salaryComponentId: row.salaryComponentId,
+        componentName: row.componentName,
+        componentType: row.componentType,
+        amount: row.amount,
+      })
+    }
   }
+
+  return Array.from(salaryMap.values())
 }
 
 // ─── Report 1: Daily Attendance ───────────────────────────────
