@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { requirePermission } from '../services/utils/jwt.utils'
 import {
   dailyAttendanceReport,
@@ -7,11 +7,9 @@ import {
   leaveLedgerReport,
   shiftReport,
   getIndividualAttendanceSummary,
-} from '../services/reports.service'
-import {
+  salaryReport,
   employeeActivitiesReport,
   employeeAttendanceReport,
-  salaryReport,
 } from '../services/reports.service'
 
 export const employeeActivitiesReportController = async (
@@ -97,75 +95,36 @@ type SalaryMonth =
   | 'November'
   | 'December'
 
-const validMonths: SalaryMonth[] = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
-
-export const salaryReportController = async (req: Request, res: Response) => {
+export const salaryReportController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    requirePermission(req, 'view_salary_report')
-    const { salaryMonth, salaryYear } = req.query
+    requirePermission(req, 'view_report')
+
     const tenantId = req.user?.tenantId
     if (tenantId === undefined) {
       throw new Error('Tenant ID is required')
     }
 
-    // Validate required query parameters
+    const { salaryMonth, salaryYear } = req.query
+
     if (!salaryMonth || !salaryYear) {
       res.status(400).json({
-        success: false,
         message: 'salaryMonth and salaryYear are required',
       })
     }
 
-    // Validate salaryMonth is a string and is a valid month
-    if (typeof salaryMonth !== 'string') {
-      res.status(400).json({
-        success: false,
-        message: 'salaryMonth must be a string',
-      })
-    }
+    const data = await salaryReport(
+      tenantId,
+      String(salaryMonth),
+      Number(salaryYear)
+    )
 
-    // Check if salaryMonth is a valid month name
-    if (!validMonths.includes(salaryMonth as SalaryMonth)) {
-      res.status(400).json({
-        success: false,
-        message: `Invalid salaryMonth. Must be one of: ${validMonths.join(', ')}`,
-      })
-    }
-
-    // Validate salaryYear
-    const year = Number(salaryYear)
-    if (isNaN(year) || !Number.isInteger(year) || year < 2000 || year > 2100) {
-      res.status(400).json({
-        success: false,
-        message: 'salaryYear must be a valid year between 2000 and 2100',
-      })
-    }
-
-    const data = await salaryReport(salaryMonth as SalaryMonth, year, tenantId)
-
-    res.status(200).json({
-      success: true,
-      data,
-    })
-  } catch (error) {
-    console.error('Salary report error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch salary report',
-    })
+    res.json(data)
+  } catch (err) {
+    next(err)
   }
 }
 
