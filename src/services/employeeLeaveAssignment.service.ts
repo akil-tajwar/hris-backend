@@ -29,106 +29,114 @@ function calculateAllocatedLeaves(
 }
 
 export const createEmployeeLeaveAssignmentService = async (
-  data: NewEmployeeLeaveAssignment
+  data: NewEmployeeLeaveAssignment[]
 ) => {
   return await db.transaction(async (tx) => {
-    // 1. Create assignment
-    const [assignment] = await tx
-      .insert(employeeLeaveAssignmentModel)
-      .values({
-        employeeId: data.employeeId,
-        leavePolicyMasterId: data.leavePolicyMasterId,
-        effectiveFrom: toDate(data.effectiveFrom),
-        effectiveTo: data.effectiveTo ? toDate(data.effectiveTo) : null,
-        active: data.active,
-        createdBy: data.createdBy,
-      })
-      .$returningId()
+    const results = []
 
-    // 2. Get employee
-    const [employee] = await tx
-      .select({ doj: employeeModel.doj })
-      .from(employeeModel)
-      .where(eq(employeeModel.employeeId, data.employeeId))
+    for (const item of data) {
+      // 1. Create assignment
+      const [assignment] = await tx
+        .insert(employeeLeaveAssignmentModel)
+        .values({
+          employeeId: item.employeeId,
+          leavePolicyMasterId: item.leavePolicyMasterId,
+          effectiveFrom: toDate(item.effectiveFrom),
+          effectiveTo: item.effectiveTo ? toDate(item.effectiveTo) : null,
+          active: item.active,
+          createdBy: item.createdBy,
+          tenantId: item.tenantId,
+        })
+        .$returningId()
 
-    if (!employee) {
-      throw new Error('Employee not found')
-    }
+      // 2. Get employee
+      const [employee] = await tx
+        .select({
+          doj: employeeModel.doj,
+        })
+        .from(employeeModel)
+        .where(eq(employeeModel.employeeId, item.employeeId))
 
-    const doj = new Date(employee.doj)
-    const effectiveFrom = new Date(data.effectiveFrom)
-    const year = effectiveFrom.getFullYear()
-
-    // 3. Get policy details
-    const policyDetails = await tx
-      .select({
-        leaveTypeId: leavePolicyDetailsModel.leaveTypeId,
-        maxDaysPerYear: leaveTypeModel.maxDaysPerYear,
-      })
-      .from(leavePolicyDetailsModel)
-      .innerJoin(
-        leaveTypeModel,
-        eq(leavePolicyDetailsModel.leaveTypeId, leaveTypeModel.leaveTypeId)
-      )
-      .where(
-        eq(
-          leavePolicyDetailsModel.leavePolicyMasterId,
-          data.leavePolicyMasterId
-        )
-      )
-
-    if (policyDetails.length === 0) {
-      throw new Error('No leave policy details found')
-    }
-
-    // 4. Build balance rows with duplicate check
-    const balanceRows = []
-
-    for (const detail of policyDetails) {
-      // 🔥 check if balance already exists
-      const [existing] = await tx
-        .select()
-        .from(employeeLeaveBalanceModel)
-        .where(
-          and(
-            eq(employeeLeaveBalanceModel.employeeId, data.employeeId),
-            eq(employeeLeaveBalanceModel.leaveTypeId, detail.leaveTypeId),
-            eq(employeeLeaveBalanceModel.year, year)
-          )
-        )
-        .limit(1)
-
-      if (existing) {
-        continue // skip duplicate
+      if (!employee) {
+        throw new Error(`Employee ${item.employeeId} not found`)
       }
 
-      const earnedDays = calculateAllocatedLeaves(
-        detail.maxDaysPerYear,
-        doj,
-        effectiveFrom
-      )
+      const doj = new Date(employee.doj)
+      const effectiveFrom = new Date(item.effectiveFrom)
+      const year = effectiveFrom.getFullYear()
 
-      balanceRows.push({
-        employeeId: data.employeeId,
-        leaveTypeId: detail.leaveTypeId,
-        employeeLeaveAssignmentId: assignment.employeeLeaveAssignmentId, // ✅ FIXED
-        year,
-        earnedDays,
-        usedDays: 0,
-        remainingDays: earnedDays,
+      // 3. Get policy details
+      const policyDetails = await tx
+        .select({
+          leaveTypeId: leavePolicyDetailsModel.leaveTypeId,
+          maxDaysPerYear: leaveTypeModel.maxDaysPerYear,
+        })
+        .from(leavePolicyDetailsModel)
+        .innerJoin(
+          leaveTypeModel,
+          eq(leavePolicyDetailsModel.leaveTypeId, leaveTypeModel.leaveTypeId)
+        )
+        .where(
+          eq(
+            leavePolicyDetailsModel.leavePolicyMasterId,
+            item.leavePolicyMasterId
+          )
+        )
+
+      if (policyDetails.length === 0) {
+        throw new Error(
+          `No leave policy details found for policy ${item.leavePolicyMasterId}`
+        )
+      }
+
+      // 4. Build balance rows
+      const balanceRows = []
+
+      for (const detail of policyDetails) {
+        const [existing] = await tx
+          .select()
+          .from(employeeLeaveBalanceModel)
+          .where(
+            and(
+              eq(employeeLeaveBalanceModel.employeeId, item.employeeId),
+              eq(employeeLeaveBalanceModel.leaveTypeId, detail.leaveTypeId),
+              eq(employeeLeaveBalanceModel.year, year)
+            )
+          )
+          .limit(1)
+
+        if (existing) continue
+
+        const earnedDays = calculateAllocatedLeaves(
+          detail.maxDaysPerYear,
+          doj,
+          effectiveFrom
+        )
+
+        balanceRows.push({
+          employeeId: item.employeeId,
+          leaveTypeId: detail.leaveTypeId,
+          employeeLeaveAssignmentId: assignment.employeeLeaveAssignmentId,
+          year,
+          earnedDays,
+          usedDays: 0,
+          remainingDays: earnedDays,
+          tenantId: item.tenantId,
+        })
+      }
+
+      if (balanceRows.length > 0) {
+        await tx.insert(employeeLeaveBalanceModel).values(balanceRows)
+      }
+
+      results.push({
+        assignmentId: assignment.employeeLeaveAssignmentId,
+        employeeId: item.employeeId,
+        balancesCreated: balanceRows.length,
       })
     }
 
-    // 5. Insert only if new rows exist
-    if (balanceRows.length > 0) {
-      await tx.insert(employeeLeaveBalanceModel).values(balanceRows)
-    }
-
-    return {
-      success: true,
-      assignmentId: assignment.employeeLeaveAssignmentId,
-      balancesCreated: balanceRows.length,
-    }
+    return results
   })
 }
 
@@ -183,7 +191,9 @@ export const updateEmployeeLeaveAssignmentService = async (
   }
 }
 
-export const getAllEmployeeLeaveAssignmentsService = async (tenantId: number) => {
+export const getAllEmployeeLeaveAssignmentsService = async (
+  tenantId: number
+) => {
   try {
     const result = await db
       .select({

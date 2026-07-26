@@ -18,10 +18,12 @@ export const createEmployeeLeaveAssignmentController = async (
     requirePermission(req, 'create_employee_leave_assignment')
 
     const tenantId = req.user?.tenantId
-    const data = {
-      ...req.body,
+
+    const data = req.body.map((item: any) => ({
+      ...item,
       tenantId,
-    }
+    }))
+
     const result = await createEmployeeLeaveAssignmentService(data)
 
     res.status(201).json({
