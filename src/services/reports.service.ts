@@ -440,19 +440,14 @@ export const getLeaveBalanceSummaryReport = async (tenantId: number) => {
       .select({
         employeeLeaveBalanceId:
           employeeLeaveBalanceModel.employeeLeaveBalanceId,
-
         employeeId: employeeModel.employeeId,
         empFullName: employeeModel.empFullName,
         empCode: employeeModel.empCode,
-
         designationName: designationModel.designationName,
-
         departmentName: departmentModel.departmentName,
-
+        leaveTypeId: employeeLeaveBalanceModel.leaveTypeId,
         leaveTypeName: leaveTypeModel.name,
-
         usedDays: employeeLeaveBalanceModel.usedDays,
-
         remainingDays: employeeLeaveBalanceModel.remainingDays,
       })
       .from(employeeLeaveBalanceModel)
@@ -497,6 +492,7 @@ export const getLeaveBalanceSummaryReport = async (tenantId: number) => {
       }
 
       acc[key].leaves.push({
+        leaveTypeId: row.leaveTypeId,
         leaveTypeName: row.leaveTypeName,
         usedDays: row.usedDays,
         remainingDays: row.remainingDays,
