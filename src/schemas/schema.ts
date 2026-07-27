@@ -1219,7 +1219,6 @@ export const employeeLeaveEncashmentModel = mysqlTable(
     encashedDays: int('encashed_days').notNull(),
     amount: double('amount').notNull(),
     processedDate: timestamp('processed_date').default(sql`CURRENT_TIMESTAMP`),
-    processedBy: int('processed_by').notNull(),
     tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
       onDelete: 'restrict',
     }),
