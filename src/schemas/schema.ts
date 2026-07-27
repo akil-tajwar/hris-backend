@@ -1203,6 +1203,35 @@ export const employeeLeaveAssignmentModel = mysqlTable(
   }
 )
 
+export const employeeLeaveEncashmentModel = mysqlTable(
+  'employee_leave_encashment',
+  {
+    employeeLeaveEncashmentId: int('employee_leave_encashment_id')
+      .primaryKey()
+      .autoincrement(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    leaveTypeId: int('leave_type_id')
+      .references(() => leaveTypeModel.leaveTypeId)
+      .notNull(),
+    year: int('year').notNull(),
+    encashedDays: int('encashed_days').notNull(),
+    amount: double('amount').notNull(),
+    processedDate: timestamp('processed_date').default(sql`CURRENT_TIMESTAMP`),
+    processedBy: int('processed_by').notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
 export const employeeLeaveBalanceModel = mysqlTable('employee_leave_balance', {
   employeeLeaveBalanceId: int('employee_leave_balance_id')
     .primaryKey()
@@ -2149,6 +2178,11 @@ export type EmployeeLeaveAssignment =
   typeof employeeLeaveAssignmentModel.$inferSelect
 export type NewEmployeeLeaveAssignment =
   typeof employeeLeaveAssignmentModel.$inferInsert
+export type EmployeeLeaveEncashment =
+  typeof employeeLeaveEncashmentModel.$inferSelect
+
+export type NewEmployeeLeaveEncashment =
+  typeof employeeLeaveEncashmentModel.$inferInsert
 export type EmployeeLeaveApply = typeof employeeLeaveApplyModel.$inferSelect
 export type NewEmployeeLeaveApply = typeof employeeLeaveApplyModel.$inferInsert
 export type EmployeeAttendance = typeof employeeAttendanceModel.$inferSelect

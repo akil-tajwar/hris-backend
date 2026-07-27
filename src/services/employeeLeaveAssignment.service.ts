@@ -70,6 +70,9 @@ export const createEmployeeLeaveAssignmentService = async (
         .select({
           leaveTypeId: leavePolicyDetailsModel.leaveTypeId,
           maxDaysPerYear: leaveTypeModel.maxDaysPerYear,
+          yearlyAllocation: leavePolicyDetailsModel.yearlyAllocation,
+          carryForwardAllowed: leaveTypeModel.carryForwardAllowed,
+          maxCarryForwardDays: leaveTypeModel.maxCarryForwardDays,
         })
         .from(leavePolicyDetailsModel)
         .innerJoin(
@@ -82,7 +85,6 @@ export const createEmployeeLeaveAssignmentService = async (
             item.leavePolicyMasterId
           )
         )
-
       if (policyDetails.length === 0) {
         throw new Error(
           `No leave policy details found for policy ${item.leavePolicyMasterId}`
@@ -108,19 +110,46 @@ export const createEmployeeLeaveAssignmentService = async (
         if (existing) continue
 
         const earnedDays = calculateAllocatedLeaves(
-          detail.maxDaysPerYear,
+          detail.yearlyAllocation,
           doj,
           effectiveFrom
         )
+
+        let carryForwardDays = 0
+
+        if (detail.carryForwardAllowed) {
+          const [previousBalance] = await tx
+            .select({
+              remainingDays: employeeLeaveBalanceModel.remainingDays,
+            })
+            .from(employeeLeaveBalanceModel)
+            .where(
+              and(
+                eq(employeeLeaveBalanceModel.employeeId, item.employeeId),
+                eq(employeeLeaveBalanceModel.leaveTypeId, detail.leaveTypeId),
+                eq(employeeLeaveBalanceModel.year, year - 1)
+              )
+            )
+            .limit(1)
+
+          if (previousBalance) {
+            carryForwardDays = Math.min(
+              previousBalance.remainingDays,
+              detail.maxCarryForwardDays ?? previousBalance.remainingDays
+            )
+          }
+        }
+
+        const totalEarned = earnedDays + carryForwardDays
 
         balanceRows.push({
           employeeId: item.employeeId,
           leaveTypeId: detail.leaveTypeId,
           employeeLeaveAssignmentId: assignment.employeeLeaveAssignmentId,
           year,
-          earnedDays,
+          earnedDays: totalEarned,
           usedDays: 0,
-          remainingDays: earnedDays,
+          remainingDays: totalEarned,
           tenantId: item.tenantId,
         })
       }
