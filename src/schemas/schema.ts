@@ -1280,6 +1280,24 @@ export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
   ),
 })
 
+export const employeeLoneModel = mysqlTable('employee_lones', {
+  employeeLoneId: int('employee_lone_id').primaryKey().autoincrement(),
+  employeeLoneName: text('employee_lone_name').notNull(),
+  employeeId: int('employee_id')
+    .notNull()
+    .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+  amount: double('amount').notNull(),
+  perMonth: int('per_month').notNull(),
+  loneDate: text('lone_date').notNull(),
+  description: text('description'),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
 export const salaryComponentsModel = mysqlTable('salary_components', {
   salaryComponentId: int('salary_component_id').primaryKey().autoincrement(),
   componentCode: varchar('component_code', { length: 20 }).notNull(),
@@ -2179,13 +2197,14 @@ export type NewEmployeeLeaveAssignment =
   typeof employeeLeaveAssignmentModel.$inferInsert
 export type EmployeeLeaveEncashment =
   typeof employeeLeaveEncashmentModel.$inferSelect
-
 export type NewEmployeeLeaveEncashment =
   typeof employeeLeaveEncashmentModel.$inferInsert
 export type EmployeeLeaveApply = typeof employeeLeaveApplyModel.$inferSelect
 export type NewEmployeeLeaveApply = typeof employeeLeaveApplyModel.$inferInsert
 export type EmployeeAttendance = typeof employeeAttendanceModel.$inferSelect
 export type NewEmployeeAttendance = typeof employeeAttendanceModel.$inferInsert
+export type EmployeeLone = typeof employeeLoneModel.$inferSelect
+export type NewEmployeeLone = typeof employeeLoneModel.$inferInsert
 export type SalaryComponent = typeof salaryComponentsModel.$inferSelect
 export type NewSalaryComponent = typeof salaryComponentsModel.$inferInsert
 export type EmployeeSalaryComponent =
@@ -2228,7 +2247,6 @@ export type EmployeeShiftAllocation =
   typeof employeeShiftAllocations.$inferSelect
 export type NewEmployeeShiftAllocation =
   typeof employeeShiftAllocations.$inferInsert
-
 export type HolidayCalendar = typeof holidayCalendarModel.$inferSelect
 export type NewHolidayCalendar = typeof holidayCalendarModel.$inferInsert
 export type Holiday = typeof holidaysModel.$inferSelect
