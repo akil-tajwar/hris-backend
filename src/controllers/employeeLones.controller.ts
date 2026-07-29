@@ -43,7 +43,7 @@ export const updateLoneController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'edit_employee_lone')
+    // requirePermission(req, 'edit_employee_lone')
     const { employeeLoneId } = req.params
 
     const lone = await updateLone({
@@ -77,19 +77,19 @@ export const skipLoneInstallmentController = async (
   next: NextFunction
 ) => {
   try {
-    requirePermission(req, 'skip_employee_lone')
-    const { employeeOtherSalaryComponentId, updatedBy } = req.params
+    // requirePermission(req, 'skip_employee_lone')
+    const { employeeLoneInstallmentId, updatedBy } = req.params
     console.log("🚀 ~ skipLoneInstallmentController ~ req.params:", req.params)
 
-    if (!employeeOtherSalaryComponentId || !updatedBy) {
+    if (!employeeLoneInstallmentId || !updatedBy) {
       res.status(400).json({
         success: false,
-        message: 'employeeOtherSalaryComponentId and updatedBy are required',
+        message: 'employeeLoneInstallmentId and updatedBy are required',
       })
     }
 
     const result = await skipLoneInstallment({
-      employeeOtherSalaryComponentId: parseInt(employeeOtherSalaryComponentId),
+      employeeLoneInstallmentId: parseInt(employeeLoneInstallmentId),
       updatedBy: parseInt(updatedBy),
     })
 

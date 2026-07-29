@@ -6,9 +6,33 @@ import {
   employeeLoneModel,
   NewEmployeeLone,
   salaryComponentsModel,
+  EmployeeLone,
+  employeeLoneInstallemntsModel,
 } from '../schemas'
-import { and, eq, ilike, sql } from 'drizzle-orm'
+import { and, eq, ilike, inArray, like, sql } from 'drizzle-orm'
 import { BadRequestError, NotFoundError } from './utils/errors.utils'
+
+const MONTHS = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+} as const
+
+// Helper function to convert month number (0-11) to name
+function getMonthName(monthNumber: number): string {
+  const entries = Object.entries(MONTHS)
+  const found = entries.find(([_, value]) => value === monthNumber)
+  return found ? found[0] : ''
+}
 
 // CREATE
 export const createLone = async (data: NewEmployeeLone) => {
@@ -30,11 +54,10 @@ export const createLone = async (data: NewEmployeeLone) => {
     )
   }
 
-  // Fetch lone salary component where isLoneFee = 1 (or true)
   const [loneSalaryComponent] = await db
     .select()
     .from(salaryComponentsModel)
-    .where(ilike(salaryComponentsModel.componentName, '%lone%'))
+    .where(like(salaryComponentsModel.componentName, '%lone%'))
     .limit(1)
 
   if (!loneSalaryComponent) {
@@ -65,42 +88,49 @@ export const createLone = async (data: NewEmployeeLone) => {
   const loneDate = new Date(data.loneDate)
 
   // Start from next month
-  let currentDate = new Date(loneDate)
-  currentDate.setMonth(currentDate.getMonth() + 1)
+  let currentMonth = loneDate.getMonth() + 1 // getMonth() returns 0-11, add 1 to get next month
+  let currentYear = loneDate.getFullYear()
 
-  const insertPayload: any[] = []
+  // If currentMonth is 12 (December + 1 = 12), set to 0 (January) and increment year
+  if (currentMonth === 12) {
+    currentMonth = 0
+    currentYear += 1
+  }
+
+  const installmentPayload: any[] = []
 
   while (remainingAmount > 0) {
     const deductionAmount =
       remainingAmount >= perMonth ? perMonth : remainingAmount
 
-    const salaryMonth = currentDate.toLocaleString('default', {
-      month: 'long',
-    })
-    const salaryYear = currentDate.getFullYear()
+    const monthName = getMonthName(currentMonth)
 
-    insertPayload.push({
-      employeeId: data.employeeId,
-      salaryComponentId: loneSalaryComponent.salaryComponentId,
+    installmentPayload.push({
       employeeLoneId: employeeLoneId,
-      salaryMonth,
-      salaryYear,
+      employeeId: data.employeeId,
       amount: deductionAmount,
-      isAuthorized: 1,
-      isSkipped: 0,
+      loneInstallmentMonth: monthName,
+      loneInstallmentYear: currentYear,
+      isSkipped: false,
       createdBy: data.createdBy,
       createdAt: now,
+      updatedAt: now,
     })
 
     remainingAmount -= deductionAmount
 
-    // Move to next month
-    currentDate.setMonth(currentDate.getMonth() + 1)
+    // Move to next month (0-11)
+    if (currentMonth === 11) {
+      currentMonth = 0
+      currentYear += 1
+    } else {
+      currentMonth += 1
+    }
   }
 
-  // Bulk insert all months
-  if (insertPayload.length > 0) {
-    await db.insert(employeesalaryComponentsModel).values(insertPayload)
+  // Bulk insert all installments
+  if (installmentPayload.length > 0) {
+    await db.insert(employeeLoneInstallemntsModel).values(installmentPayload)
   }
 
   // ---- INSTALLMENT LOGIC END ----
@@ -114,7 +144,8 @@ export const createLone = async (data: NewEmployeeLone) => {
 
 // READ ALL
 export const getLones = async () => {
-  return await db
+  // First, get all lones with employee details
+  const lones = await db
     .select({
       // Lone fields
       employeeLoneId: employeeLoneModel.employeeLoneId,
@@ -128,11 +159,11 @@ export const getLones = async () => {
       createdAt: employeeLoneModel.createdAt,
       updatedBy: employeeLoneModel.updatedBy,
       updatedAt: employeeLoneModel.updatedAt,
-      // Employee fields (adjust based on your employeeModel schema)
-      empCode: employeeModel.empCode, // example field
-      employeeName: employeeModel.fullName, // example field
-      designationName: designationModel.designationName, // example field
-      departmentName: departmentModel.departmentName, // example field
+      // Employee fields
+      empCode: employeeModel.empCode,
+      empFullName: employeeModel.empFullName,
+      designationName: designationModel.designationName,
+      departmentName: departmentModel.departmentName,
     })
     .from(employeeLoneModel)
     .leftJoin(
@@ -147,10 +178,76 @@ export const getLones = async () => {
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
+
+  if (lones.length === 0) {
+    return []
+  }
+
+  // Get all installment data for these lones
+  const loneIds = lones.map((lone) => lone.employeeLoneId)
+
+  const installments = await db
+    .select({
+      employeeLoneInstallmentId:
+        employeeLoneInstallemntsModel.employeeLoneInstallmentId,
+      employeeLoneId: employeeLoneInstallemntsModel.employeeLoneId,
+      employeeId: employeeLoneInstallemntsModel.employeeId,
+      amount: employeeLoneInstallemntsModel.amount,
+      loneInstallmentMonth: employeeLoneInstallemntsModel.loneInstallmentMonth,
+      loneInstallmentYear: employeeLoneInstallemntsModel.loneInstallmentYear,
+      isSkipped: employeeLoneInstallemntsModel.isSkipped,
+      isPaid: employeeLoneInstallemntsModel.isPaid, // Add this field
+      createdBy: employeeLoneInstallemntsModel.createdBy,
+      createdAt: employeeLoneInstallemntsModel.createdAt,
+      updatedBy: employeeLoneInstallemntsModel.updatedBy,
+      updatedAt: employeeLoneInstallemntsModel.updatedAt,
+    })
+    .from(employeeLoneInstallemntsModel)
+    .where(inArray(employeeLoneInstallemntsModel.employeeLoneId, loneIds))
+    .orderBy(
+      employeeLoneInstallemntsModel.loneInstallmentYear,
+      employeeLoneInstallemntsModel.loneInstallmentMonth
+    )
+
+  // Group installments by employeeLoneId
+  const installmentsByLoneId = installments.reduce(
+    (acc, installment) => {
+      const key = installment.employeeLoneId
+      if (!acc[key]) {
+        acc[key] = []
+      }
+      acc[key].push(installment)
+      return acc
+    },
+    {} as Record<number, typeof installments>
+  )
+
+  // Combine lones with their installments
+  const result = lones.map((lone) => {
+    const loneInstallments = installmentsByLoneId[lone.employeeLoneId] || []
+
+    const totalPaid = loneInstallments
+      .filter((inst) => inst.isSkipped === false && inst.isPaid === true)
+      .reduce((sum, inst) => sum + Number(inst.amount), 0)
+
+    const totalRemaining = loneInstallments
+      .filter((inst) => inst.isSkipped === false && inst.isPaid === false)
+      .reduce((sum, inst) => sum + Number(inst.amount), 0)
+
+    return {
+      ...lone,
+      installments: loneInstallments,
+      totalPaid: totalPaid,
+      remainingBalance: totalRemaining,
+      totalInstallments: loneInstallments.length,
+    }
+  })
+
+  return result
 }
 
 // UPDATE
-export const updateLone = async (data: Lone) => {
+export const updateLone = async (data: EmployeeLone) => {
   await db
     .update(employeeLoneModel)
     .set({ employeeLoneName: data.employeeLoneName, updatedBy: data.updatedBy })
@@ -167,12 +264,12 @@ export const updateLone = async (data: Lone) => {
 // DELETE
 export const deleteLone = async (employeeLoneId: number) => {
   await db.transaction(async (trx) => {
-    // Delete related records first
-    await trx
-      .delete(employeesalaryComponentsModel)
-      .where(
-        eq(employeesalaryComponentsModel.employeeLoneId, employeeLoneId)
-      )
+    // // Delete related records first
+    // await trx
+    //   .delete(employeesalaryComponentsModel)
+    //   .where(
+    //     eq(employeesalaryComponentsModel.employeeLoneId, employeeLoneId)
+    //   )
 
     // Then delete the loan record
     await trx
@@ -183,11 +280,11 @@ export const deleteLone = async (employeeLoneId: number) => {
 
 //skip lone
 interface SkipLoneParams {
-  employeeOtherSalaryComponentId: number
+  employeeLoneInstallmentId: number // Changed from employeeOtherSalaryComponentId
   updatedBy: number
 }
 
-// Helper function to convert month name to number
+// Helper function to convert month name to number (same as before)
 function getMonthNumber(monthName: string): number {
   const months = {
     January: 0,
@@ -212,16 +309,16 @@ function toDate(month: string, year: number): Date {
 }
 
 export const skipLoneInstallment = async (params: SkipLoneParams) => {
-  const { employeeOtherSalaryComponentId, updatedBy } = params
+  const { employeeLoneInstallmentId, updatedBy } = params
 
-  // Get the installment to skip
+  // Get the installment to skip from the installments table
   const [installment] = await db
     .select()
-    .from(employeesalaryComponentsModel)
+    .from(employeeLoneInstallemntsModel)
     .where(
       eq(
-        employeesalaryComponentsModel.employeeOtherSalaryComponentId,
-        employeeOtherSalaryComponentId
+        employeeLoneInstallemntsModel.employeeLoneInstallmentId,
+        employeeLoneInstallmentId
       )
     )
     .limit(1)
@@ -231,13 +328,8 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
   }
 
   // Check if already skipped
-  if (installment.isSkipped === 1) {
+  if (installment.isSkipped === true) {
     throw BadRequestError('This installment is already skipped')
-  }
-
-  // Check if installment is authorized
-  if (installment.isAuthorized !== 1) {
-    throw BadRequestError('Cannot skip unauthorized installment')
   }
 
   const employeeLoneId = installment.employeeLoneId
@@ -246,20 +338,20 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
     throw BadRequestError('No lone associated with this installment')
   }
 
-  const now = Date.now()
+  const now = new Date()
 
   // Mark current installment as skipped
   await db
-    .update(employeesalaryComponentsModel)
+    .update(employeeLoneInstallemntsModel)
     .set({
-      isSkipped: 1,
+      isSkipped: true,
       updatedBy: updatedBy,
       updatedAt: now,
     })
     .where(
       eq(
-        employeesalaryComponentsModel.employeeOtherSalaryComponentId,
-        employeeOtherSalaryComponentId
+        employeeLoneInstallemntsModel.employeeLoneInstallmentId,
+        employeeLoneInstallmentId
       )
     )
 
@@ -268,80 +360,122 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
   // Get all installments under this loan
   const allInstallments = await db
     .select()
-    .from(employeesalaryComponentsModel)
-    .where(
-      eq(employeesalaryComponentsModel.employeeLoneId, employeeLoneId)
-    )
+    .from(employeeLoneInstallemntsModel)
+    .where(eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId))
 
   if (!allInstallments.length) {
     throw BadRequestError('No installments found for this loan')
   }
 
-  // ✅ Find the TRUE last installment using Date comparison
+  // Find the TRUE last installment using Date comparison
   const lastInstallment = allInstallments.reduce((latest, current) => {
-    const currentDate = toDate(current.salaryMonth, current.salaryYear)
-    const latestDate = toDate(latest.salaryMonth, latest.salaryYear)
+    const currentDate = toDate(
+      current.loneInstallmentMonth,
+      current.loneInstallmentYear
+    )
+    const latestDate = toDate(
+      latest.loneInstallmentMonth,
+      latest.loneInstallmentYear
+    )
 
     return currentDate > latestDate ? current : latest
   })
 
-  // ✅ Add 1 month to the LAST installment date
+  // Add 1 month to the LAST installment date
   const nextDate = new Date(
-    lastInstallment.salaryYear,
-    getMonthNumber(lastInstallment.salaryMonth),
+    lastInstallment.loneInstallmentYear,
+    getMonthNumber(lastInstallment.loneInstallmentMonth),
     1
   )
 
   nextDate.setMonth(nextDate.getMonth() + 1)
 
-  const newSalaryMonth = nextDate.toLocaleString('default', { month: 'long' })
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ]
+  const newSalaryMonth = monthNames[nextDate.getMonth()]
   const newSalaryYear = nextDate.getFullYear()
 
   // Insert new installment
-  await db.insert(employeesalaryComponentsModel).values({
-    employeeId: installment.employeeId,
-    otherSalaryComponentId: installment.otherSalaryComponentId,
+  await db.insert(employeeLoneInstallemntsModel).values({
     employeeLoneId: employeeLoneId,
-    salaryMonth: newSalaryMonth,
-    salaryYear: newSalaryYear,
-    amount: skippedAmount,
-    isAuthorized: 1,
-    isSkipped: 0,
+    employeeId: installment.employeeId,
+    amount: Number(skippedAmount), // Ensure it's a number
+    loneInstallmentMonth: newSalaryMonth as
+      | 'January'
+      | 'February'
+      | 'March'
+      | 'April'
+      | 'May'
+      | 'June'
+      | 'July'
+      | 'August'
+      | 'September'
+      | 'October'
+      | 'November'
+      | 'December',
+    loneInstallmentYear: newSalaryYear,
+    isSkipped: false,
     createdBy: updatedBy,
     createdAt: now,
+    updatedAt: now,
   })
 
   // Get updated installments (ordered properly using JS sort)
   const updatedInstallments = (
     await db
       .select()
-      .from(employeesalaryComponentsModel)
-      .where(
-        eq(employeesalaryComponentsModel.employeeLoneId, employeeLoneId)
-      )
+      .from(employeeLoneInstallemntsModel)
+      .where(eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId))
   ).sort((a, b) => {
-    const dateA = toDate(a.salaryMonth, a.salaryYear).getTime()
-    const dateB = toDate(b.salaryMonth, b.salaryYear).getTime()
+    const dateA = toDate(
+      a.loneInstallmentMonth,
+      a.loneInstallmentYear
+    ).getTime()
+    const dateB = toDate(
+      b.loneInstallmentMonth,
+      b.loneInstallmentYear
+    ).getTime()
     return dateA - dateB
   })
+
+  // Calculate total remaining amount
+  const totalRemaining = updatedInstallments
+    .filter((inst) => inst.isSkipped === false)
+    .reduce((sum, inst) => sum + Number(inst.amount), 0)
 
   return {
     message: 'Lone installment skipped successfully',
     employeeLoneId,
-    skippedAmount,
+    skippedAmount: Number(skippedAmount),
     skippedInstallment: {
-      month: installment.salaryMonth,
-      year: installment.salaryYear,
-      amount: installment.amount,
+      month: installment.loneInstallmentMonth,
+      year: installment.loneInstallmentYear,
+      amount: Number(installment.amount),
     },
     newInstallment: {
       month: newSalaryMonth,
       year: newSalaryYear,
-      amount: skippedAmount,
+      amount: Number(skippedAmount),
     },
     remainingInstallments: updatedInstallments.filter(
-      (inst) => inst.isSkipped === 0 && inst.isAuthorized === 1
+      (inst) => inst.isSkipped === false
     ).length,
-    installments: updatedInstallments,
+    totalRemainingAmount: totalRemaining,
+    installments: updatedInstallments.map((inst) => ({
+      ...inst,
+      amount: Number(inst.amount), // Convert Decimal to number for JSON
+    })),
   }
 }

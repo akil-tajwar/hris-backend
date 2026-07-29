@@ -1298,6 +1298,45 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   ),
 })
 
+export const employeeLoneInstallemntsModel = mysqlTable(
+  'employee_lone_installments',
+  {
+    employeeLoneInstallmentId: int('employee_lone_installment_id')
+      .primaryKey()
+      .autoincrement(),
+    employeeLoneId: int('employee_lone_id')
+      .notNull()
+      .references(() => employeeLoneModel.employeeLoneId),
+    employeeId: int('employee_id')
+      .notNull()
+      .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+    amount: double('amount').notNull(),
+    loneInstallmentMonth: mysqlEnum('lone_installment_month', [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ]).notNull(),
+    loneInstallmentYear: int('lone_installment_year').notNull(),
+    isSkipped: boolean('is_skipped').notNull().default(false),
+    isPaid: boolean('is_paid').notNull().default(false),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
 export const salaryComponentsModel = mysqlTable('salary_components', {
   salaryComponentId: int('salary_component_id').primaryKey().autoincrement(),
   componentCode: varchar('component_code', { length: 20 }).notNull(),
