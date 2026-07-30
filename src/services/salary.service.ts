@@ -9,8 +9,10 @@ import {
   NewEmployeeSalaryComponent,
   salaryComponentsModel,
   salaryStructureDetailsModel,
+  employeeLoneInstallemntsModel,
+  employeeLoneModel,
 } from '../schemas'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, like } from 'drizzle-orm'
 
 //generate salary
 export const generateSalaryPreview = async (
@@ -47,7 +49,25 @@ export const generateSalaryPreview = async (
       )
     )
 
+  // Find loan salary component
+  const loanComponentResult = await db
+    .select({
+      salaryComponentId: salaryComponentsModel.salaryComponentId,
+      componentName: salaryComponentsModel.componentName,
+    })
+    .from(salaryComponentsModel)
+    .where(
+      and(
+        like(salaryComponentsModel.componentName, '%lone%'),
+        eq(salaryComponentsModel.tenantId, tenantId)
+      )
+    )
+    .limit(1)
+
+  const loanComponent = loanComponentResult[0]
+
   const result = []
+
   for (const employee of employees) {
     if (!employee.salaryStructureMasterId) {
       continue
@@ -82,27 +102,93 @@ export const generateSalaryPreview = async (
 
     let grossSalary = employee.basicSalary
     let totalDeduction = 0
-    const components = structureDetails.map((item) => {
-      let amount = Number(item.amount)
 
-      if (item.calculationType === 'Percentage') {
-        amount = (employee.basicSalary * Number(item.percentage)) / 100
+    // Remove loan component from salary structure
+    const components = structureDetails
+      .filter((item) => !item.componentName.toLowerCase().includes('lone'))
+      .map((item) => {
+        let amount = Number(item.amount)
+
+        if (item.calculationType === 'Percentage') {
+          amount = (employee.basicSalary * Number(item.percentage)) / 100
+        }
+
+        if (item.componentType === 'Allowance') {
+          grossSalary += amount
+        }
+
+        if (item.componentType === 'Deduction') {
+          totalDeduction += amount
+        }
+
+        return {
+          salaryStructureDetailId: item.salaryStructureDetailId,
+          salaryComponentId: item.salaryComponentId,
+          componentName: item.componentName,
+          componentType: item.componentType,
+          calculationType: item.calculationType,
+          amount,
+        }
+      })
+
+    // Find employee loan installments for this salary month
+    // Only include loans that are not fully paid
+    const loanInstallments = await db
+      .select({
+        amount: employeeLoneInstallemntsModel.amount,
+      })
+      .from(employeeLoneInstallemntsModel)
+      .innerJoin(
+        employeeLoneModel,
+        eq(
+          employeeLoneModel.employeeLoneId,
+          employeeLoneInstallemntsModel.employeeLoneId
+        )
+      )
+      .where(
+        and(
+          eq(employeeLoneInstallemntsModel.employeeId, employee.employeeId),
+          eq(
+            employeeLoneInstallemntsModel.loneInstallmentMonth,
+            salaryMonth as any
+          ),
+          eq(employeeLoneInstallemntsModel.loneInstallmentYear, salaryYear),
+          eq(employeeLoneInstallemntsModel.isSkipped, false),
+          eq(employeeLoneModel.isFullPaid, false)
+        )
+      )
+
+    const loanAmount = loanInstallments.reduce(
+      (sum, item) => sum + Number(item.amount),
+      0
+    )
+
+    // Add loan deduction from installment table
+    if (loanAmount > 0 && loanComponent) {
+      // Find loan component's structure detail from the already-fetched
+      // structureDetails — guaranteed to belong to employee.salaryStructureMasterId
+      const loanStructureDetail = structureDetails.find(
+        (item) => item.salaryComponentId === loanComponent.salaryComponentId
+      )
+
+      if (!loanStructureDetail) {
+        throw new Error(
+          `Loan salary component is not assigned in salary structure for ${employee.empFullName}`
+        )
       }
-      if (item.componentType === 'Allowance') {
-        grossSalary += amount
-      }
-      if (item.componentType === 'Deduction') {
-        totalDeduction += amount
-      }
-      return {
-        salaryStructureDetailId: item.salaryStructureDetailId,
-        salaryComponentId: item.salaryComponentId,
-        componentName: item.componentName,
-        componentType: item.componentType,
-        calculationType: item.calculationType,
-        amount,
-      }
-    })
+
+      totalDeduction += loanAmount
+
+      components.push({
+        salaryStructureDetailId: loanStructureDetail.salaryStructureDetailId,
+        salaryComponentId: loanComponent.salaryComponentId,
+        componentName: loanComponent.componentName,
+        componentType: 'Deduction',
+        calculationType: 'Fixed',
+        amount: loanAmount,
+      })
+    }
+
     result.push({
       employeeId: employee.employeeId,
       empCode: employee.empCode,
@@ -115,6 +201,7 @@ export const generateSalaryPreview = async (
       components,
     })
   }
+
   return result
 }
 
@@ -549,6 +636,28 @@ export const giveSalary = async (salaryId: number, tenantId: number) => {
       and(
         eq(salaryModel.salaryId, salaryId),
         eq(salaryModel.tenantId, tenantId)
+      )
+    )
+
+  // Mark that month's loan installment(s) as paid for this employee
+  await db
+    .update(employeeLoneInstallemntsModel)
+    .set({
+      isPaid: true,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(employeeLoneInstallemntsModel.employeeId, salary.employeeId),
+        eq(
+          employeeLoneInstallemntsModel.loneInstallmentMonth,
+          salary.salaryMonth
+        ),
+        eq(
+          employeeLoneInstallemntsModel.loneInstallmentYear,
+          salary.salaryYear
+        ),
+        eq(employeeLoneInstallemntsModel.isSkipped, false)
       )
     )
 
