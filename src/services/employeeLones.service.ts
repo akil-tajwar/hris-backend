@@ -479,3 +479,42 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
     })),
   }
 }
+
+export const makeEmployeeLoneFullPaid = async (
+  employeeLoneId: number,
+  updatedBy: number
+) => {
+  return await db.transaction(async (tx) => {
+    // Check loan exists
+    const [loan] = await tx
+      .select()
+      .from(employeeLoneModel)
+      .where(eq(employeeLoneModel.employeeLoneId, employeeLoneId))
+
+    if (!loan) {
+      throw new Error('Loan not found')
+    }
+
+    // Mark loan as fully paid
+    await tx
+      .update(employeeLoneModel)
+      .set({
+        isFullPaid: true,
+        updatedBy,
+      })
+      .where(eq(employeeLoneModel.employeeLoneId, employeeLoneId))
+
+    // Mark all installments as paid
+    await tx
+      .update(employeeLoneInstallemntsModel)
+      .set({
+        isPaid: true,
+        updatedBy,
+      })
+      .where(eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId))
+
+    return {
+      message: 'Loan marked as fully paid successfully.',
+    }
+  })
+}

@@ -10,6 +10,7 @@ import {
   salaryComponentsModel,
   salaryStructureDetailsModel,
   employeeLoneInstallemntsModel,
+  employeeLoneModel,
 } from '../schemas'
 import { and, eq, like } from 'drizzle-orm'
 
@@ -130,12 +131,20 @@ export const generateSalaryPreview = async (
         }
       })
 
-    // Find employee loan installment for this salary month
+    // Find employee loan installments for this salary month
+    // Only include loans that are not fully paid
     const loanInstallments = await db
       .select({
         amount: employeeLoneInstallemntsModel.amount,
       })
       .from(employeeLoneInstallemntsModel)
+      .innerJoin(
+        employeeLoneModel,
+        eq(
+          employeeLoneModel.employeeLoneId,
+          employeeLoneInstallemntsModel.employeeLoneId
+        )
+      )
       .where(
         and(
           eq(employeeLoneInstallemntsModel.employeeId, employee.employeeId),
@@ -144,7 +153,8 @@ export const generateSalaryPreview = async (
             salaryMonth as any
           ),
           eq(employeeLoneInstallemntsModel.loneInstallmentYear, salaryYear),
-          eq(employeeLoneInstallemntsModel.isSkipped, false)
+          eq(employeeLoneInstallemntsModel.isSkipped, false),
+          eq(employeeLoneModel.isFullPaid, false)
         )
       )
 

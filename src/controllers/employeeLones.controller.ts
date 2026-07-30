@@ -5,6 +5,7 @@ import {
   updateLone,
   deleteLone,
   skipLoneInstallment,
+  makeEmployeeLoneFullPaid,
 } from '../services/employeeLones.service'
 import { requirePermission } from '../services/utils/jwt.utils'
 
@@ -79,7 +80,7 @@ export const skipLoneInstallmentController = async (
   try {
     // requirePermission(req, 'skip_employee_lone')
     const { employeeLoneInstallmentId, updatedBy } = req.params
-    console.log("🚀 ~ skipLoneInstallmentController ~ req.params:", req.params)
+    console.log('🚀 ~ skipLoneInstallmentController ~ req.params:', req.params)
 
     if (!employeeLoneInstallmentId || !updatedBy) {
       res.status(400).json({
@@ -95,6 +96,30 @@ export const skipLoneInstallmentController = async (
 
     res.status(200).json({
       success: true,
+      data: result,
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const makeEmployeeLoneFullPaidController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const employeeLoneId = Number(req.params.employeeLoneId)
+
+    const updatedBy = req.user?.userId
+
+    const result = await makeEmployeeLoneFullPaid(
+      employeeLoneId,
+      Number(updatedBy)
+    )
+
+    res.status(200).json({
+      status: 'success',
       data: result,
     })
   } catch (err) {

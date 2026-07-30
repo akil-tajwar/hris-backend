@@ -1290,6 +1290,7 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   perMonth: int('per_month').notNull(),
   loneDate: text('lone_date').notNull(),
   description: text('description'),
+  isFullPaid: boolean('is_full_paid').default(false).notNull(),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),
