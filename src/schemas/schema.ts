@@ -1286,6 +1286,9 @@ export const employeeLoneModel = mysqlTable('employee_lones', {
   employeeId: int('employee_id')
     .notNull()
     .references(() => employeeModel.employeeId, { onDelete: 'cascade' }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
   amount: double('amount').notNull(),
   perMonth: int('per_month').notNull(),
   loneDate: text('lone_date').notNull(),
@@ -1329,6 +1332,9 @@ export const employeeLoneInstallemntsModel = mysqlTable(
     loneInstallmentYear: int('lone_installment_year').notNull(),
     isSkipped: boolean('is_skipped').notNull().default(false),
     isPaid: boolean('is_paid').notNull().default(false),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
     createdBy: int('created_by').notNull(),
     createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedBy: int('updated_by'),
@@ -1746,25 +1752,22 @@ export const attendanceDailyApply = mysqlTable('attendance_daily_apply', {
   ),
 })
 
-export const noticeModel = mysqlTable(
-  'notice',
-  {
-    noticeId: int('notice_id').autoincrement().primaryKey(),
-    title: varchar('title', { length: 255 }).notNull(),
-    description: text('description'),
-    pdfUrl: varchar('pdf_url', { length: 255 }),
-    noticeDate: date('notice_date').notNull(),
-    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
-      onDelete: 'restrict',
-    }),
-    createdBy: int('created_by').notNull(),
-    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
-    updatedBy: int('updated_by'),
-    updatedAt: timestamp('updated_at').default(
-      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
-    ),
-  }
-)
+export const noticeModel = mysqlTable('notice', {
+  noticeId: int('notice_id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  pdfUrl: varchar('pdf_url', { length: 255 }),
+  noticeDate: date('notice_date').notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
 
 // ========================
 // Relations (unchanged)
