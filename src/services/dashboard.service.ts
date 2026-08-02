@@ -1,4 +1,4 @@
-import { eq, and, gte, lte } from 'drizzle-orm'
+import { eq, and, gte, lte, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   departmentModel,
@@ -7,6 +7,7 @@ import {
   employeeModel,
   leavePolicyDetailsModel,
   leaveTypeModel,
+  salaryModel,
 } from '../schemas'
 
 // export const getEmployeeLeaveSummary = async () => {
@@ -186,4 +187,76 @@ export const getEmployeeAttendanceSummary = async () => {
   }
 
   return Array.from(employeeMap.values())
+}
+
+export const getSalaryStatus = async (tenantId: number) => {
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ] as const
+
+  const now = new Date()
+
+  const currentMonth = monthNames[now.getMonth()]
+  const currentYear = now.getFullYear()
+
+  const result = await db
+    .select({
+      grossPayroll: sql<number>`COALESCE(SUM(${salaryModel.grossSalary}), 0)`,
+      netPayroll: sql<number>`COALESCE(SUM(${salaryModel.netSalary}), 0)`,
+      totalPaidAmount: sql<number>`
+        COALESCE(
+          SUM(
+            CASE
+              WHEN ${salaryModel.isSalaryGiven} = true
+              THEN ${salaryModel.netSalary}
+              ELSE 0
+            END
+          ),
+          0
+        )
+      `,
+      totalUnpaidAmount: sql<number>`
+        COALESCE(
+          SUM(
+            CASE
+              WHEN ${salaryModel.isSalaryGiven} = false
+              THEN ${salaryModel.netSalary}
+              ELSE 0
+            END
+          ),
+          0
+        )
+      `,
+    })
+    .from(salaryModel)
+    .where(
+      and(
+        eq(salaryModel.tenantId, tenantId),
+        eq(salaryModel.salaryMonth, currentMonth),
+        eq(salaryModel.salaryYear, currentYear)
+      )
+    )
+
+  return [
+    {
+      id: 1,
+      currentMonth,
+      currentYear,
+      totalPaidAmount: Number(result[0].totalPaidAmount),
+      totalUnpaidAmount: Number(result[0].totalUnpaidAmount),
+      grossPayroll: Number(result[0].grossPayroll),
+      netPayroll: Number(result[0].netPayroll),
+    },
+  ]
 }
