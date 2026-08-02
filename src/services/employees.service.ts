@@ -626,7 +626,7 @@ export const getAllEmployees = async (tenantId: number) => {
   return data
 }
 
-//GET EMPLOYEE BY ID (WITH WEEKENDS)
+//GET EMPLOYEE BY ID
 export const getEmployeeById = async (employeeId: number) => {
   const reportingAuthority = alias(employeeModel, 'reportingAuthority')
 

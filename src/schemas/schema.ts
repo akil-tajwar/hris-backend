@@ -1746,6 +1746,26 @@ export const attendanceDailyApply = mysqlTable('attendance_daily_apply', {
   ),
 })
 
+export const noticeModel = mysqlTable(
+  'notice',
+  {
+    noticeId: int('notice_id').autoincrement().primaryKey(),
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+    pdfUrl: varchar('pdf_url', { length: 255 }),
+    noticeDate: date('notice_date').notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
 // ========================
 // Relations (unchanged)
 // ========================
@@ -2291,3 +2311,5 @@ export type HolidayCalendar = typeof holidayCalendarModel.$inferSelect
 export type NewHolidayCalendar = typeof holidayCalendarModel.$inferInsert
 export type Holiday = typeof holidaysModel.$inferSelect
 export type NewHoliday = typeof holidaysModel.$inferInsert
+export type Notice = typeof noticeModel.$inferSelect
+export type NewNotice = typeof noticeModel.$inferInsert
