@@ -16,8 +16,13 @@ export const createLoneController = async (
 ) => {
   try {
     // requirePermission(req, 'create_employee_lone')
+    const tenantId = req.user?.tenantId
+    const data = {
+      ...req.body,
+      tenantId,
+    }
     console.log('🚀 ~ createLoneController ~ req.body:', req.body)
-    const lone = await createLone(req.body)
+    const lone = await createLone(data)
     res.status(201).json({ status: 'success', data: lone })
   } catch (err) {
     next(err)
@@ -31,7 +36,11 @@ export const getLonesController = async (
 ) => {
   try {
     // requirePermission(req, 'view_employee_lone')
-    const lones = await getLones()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const lones = await getLones(tenantId)
     res.json(lones)
   } catch (err) {
     next(err)

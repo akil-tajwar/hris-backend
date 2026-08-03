@@ -1,9 +1,14 @@
-import { Router } from 'express'
-import { getRolesController } from '../controllers/role.controller'
-import { authenticateUser } from '../middlewares/auth.middleware'
+import express from 'express';
+import { getAllRolesController, updateRolePermissionsController, getAllPermissionController } from '../controllers/role.controller';
 
-const router = Router()
+const router = express.Router();
 
-router.get('/getAll', authenticateUser, getRolesController)
+// router.get('/:roleId', getRole);
+router.get('/get-all-roles', getAllRolesController);
+router.get('/get-all-permissions', getAllPermissionController);
+router.put(
+    "/update-role-permissions/:roleId",
+    updateRolePermissionsController
+);
 
-export default router
+export default router;

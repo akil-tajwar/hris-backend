@@ -71,6 +71,7 @@ export const createLone = async (data: NewEmployeeLone) => {
   // Insert into lones table
   const result = await db.insert(employeeLoneModel).values({
     ...data,
+    tenantId: employee.tenantId,
     createdAt: now,
     updatedAt: now,
   })
@@ -108,6 +109,7 @@ export const createLone = async (data: NewEmployeeLone) => {
     installmentPayload.push({
       employeeLoneId: employeeLoneId,
       employeeId: data.employeeId,
+      tenantId: employee.tenantId,
       amount: deductionAmount,
       loneInstallmentMonth: monthName,
       loneInstallmentYear: currentYear,
@@ -143,7 +145,7 @@ export const createLone = async (data: NewEmployeeLone) => {
 }
 
 // READ ALL
-export const getLones = async () => {
+export const getLones = async (tenantId: number) => {
   // First, get all lones with employee details
   const lones = await db
     .select({
@@ -178,6 +180,7 @@ export const getLones = async () => {
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
+    .where(eq(employeeLoneModel.tenantId, tenantId))
 
   if (lones.length === 0) {
     return []
@@ -203,7 +206,12 @@ export const getLones = async () => {
       updatedAt: employeeLoneInstallemntsModel.updatedAt,
     })
     .from(employeeLoneInstallemntsModel)
-    .where(inArray(employeeLoneInstallemntsModel.employeeLoneId, loneIds))
+    .where(
+      and(
+        inArray(employeeLoneInstallemntsModel.employeeLoneId, loneIds),
+        eq(employeeLoneInstallemntsModel.tenantId, tenantId)
+      )
+    )
     .orderBy(
       employeeLoneInstallemntsModel.loneInstallmentYear,
       employeeLoneInstallemntsModel.loneInstallmentMonth
