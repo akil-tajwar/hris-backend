@@ -23,7 +23,6 @@ export const getEmployeeLeaveSummary = async (tenantId?: number) => {
   if (tenantId) {
     conditions.push(eq(employeeLeaveBalanceModel.tenantId, tenantId))
   }
-    }
 
   const leaveBalances = await db
     .select({
@@ -203,13 +202,30 @@ export const getSalaryStatus = async (tenantId: number) => {
     'December',
   ] as const
 
-  const now = new Date()
+  const currentYear = new Date().getFullYear()
 
-  const currentMonth = monthNames[now.getMonth()]
-  const currentYear = now.getFullYear()
+  // Create a CASE expression for ordering
+  const monthOrder = sql`
+    CASE ${salaryModel.salaryMonth}
+      WHEN 'January' THEN 1
+      WHEN 'February' THEN 2
+      WHEN 'March' THEN 3
+      WHEN 'April' THEN 4
+      WHEN 'May' THEN 5
+      WHEN 'June' THEN 6
+      WHEN 'July' THEN 7
+      WHEN 'August' THEN 8
+      WHEN 'September' THEN 9
+      WHEN 'October' THEN 10
+      WHEN 'November' THEN 11
+      WHEN 'December' THEN 12
+    END
+  `
 
-  const result = await db
+  const results = await db
     .select({
+      salaryMonth: salaryModel.salaryMonth,
+      salaryYear: salaryModel.salaryYear,
       grossPayroll: sql<number>`COALESCE(SUM(${salaryModel.grossSalary}), 0)`,
       netPayroll: sql<number>`COALESCE(SUM(${salaryModel.netSalary}), 0)`,
       totalPaidAmount: sql<number>`
@@ -241,22 +257,43 @@ export const getSalaryStatus = async (tenantId: number) => {
     .where(
       and(
         eq(salaryModel.tenantId, tenantId),
-        eq(salaryModel.salaryMonth, currentMonth),
         eq(salaryModel.salaryYear, currentYear)
       )
     )
+    .groupBy(salaryModel.salaryMonth, salaryModel.salaryYear)
+    .orderBy(monthOrder)
 
-  return [
-    {
-      id: 1,
-      currentMonth,
-      currentYear,
-      totalPaidAmount: Number(result[0].totalPaidAmount),
-      totalUnpaidAmount: Number(result[0].totalUnpaidAmount),
-      grossPayroll: Number(result[0].grossPayroll),
-      netPayroll: Number(result[0].netPayroll),
-    },
-  ]
+  // Create a map of existing months with data
+  const monthDataMap = new Map()
+  
+  results.forEach((result) => {
+    monthDataMap.set(result.salaryMonth, {
+      month: result.salaryMonth,
+      year: result.salaryYear,
+      totalPaidAmount: Number(result.totalPaidAmount),
+      totalUnpaidAmount: Number(result.totalUnpaidAmount),
+      grossPayroll: Number(result.grossPayroll),
+      netPayroll: Number(result.netPayroll),
+    })
+  })
+
+  // Create array with all months of the year
+  const allMonthsData = monthNames.map((month, index) => {
+    const existingData = monthDataMap.get(month)
+    
+    return {
+      id: index + 1,
+      month: month,
+      year: currentYear,
+      totalPaidAmount: existingData?.totalPaidAmount ?? 0,
+      totalUnpaidAmount: existingData?.totalUnpaidAmount ?? 0,
+      grossPayroll: existingData?.grossPayroll ?? 0,
+      netPayroll: existingData?.netPayroll ?? 0,
+      isDataAvailable: !!existingData,
+    }
+  })
+
+  return allMonthsData
 }
 
 export const getEmployeeLoneSummary = async (tenantId?: number) => {
@@ -330,9 +367,21 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
   for (const loan of loans) {
     const employeeId = loan.employeeId
 
-    if (!employeeMap.has(employeeId ?? 0)) {
+    // Skip if employeeId is null
+    if (employeeId === null) {
+      continue
+    }
+
+    // Loan belongs to the year it was created
+    const loanYear = new Date(loan.loneDate).getFullYear()
+
+    if (loanYear !== currentYear) {
+      continue
+    }
+
+    if (!employeeMap.has(employeeId)) {
       employeeMap.set(employeeId, {
-        employeeId: loan.employeeId,
+        employeeId: loan.employeeId!,
         empCode: loan.empCode,
         empFullName: loan.empFullName,
         designationName: loan.designationName,
@@ -349,13 +398,6 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
     }
 
     const employeeData = employeeMap.get(employeeId)!
-
-    // Loan belongs to the year it was created
-    const loanYear = new Date(loan.loneDate).getFullYear()
-
-    if (loanYear !== currentYear) {
-      continue
-    }
 
     // Count loan amount once per loan
     if (!employeeData._processedLoans.has(loan.employeeLoneId)) {
