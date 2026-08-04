@@ -126,7 +126,7 @@ export const createEmployee = async (input: {
 
         remarks,
 
-        performedBy:  employeeData.createdBy,
+        performedBy: employeeData.createdBy,
         approvedBy: null,
 
         referenceType: 'EMPLOYEE_CREATION',
@@ -173,323 +173,327 @@ export const createEmployee = async (input: {
 }
 
 // UPDATE EMPLOYEE
-export const updateEmployee = async (
-  employeeId: number,
-  data: Partial<NewEmployee> & {
-    leavePolicyMasterId?: number | null
-    salaryStructureMasterId?: number | null
-    effectiveFrom?: Date | string
-    effectiveTo?: Date | string | null
-    changeReason?: string
-    approvedBy?: number | null
-    createdBy?: number
-  }
+export const updateEmployees = async (
+  employeesData: Array<
+    Partial<NewEmployee> & {
+      employeeId: number
+      leavePolicyMasterId?: number | null
+      salaryStructureMasterId?: number | null
+      effectiveFrom?: Date | string
+      effectiveTo?: Date | string | null
+      changeReason?: string
+      approvedBy?: number | null
+      createdBy?: number
+    }
+  >
 ) => {
   const CACHE_KEY = 'employees:all'
 
   return await db.transaction(async (tx) => {
-    const existing = await tx.query.employeeModel.findFirst({
-      where: eq(employeeModel.employeeId, employeeId),
-    })
+    const results: any[] = []
 
-    if (!existing) throw new Error('Employee not found')
-
-    const {
-      leavePolicyMasterId,
-      salaryStructureMasterId,
-      effectiveFrom,
-      effectiveTo,
-      changeReason,
-      approvedBy,
-      createdBy,
-      ...employeeData
-    } = data
-
-    const fkFields = [
-      'departmentId',
-      'designationId',
-      'employmentTypeId',
-      'companyId',
-      'workStationId',
-      'divisionId',
-      'costCenterId',
-      'reportingAuthorityId',
-    ]
-
-    const updateData: any = {}
-
-    Object.entries(employeeData).forEach(([key, value]) => {
-      if (fkFields.includes(key)) {
-        updateData[key] =
-          value === 0 || value === '' || value === undefined ? null : value
-      } else if (key === 'isActive') {
-        updateData[key] = value ? 1 : 0
-      } else {
-        updateData[key] = value === '' || value === undefined ? null : value
-      }
-    })
-
-    if (leavePolicyMasterId !== undefined) {
-      updateData.leavePolicyMasterId =
-        leavePolicyMasterId === 0 ? null : leavePolicyMasterId
-    }
-
-    if (salaryStructureMasterId !== undefined) {
-      updateData.salaryStructureMasterId =
-        salaryStructureMasterId === 0 ? null : salaryStructureMasterId
-    }
-
-    updateData.updatedAt = new Date()
-
-    // ===========================
-    // HISTORY META
-    // ===========================
-    const historyMeta = {
-      effectiveFrom:
-        typeof effectiveFrom === 'string'
-          ? new Date(effectiveFrom)
-          : (effectiveFrom ?? new Date()),
-      effectiveTo:
-        effectiveTo === undefined || effectiveTo === null
-          ? null
-          : typeof effectiveTo === 'string'
-            ? new Date(effectiveTo)
-            : effectiveTo,
-      changeReason: changeReason ?? null,
-      approvedBy: approvedBy ?? null,
-      createdBy: createdBy ?? 0,
-    }
-
-    // ===========================
-    // FK RESOLVER (IMPORTANT PART)
-    // ===========================
-    const resolveName = async (field: string, id: any) => {
-      if (!id) return null
-
-      switch (field) {
-        case 'departmentId': {
-          const row = await tx.query.departmentModel.findFirst({
-            where: eq(departmentModel.departmentId, id),
-          })
-          return row?.departmentName ?? null
-        }
-
-        case 'designationId': {
-          const row = await tx.query.designationModel.findFirst({
-            where: eq(designationModel.designationId, id),
-          })
-          return row?.designationName ?? null
-        }
-
-        case 'employmentTypeId': {
-          const row = await tx.query.employmentTypeModel.findFirst({
-            where: eq(employmentTypeModel.employmentTypeId, id),
-          })
-          return row?.employmentTypeName ?? null
-        }
-
-        case 'leavePolicyMasterId': {
-          const row = await tx.query.leavePolicyMasterModel.findFirst({
-            where: eq(leavePolicyMasterModel.leavePolicyMasterId, id),
-          })
-          return row?.policyName ?? null
-        }
-
-        case 'salaryStructureMasterId': {
-          const row = await tx.query.salaryStructureMasterModel.findFirst({
-            where: eq(salaryStructureMasterModel.salaryStructureMasterId, id),
-          })
-          return row?.structureName ?? null
-        }
-
-        case 'reportingAuthorityId': {
-          const row = await tx.query.employeeModel.findFirst({
-            where: eq(employeeModel.employeeId, id),
-          })
-          return row?.empFullName ?? null
-        }
-
-        default:
-          return id
-      }
-    }
-
-    // ===========================
-    // LIFECYCLE EVENTS
-    // ===========================
-    const lifecycleEvents: any[] = []
-
-    const pushEvent = (
-      type: any,
-      oldValue: any,
-      newValue: any,
-      referenceType?: string,
-      referenceId?: number
-    ) => {
-      lifecycleEvents.push({
+    for (const data of employeesData) {
+      const {
         employeeId,
-        eventDate: new Date(),
-        employeeEventType: type,
-        effectiveFrom: historyMeta.effectiveFrom,
-        remarks: changeReason ?? null,
-        performedBy: createdBy ?? null,
-        approvedBy: approvedBy ?? null,
-        referenceType: referenceType ?? null,
-        referenceId: referenceId ?? null,
-        oldValue,
-        newValue,
-        createdBy: createdBy ?? 5,
+        leavePolicyMasterId,
+        salaryStructureMasterId,
+        effectiveFrom,
+        effectiveTo,
+        changeReason,
+        approvedBy,
+        createdBy,
+        ...employeeData
+      } = data
+
+      const existing = await tx.query.employeeModel.findFirst({
+        where: eq(employeeModel.employeeId, employeeId),
       })
-    }
 
-    const trackChange = async (field: string, eventType: any) => {
-      const oldVal = (existing as any)[field]
-      const newVal = (updateData as any)[field]
+      if (!existing) throw new Error(`Employee not found: ${employeeId}`)
 
-      if (newVal === undefined || newVal === oldVal) return
+      const fkFields = [
+        'departmentId',
+        'designationId',
+        'employmentTypeId',
+        'companyId',
+        'workStationId',
+        'divisionId',
+        'costCenterId',
+        'reportingAuthorityId',
+      ]
 
-      const isFk = fkFields.includes(field)
+      const updateData: any = {}
 
-      if (isFk) {
-        const oldName = await resolveName(field, oldVal)
-        const newName = await resolveName(field, newVal)
+      Object.entries(employeeData).forEach(([key, value]) => {
+        if (fkFields.includes(key)) {
+          updateData[key] =
+            value === 0 || value === '' || value === undefined ? null : value
+        } else if (key === 'isActive') {
+          updateData[key] = value ? 1 : 0
+        } else {
+          updateData[key] = value === '' || value === undefined ? null : value
+        }
+      })
 
-        const cleanKey = field.replace(/Id$/, 'Name')
-
-        pushEvent(eventType, { [cleanKey]: oldName }, { [cleanKey]: newName })
-      } else {
-        pushEvent(eventType, { [field]: oldVal }, { [field]: newVal })
+      if (leavePolicyMasterId !== undefined) {
+        updateData.leavePolicyMasterId =
+          leavePolicyMasterId === 0 ? null : leavePolicyMasterId
       }
-    }
 
-    // ===========================
-    // TRACK CHANGES
-    // ===========================
-    await trackChange('departmentId', 'DEPARTMENT_CHANGE')
-    await trackChange('designationId', 'DESIGNATION_CHANGE')
-    await trackChange('employmentTypeId', 'EMPLOYMENT_TYPE_CHANGE')
-    await trackChange('leavePolicyMasterId', 'LEAVE_POLICY_CHANGE')
-    await trackChange('salaryStructureMasterId', 'SALARY_STRUCTURE_CHANGE')
-    await trackChange('basicSalary', 'SALARY_REVISION')
+      if (salaryStructureMasterId !== undefined) {
+        updateData.salaryStructureMasterId =
+          salaryStructureMasterId === 0 ? null : salaryStructureMasterId
+      }
 
-    const historyInserts: Promise<any>[] = []
+      updateData.updatedAt = new Date()
 
-    // Department History
-    if (
-      updateData.departmentId !== undefined &&
-      updateData.departmentId !== existing.departmentId
-    ) {
-      historyInserts.push(
-        tx.insert(employeeDepartmentHistoryModel).values({
+      // ===========================
+      // HISTORY META
+      // ===========================
+      const historyMeta = {
+        effectiveFrom:
+          typeof effectiveFrom === 'string'
+            ? new Date(effectiveFrom)
+            : (effectiveFrom ?? new Date()),
+        effectiveTo:
+          effectiveTo === undefined || effectiveTo === null
+            ? null
+            : typeof effectiveTo === 'string'
+              ? new Date(effectiveTo)
+              : effectiveTo,
+        changeReason: changeReason ?? null,
+        approvedBy: approvedBy ?? null,
+        createdBy: createdBy ?? 0,
+      }
+
+      // ===========================
+      // FK RESOLVER
+      // ===========================
+      const resolveName = async (field: string, id: any) => {
+        if (!id) return null
+
+        switch (field) {
+          case 'departmentId': {
+            const row = await tx.query.departmentModel.findFirst({
+              where: eq(departmentModel.departmentId, id),
+            })
+            return row?.departmentName ?? null
+          }
+
+          case 'designationId': {
+            const row = await tx.query.designationModel.findFirst({
+              where: eq(designationModel.designationId, id),
+            })
+            return row?.designationName ?? null
+          }
+
+          case 'employmentTypeId': {
+            const row = await tx.query.employmentTypeModel.findFirst({
+              where: eq(employmentTypeModel.employmentTypeId, id),
+            })
+            return row?.employmentTypeName ?? null
+          }
+
+          case 'leavePolicyMasterId': {
+            const row = await tx.query.leavePolicyMasterModel.findFirst({
+              where: eq(leavePolicyMasterModel.leavePolicyMasterId, id),
+            })
+            return row?.policyName ?? null
+          }
+
+          case 'salaryStructureMasterId': {
+            const row = await tx.query.salaryStructureMasterModel.findFirst({
+              where: eq(salaryStructureMasterModel.salaryStructureMasterId, id),
+            })
+            return row?.structureName ?? null
+          }
+
+          case 'reportingAuthorityId': {
+            const row = await tx.query.employeeModel.findFirst({
+              where: eq(employeeModel.employeeId, id),
+            })
+            return row?.empFullName ?? null
+          }
+
+          default:
+            return id
+        }
+      }
+
+      // ===========================
+      // LIFECYCLE EVENTS
+      // ===========================
+      const lifecycleEvents: any[] = []
+
+      const pushEvent = (
+        type: any,
+        oldValue: any,
+        newValue: any,
+        referenceType?: string,
+        referenceId?: number
+      ) => {
+        lifecycleEvents.push({
           employeeId,
-          departmentId: updateData.departmentId,
+          eventDate: new Date(),
+          employeeEventType: type,
           effectiveFrom: historyMeta.effectiveFrom,
-          effectiveTo: historyMeta.effectiveTo,
-          changeReason: historyMeta.changeReason,
-          approvedBy: historyMeta.approvedBy,
-          createdBy: historyMeta.createdBy,
+          remarks: changeReason ?? null,
+          performedBy: createdBy ?? null,
+          approvedBy: approvedBy ?? null,
+          referenceType: referenceType ?? null,
+          referenceId: referenceId ?? null,
+          oldValue,
+          newValue,
+          createdBy: createdBy ?? 5,
         })
-      )
-    }
+      }
 
-    // Designation History
-    if (
-      updateData.designationId !== undefined &&
-      updateData.designationId !== existing.designationId
-    ) {
-      historyInserts.push(
-        tx.insert(employeeDesignationHistoryModel).values({
-          employeeId,
-          designationId: updateData.designationId,
-          effectiveFrom: historyMeta.effectiveFrom,
-          effectiveTo: historyMeta.effectiveTo,
-          changeReason: historyMeta.changeReason,
-          approvedBy: historyMeta.approvedBy,
-          createdBy: historyMeta.createdBy,
-        })
-      )
-    }
+      const trackChange = async (field: string, eventType: any) => {
+        const oldVal = (existing as any)[field]
+        const newVal = (updateData as any)[field]
 
-    // Employment Type History
-    if (
-      updateData.employmentTypeId !== undefined &&
-      updateData.employmentTypeId !== existing.employmentTypeId
-    ) {
-      historyInserts.push(
-        tx.insert(employeeEmploymentTypeHistoryModel).values({
-          employeeId,
-          employmentTypeId: updateData.employmentTypeId,
-          effectiveFrom: historyMeta.effectiveFrom,
-          effectiveTo: historyMeta.effectiveTo,
-          changeReason: historyMeta.changeReason,
-          approvedBy: historyMeta.approvedBy,
-          createdBy: historyMeta.createdBy,
-        })
-      )
-    }
+        if (newVal === undefined || newVal === oldVal) return
 
-    // Leave Policy History
-    if (
-      updateData.leavePolicyMasterId !== undefined &&
-      updateData.leavePolicyMasterId !== existing.leavePolicyMasterId
-    ) {
-      historyInserts.push(
-        tx.insert(employeeLeavePolicyHistoryModel).values({
-          employeeId,
-          leavePolicyId: updateData.leavePolicyMasterId,
-          effectiveFrom: historyMeta.effectiveFrom,
-          effectiveTo: historyMeta.effectiveTo,
-          changeReason: historyMeta.changeReason,
-          approvedBy: historyMeta.approvedBy,
-          createdBy: historyMeta.createdBy,
-        })
-      )
-    }
+        const isFk = fkFields.includes(field)
 
-    // Salary Structure History
-    if (
-      updateData.salaryStructureMasterId !== undefined &&
-      updateData.salaryStructureMasterId !== existing.salaryStructureMasterId
-    ) {
-      historyInserts.push(
-        tx.insert(employeeSalaryStructureHistoryModel).values({
-          employeeId,
-          salaryStructureMasterId: updateData.salaryStructureMasterId,
-          effectiveFrom: historyMeta.effectiveFrom,
-          effectiveTo: historyMeta.effectiveTo,
-          changeReason: historyMeta.changeReason,
-          approvedBy: historyMeta.approvedBy,
-          createdBy: historyMeta.createdBy,
-        })
-      )
-    }
+        if (isFk) {
+          const oldName = await resolveName(field, oldVal)
+          const newName = await resolveName(field, newVal)
 
-    if (historyInserts.length > 0) {
-      await Promise.all(historyInserts)
-    }
+          const cleanKey = field.replace(/Id$/, 'Name')
 
-    // ===========================
-    // UPDATE EMPLOYEE
-    // ===========================
-    await tx
-      .update(employeeModel)
-      .set(updateData)
-      .where(eq(employeeModel.employeeId, employeeId))
+          pushEvent(eventType, { [cleanKey]: oldName }, { [cleanKey]: newName })
+        } else {
+          pushEvent(eventType, { [field]: oldVal }, { [field]: newVal })
+        }
+      }
 
-    // ===========================
-    // INSERT LIFECYCLE EVENTS
-    // ===========================
-    if (lifecycleEvents.length > 0) {
-      await tx.insert(employeeLifecycleEventsModel).values(lifecycleEvents)
+      // ===========================
+      // TRACK CHANGES
+      // ===========================
+      await trackChange('departmentId', 'DEPARTMENT_CHANGE')
+      await trackChange('designationId', 'DESIGNATION_CHANGE')
+      await trackChange('employmentTypeId', 'EMPLOYMENT_TYPE_CHANGE')
+      await trackChange('leavePolicyMasterId', 'LEAVE_POLICY_CHANGE')
+      await trackChange('salaryStructureMasterId', 'SALARY_STRUCTURE_CHANGE')
+      await trackChange('basicSalary', 'SALARY_REVISION')
+
+      const historyInserts: Promise<any>[] = []
+
+      if (
+        updateData.departmentId !== undefined &&
+        updateData.departmentId !== existing.departmentId
+      ) {
+        historyInserts.push(
+          tx.insert(employeeDepartmentHistoryModel).values({
+            employeeId,
+            departmentId: updateData.departmentId,
+            effectiveFrom: historyMeta.effectiveFrom,
+            effectiveTo: historyMeta.effectiveTo,
+            changeReason: historyMeta.changeReason,
+            approvedBy: historyMeta.approvedBy,
+            createdBy: historyMeta.createdBy,
+          })
+        )
+      }
+
+      if (
+        updateData.designationId !== undefined &&
+        updateData.designationId !== existing.designationId
+      ) {
+        historyInserts.push(
+          tx.insert(employeeDesignationHistoryModel).values({
+            employeeId,
+            designationId: updateData.designationId,
+            effectiveFrom: historyMeta.effectiveFrom,
+            effectiveTo: historyMeta.effectiveTo,
+            changeReason: historyMeta.changeReason,
+            approvedBy: historyMeta.approvedBy,
+            createdBy: historyMeta.createdBy,
+          })
+        )
+      }
+
+      if (
+        updateData.employmentTypeId !== undefined &&
+        updateData.employmentTypeId !== existing.employmentTypeId
+      ) {
+        historyInserts.push(
+          tx.insert(employeeEmploymentTypeHistoryModel).values({
+            employeeId,
+            employmentTypeId: updateData.employmentTypeId,
+            effectiveFrom: historyMeta.effectiveFrom,
+            effectiveTo: historyMeta.effectiveTo,
+            changeReason: historyMeta.changeReason,
+            approvedBy: historyMeta.approvedBy,
+            createdBy: historyMeta.createdBy,
+          })
+        )
+      }
+
+      if (
+        updateData.leavePolicyMasterId !== undefined &&
+        updateData.leavePolicyMasterId !== existing.leavePolicyMasterId
+      ) {
+        historyInserts.push(
+          tx.insert(employeeLeavePolicyHistoryModel).values({
+            employeeId,
+            leavePolicyId: updateData.leavePolicyMasterId,
+            effectiveFrom: historyMeta.effectiveFrom,
+            effectiveTo: historyMeta.effectiveTo,
+            changeReason: historyMeta.changeReason,
+            approvedBy: historyMeta.approvedBy,
+            createdBy: historyMeta.createdBy,
+          })
+        )
+      }
+
+      if (
+        updateData.salaryStructureMasterId !== undefined &&
+        updateData.salaryStructureMasterId !== existing.salaryStructureMasterId
+      ) {
+        historyInserts.push(
+          tx.insert(employeeSalaryStructureHistoryModel).values({
+            employeeId,
+            salaryStructureMasterId: updateData.salaryStructureMasterId,
+            effectiveFrom: historyMeta.effectiveFrom,
+            effectiveTo: historyMeta.effectiveTo,
+            changeReason: historyMeta.changeReason,
+            approvedBy: historyMeta.approvedBy,
+            createdBy: historyMeta.createdBy,
+          })
+        )
+      }
+
+      if (historyInserts.length > 0) {
+        await Promise.all(historyInserts)
+      }
+
+      // ===========================
+      // UPDATE EMPLOYEE
+      // ===========================
+      await tx
+        .update(employeeModel)
+        .set(updateData)
+        .where(eq(employeeModel.employeeId, employeeId))
+
+      // ===========================
+      // INSERT LIFECYCLE EVENTS
+      // ===========================
+      if (lifecycleEvents.length > 0) {
+        await tx.insert(employeeLifecycleEventsModel).values(lifecycleEvents)
+      }
+
+      const updatedEmployee = await tx.query.employeeModel.findFirst({
+        where: eq(employeeModel.employeeId, employeeId),
+      })
+
+      results.push(updatedEmployee)
     }
 
     await redis.del(CACHE_KEY)
 
-    const updatedEmployee = await tx.query.employeeModel.findFirst({
-      where: eq(employeeModel.employeeId, employeeId),
-    })
-
-    return updatedEmployee
+    return results
   })
 }
 

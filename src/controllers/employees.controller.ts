@@ -2,11 +2,11 @@ import { Request, Response } from 'express'
 import { requirePermission } from '../services/utils/jwt.utils'
 import {
   createEmployee,
-  updateEmployee,
   getAllEmployees,
   getEmployeeById,
   deleteEmployee,
   getEmployeeIdByUserIdService,
+  updateEmployees,
 } from '../services/employees.service'
 
 /* ================================
@@ -81,10 +81,23 @@ export const updateEmployeeController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'edit_employee')
 
-    const employeeId = Number(req.params.id)
-    if (!employeeId) {
-      res.status(400).json({ error: 'Invalid employee ID' })
-    }
+    const employeeDetailsList =
+      typeof req.body.employeeDetails === 'string'
+        ? JSON.parse(req.body.employeeDetails)
+        : req.body.employeeDetails
+
+    // employeeDetailsList is now an array, each item must include its own employeeId
+    employeeDetailsList.forEach((emp: any) => {
+      if (files?.[`photoUrl_${emp.employeeId}`]?.[0]) {
+        emp.photoUrl = `${baseUrl}${files[`photoUrl_${emp.employeeId}`][0].filename}`
+      }
+      if (files?.[`cvUrl_${emp.employeeId}`]?.[0]) {
+        emp.cvUrl = `${baseUrl}${files[`cvUrl_${emp.employeeId}`][0].filename}`
+      }
+      if (files?.[`certificateUrl_${emp.employeeId}`]?.[0]) {
+        emp.certificateUrl = `${baseUrl}${files[`certificateUrl_${emp.employeeId}`][0].filename}`
+      }
+    })
 
     const files = req.files as {
       [fieldname: string]: Express.Multer.File[]
@@ -109,11 +122,11 @@ export const updateEmployeeController = async (req: Request, res: Response) => {
       employeeDetails.certificateUrl = `${baseUrl}${files.certificateUrl[0].filename}`
     }
 
-    const updatedEmployee = await updateEmployee(employeeId, employeeDetails)
+    const updatedEmployees = await updateEmployees(employeeDetailsList)
 
     res.json({
       success: true,
-      data: updatedEmployee,
+      data: updatedEmployees,
     })
   } catch (error: any) {
     console.error('❌ Employee update error:', error)
