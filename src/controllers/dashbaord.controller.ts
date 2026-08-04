@@ -12,7 +12,7 @@ export const getEmployeeLeaveSummaryController = async (
   res: Response
 ) => {
   try {
-    // requirePermission(req, 'view_dashboard')
+    requirePermission(req, 'view_dashboard')
 
     const tenantId = req.user?.tenantId
 
@@ -41,7 +41,7 @@ export const getEmployeeAttendanceSummaryController = async (
   res: Response
 ) => {
   try {
-    // requirePermission(req, 'view_dashboard')
+    requirePermission(req, 'view_dashboard')
     const tenantId = req.user?.tenantId
 
     if (!tenantId) {
@@ -71,7 +71,7 @@ export const getSalaryStatusController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_dashboard')
+    requirePermission(req, 'view_dashboard')
     const tenantId = req.user?.tenantId
 
     if (!tenantId) {
@@ -96,7 +96,7 @@ export const getEmployeeLoneSummaryController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_dashboard')
+    requirePermission(req, 'view_dashboard')
     const tenantId = req.user?.tenantId
 
     if (!tenantId) {

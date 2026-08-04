@@ -1,34 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { getAllRoles, updateRolePermissions, getAllPermission } from "../services/role.service";
 import { requirePermission } from "../services/utils/jwt.utils";
-// import { z } from "zod";
-
-// const createRoleSchema = z.object({
-//     roleName: z.string().min(1, "Role name is required"),
-//     permissions: z.array(z.string()).optional(),
-//     description: z.string().optional(),
-// });
-
-// // Create role
-// export const createRoleController = async (
-//     req: Request,
-//     res: Response,
-//     next: NextFunction
-// ) => {
-//     try {
-//         const roleData = createRoleSchema.parse(req.body);
-//         const role = await createRole(roleData);
-
-//         res.status(201).json({
-//             status: "success",
-//             data: {
-//                 role,
-//             },
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
-// };
 
 // Get all roles
 export const getAllRolesController = async (

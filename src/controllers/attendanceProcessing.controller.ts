@@ -3,9 +3,11 @@ import {
   processAttendanceForDate,
   processAttendanceForRange,
 } from '../services/attendanceProcessing.service'
+import { requirePermission } from '../services/utils/jwt.utils'
 
 export const processDateController = async (req: Request, res: Response): Promise<void> => {
   try {
+    requirePermission(req, "process_attendance")
     const { date } = req.body
     console.log("🚀 ~ processDateController ~ req.body:", req.body)
     const changedBy = (req as any).user?.userId ?? 1
@@ -36,6 +38,7 @@ export const processDateController = async (req: Request, res: Response): Promis
 
 export const processRangeController = async (req: Request, res: Response): Promise<void> => {
   try {
+    requirePermission(req, "process_attendance")
     const { fromDate, toDate } = req.body
     const changedBy = (req as any).user?.userId ?? 1
 

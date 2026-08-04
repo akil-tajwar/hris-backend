@@ -25,7 +25,7 @@ export const markNotificationsAsReadController = async (
   res: Response,
 ) => {
   try {
-    requirePermission(req, 'marks_as_read_notification')
+    requirePermission(req, 'read_notification')
     const result = await markNotificationsAsRead(req.body)
 
     res.status(200).json({
