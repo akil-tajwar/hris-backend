@@ -20,7 +20,9 @@ export const authenticateUser = async (
     // console.log(token);
     const decoded = verifyAccessToken(token)
 
-    const permissions = await getUserPermissions(decoded.userId)
+    // Super Admin doesn't need permission lookup
+    const permissions =
+      decoded.role === 1 ? [] : await getUserPermissions(decoded.userId)
 
     const [user] = await db
       .select({ tenantId: userModel.tenantId })
@@ -37,7 +39,12 @@ export const authenticateUser = async (
       role: decoded.role,
       tenantId: user.tenantId,
       permissions: permissions,
-      hasPermission: (perm: string) => permissions.includes(perm),
+      hasPermission: (perm: string) => {
+        // Super Admin has access to everything
+        if (decoded.role === 1) return true
+
+        return permissions.includes(perm)
+      },
       hasRole: (role: number) => decoded.role === role,
     }
     // console.log('🚀 ~ authenticateUser ~ req.user:', req.user)
@@ -48,5 +55,3 @@ export const authenticateUser = async (
     return next(UnauthorizedError('Invalid token'))
   }
 }
-
-// utils/getUserPermissions.ts

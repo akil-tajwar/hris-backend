@@ -54,6 +54,9 @@ export const rolePermissionsModel = mysqlTable('role_permissions', {
   permissionId: int('permission_id')
     .notNull()
     .references(() => permissionsModel.id),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
 })
 
 export const userRolesModel = mysqlTable('user_roles', {

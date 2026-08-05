@@ -9,8 +9,12 @@ export const getAllRolesController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, "view_roles");
-    const roles = await getAllRoles();
+    requirePermission(req, "view_roles");
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const roles = await getAllRoles(tenantId);
 
     res.status(200).json(roles);
   } catch (error) {
@@ -26,7 +30,7 @@ export const updateRolePermissionsController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // requirePermission(req, "edit_roles");
+    requirePermission(req, "edit_roles");
     const { roleId } = req.params;
     const { permissions } = req.body;
 
@@ -40,9 +44,16 @@ export const updateRolePermissionsController = async (
       return;
     }
 
+    const tenantId = req.user?.tenantId
+   
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
     const updatedRole = await updateRolePermissions(
       Number(roleId),
-      permissions
+      tenantId,
+      permissions,
     );
 
     res.status(200).json({
@@ -61,7 +72,7 @@ export const getAllPermissionController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, "view_permissions");
+    requirePermission(req, "view_permissions");
     const roles = await getAllPermission();
 
     res.status(200).json(roles);
