@@ -16,7 +16,7 @@ export const generateSalaryController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_salary')
+    requirePermission(req, 'view_salary')
 
     const salaryMonth = req.query.salaryMonth
     const salaryYear = req.query.salaryYear
@@ -43,7 +43,7 @@ export const createSalariesController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'create_salary')
+    requirePermission(req, 'create_salary')
 
     const tenantId = req.user?.tenantId
 
@@ -77,7 +77,7 @@ export const getSalarysController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_salary')
+    requirePermission(req, 'view_salary')
 
     const tenantId = req.user?.tenantId
     if (tenantId === undefined) {
@@ -98,7 +98,7 @@ export const updateSalaryController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'edit_salary')
+    requirePermission(req, 'edit_salary')
 
     const result = await updateSalaryWithSalaryComponents(req.body)
 
@@ -138,7 +138,7 @@ export const giveSalaryController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'edit_salary')
+    requirePermission(req, 'edit_salary')
 
     const { salaryId } = req.params
 
@@ -167,7 +167,7 @@ export const makeSalaryPermentController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'edit_salary')
+    requirePermission(req, 'edit_salary')
 
     const { salaryId } = req.params
     console.log("🚀 ~ makeSalaryPermentController ~ salaryId:", salaryId)

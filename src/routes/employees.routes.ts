@@ -23,7 +23,7 @@ router.post(
   createEmployeeController
 )
 router.patch(
-  '/edit/:id',
+  '/edit',
   upload.fields([
     { name: 'photoUrl', maxCount: 1 },
     { name: 'cvUrl', maxCount: 1 },

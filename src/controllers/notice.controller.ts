@@ -124,7 +124,7 @@ export const getNoticesController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_notice')
+    requirePermission(req, 'view_notice')
     const tenantId = req.user?.tenantId
     if (tenantId === undefined) {
       throw new Error('Tenant ID is required')
@@ -145,7 +145,7 @@ export const getNoticeByIdController = async (
   next: NextFunction
 ) => {
   try {
-    //requirePermission(req, 'view_notice')
+    requirePermission(req, 'view_notice')
     const { noticeId } = req.params
     const notice = await getNoticeById(Number(noticeId))
     res.json({ status: 'success', data: notice })
@@ -163,7 +163,7 @@ export const deleteNoticeController = async (
   next: NextFunction
 ) => {
   try {
-    //requirePermission(req, 'delete_notice')
+    requirePermission(req, 'delete_notice')
     const { noticeId } = req.params
     await deleteNotice(Number(noticeId))
     res.json({ status: 'success', message: 'Notice deleted' })

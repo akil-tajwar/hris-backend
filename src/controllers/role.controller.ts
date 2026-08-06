@@ -1,34 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { getAllRoles, updateRolePermissions, getAllPermission } from "../services/role.service";
 import { requirePermission } from "../services/utils/jwt.utils";
-// import { z } from "zod";
-
-// const createRoleSchema = z.object({
-//     roleName: z.string().min(1, "Role name is required"),
-//     permissions: z.array(z.string()).optional(),
-//     description: z.string().optional(),
-// });
-
-// // Create role
-// export const createRoleController = async (
-//     req: Request,
-//     res: Response,
-//     next: NextFunction
-// ) => {
-//     try {
-//         const roleData = createRoleSchema.parse(req.body);
-//         const role = await createRole(roleData);
-
-//         res.status(201).json({
-//             status: "success",
-//             data: {
-//                 role,
-//             },
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
-// };
 
 // Get all roles
 export const getAllRolesController = async (
@@ -37,8 +9,12 @@ export const getAllRolesController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, "view_roles");
-    const roles = await getAllRoles();
+    requirePermission(req, "view_roles");
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const roles = await getAllRoles(tenantId);
 
     res.status(200).json(roles);
   } catch (error) {
@@ -54,7 +30,7 @@ export const updateRolePermissionsController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // requirePermission(req, "edit_roles");
+    requirePermission(req, "edit_roles");
     const { roleId } = req.params;
     const { permissions } = req.body;
 
@@ -68,9 +44,16 @@ export const updateRolePermissionsController = async (
       return;
     }
 
+    const tenantId = req.user?.tenantId
+   
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
     const updatedRole = await updateRolePermissions(
       Number(roleId),
-      permissions
+      tenantId,
+      permissions,
     );
 
     res.status(200).json({
@@ -89,7 +72,7 @@ export const getAllPermissionController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, "view_permissions");
+    requirePermission(req, "view_permissions");
     const roles = await getAllPermission();
 
     res.status(200).json(roles);

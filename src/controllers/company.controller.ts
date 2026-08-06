@@ -128,7 +128,7 @@ export const getCompanyByIdController = async (
   next: NextFunction
 ) => {
   try {
-    //requirePermission(req, 'view_company')
+    requirePermission(req, 'view_company')
     const { companyId } = req.params
     const company = await getCompanyById(Number(companyId))
     res.json({ status: 'success', data: company })

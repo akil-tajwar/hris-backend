@@ -5,7 +5,7 @@ import { permissionsModel, roleModel, rolePermissionsModel } from '../schemas'
 import { BadRequestError } from './utils/errors.utils'
 
 // Get all roles
-export const getAllRoles = async () => {
+export const getAllRoles = async (tenantId: number) => {
   const roles = await db
     .select({
       roleId: roleModel.roleId,
@@ -20,6 +20,7 @@ export const getAllRoles = async () => {
       eq(roleModel.roleId, rolePermissionsModel.roleId)
     )
     .groupBy(roleModel.roleId, roleModel.roleName)
+    // .where(eq(rolePermissionsModel.tenantId, tenantId))
 
   return roles
 }
@@ -27,6 +28,7 @@ export const getAllRoles = async () => {
 // Update role permissions
 export const updateRolePermissions = async (
   roleId: number,
+  tenantId: number,
   permissions: number[]
 ) => {
   if (!Array.isArray(permissions)) {
@@ -66,6 +68,7 @@ export const updateRolePermissions = async (
     const rolePermissionsData = permissions.map((permissionId) => ({
       roleId: roleId,
       permissionId: permissionId,
+      tenantId: tenantId,
     }))
 
     await db.insert(rolePermissionsModel).values(rolePermissionsData)

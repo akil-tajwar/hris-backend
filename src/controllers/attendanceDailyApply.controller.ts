@@ -17,7 +17,7 @@ export const createAttendanceDailyApplyController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'create_attendance_daily_apply')
+    requirePermission(req, 'create_attendance_daily_apply')
 
     const tenantId = req.user?.tenantId
     const data = {
@@ -51,7 +51,7 @@ export const editAttendanceDailyApplyController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'edit_attendance_daily_apply')
+    requirePermission(req, 'edit_attendance_daily_apply')
 
     const { attendanceDailyApplyId } = req.params
     const updatedBy = req.user?.userId
@@ -77,7 +77,7 @@ export const getAttendanceApplyByUserIdController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_attendance_daily_apply')
+    requirePermission(req, 'view_attendance_daily_apply')
 
     const { userId } = req.params
     const tenantId = req.user?.tenantId
@@ -99,7 +99,7 @@ export const getAllAttendanceApplyController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_attendance_daily_apply')
+    requirePermission(req, 'view_attendance_daily_apply')
 
     const { userId } = req.params
     const tenantId = req.user?.tenantId
@@ -119,7 +119,7 @@ export const acceptedAttendanceApplyByRepAuthController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'approve_attendance_daily_apply_rep_auth')
+    requirePermission(req, 'repauth_approve_attendance_daily_apply')
 
     const { attendanceDailyApplyId } = req.params
     const updatedBy = req.user?.userId as number
@@ -145,7 +145,7 @@ export const acceptedAttendanceApplyByByHrController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'approve_attendance_daily_apply_hr')
+    requirePermission(req, 'hr_approve_attendance_daily_apply')
 
     const { attendanceDailyApplyId } = req.params
     const updatedBy = req.user?.userId as number
@@ -171,7 +171,7 @@ export const rejectAttendanceApplyController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'edit_attendance_daily_apply')
+    requirePermission(req, 'reject_attendance_daily_apply')
 
     const { attendanceDailyApplyId } = req.params
     const updatedBy = req.user?.userId as number

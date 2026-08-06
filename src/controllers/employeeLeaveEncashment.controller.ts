@@ -11,7 +11,7 @@ export const createEmployeeLeaveEncashmentController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'create_employee_leave_encashment')
+    requirePermission(req, 'create_employee_leave_encashment')
 
     const tenantId = req.user?.tenantId
 
@@ -45,7 +45,7 @@ export const getEmployeeLeaveEncashmentsController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_employee_leave_encashment')
+    requirePermission(req, 'view_employee_leave_encashment')
 
     const tenantId = req.user?.tenantId
 

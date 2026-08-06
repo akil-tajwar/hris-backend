@@ -87,7 +87,7 @@ export const skipLoneInstallmentController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'skip_employee_lone')
+    requirePermission(req, 'skip_employee_lone')
     const { employeeLoneInstallmentId, updatedBy } = req.params
     console.log('🚀 ~ skipLoneInstallmentController ~ req.params:', req.params)
 
@@ -118,6 +118,7 @@ export const makeEmployeeLoneFullPaidController = async (
   next: NextFunction
 ) => {
   try {
+    requirePermission(req, 'fullpay_employee_lone')
     const employeeLoneId = Number(req.params.employeeLoneId)
 
     const updatedBy = req.user?.userId
