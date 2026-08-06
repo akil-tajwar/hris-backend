@@ -86,6 +86,10 @@ export const updateEmployeeController = async (req: Request, res: Response) => {
         ? JSON.parse(req.body.employeeDetails)
         : req.body.employeeDetails
 
+    const files = req.files as {
+      [fieldname: string]: Express.Multer.File[]
+    }
+
     // employeeDetailsList is now an array, each item must include its own employeeId
     employeeDetailsList.forEach((emp: any) => {
       if (files?.[`photoUrl_${emp.employeeId}`]?.[0]) {
@@ -98,10 +102,6 @@ export const updateEmployeeController = async (req: Request, res: Response) => {
         emp.certificateUrl = `${baseUrl}${files[`certificateUrl_${emp.employeeId}`][0].filename}`
       }
     })
-
-    const files = req.files as {
-      [fieldname: string]: Express.Multer.File[]
-    }
 
     const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`
 

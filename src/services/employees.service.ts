@@ -187,7 +187,7 @@ export const updateEmployees = async (
     }
   >
 ) => {
-  const CACHE_KEY = 'employees:all'
+  const CACHE_KEY = `employees:all:${employeesData[0].tenantId}`
 
   return await db.transaction(async (tx) => {
     const results: any[] = []
@@ -201,6 +201,7 @@ export const updateEmployees = async (
         effectiveTo,
         changeReason,
         approvedBy,
+        tenantId,
         createdBy,
         ...employeeData
       } = data
