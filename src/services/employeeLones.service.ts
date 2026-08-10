@@ -288,8 +288,9 @@ export const deleteLone = async (employeeLoneId: number) => {
 
 //skip lone
 interface SkipLoneParams {
-  employeeLoneInstallmentId: number // Changed from employeeOtherSalaryComponentId
+  employeeLoneInstallmentId: number
   updatedBy: number
+  tenantId: number
 }
 
 // Helper function to convert month name to number (same as before)
@@ -317,16 +318,16 @@ function toDate(month: string, year: number): Date {
 }
 
 export const skipLoneInstallment = async (params: SkipLoneParams) => {
-  const { employeeLoneInstallmentId, updatedBy } = params
+  const { employeeLoneInstallmentId, updatedBy, tenantId } = params
 
   // Get the installment to skip from the installments table
   const [installment] = await db
     .select()
     .from(employeeLoneInstallemntsModel)
     .where(
-      eq(
-        employeeLoneInstallemntsModel.employeeLoneInstallmentId,
-        employeeLoneInstallmentId
+      and(
+        eq(employeeLoneInstallemntsModel.employeeLoneInstallmentId, employeeLoneInstallmentId),
+        eq(employeeLoneInstallemntsModel.tenantId, tenantId)
       )
     )
     .limit(1)
@@ -357,9 +358,12 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
       updatedAt: now,
     })
     .where(
-      eq(
-        employeeLoneInstallemntsModel.employeeLoneInstallmentId,
-        employeeLoneInstallmentId
+      and(
+        eq(
+          employeeLoneInstallemntsModel.employeeLoneInstallmentId,
+          employeeLoneInstallmentId
+        ),
+        eq(employeeLoneInstallemntsModel.tenantId, tenantId)
       )
     )
 
@@ -369,7 +373,12 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
   const allInstallments = await db
     .select()
     .from(employeeLoneInstallemntsModel)
-    .where(eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId))
+    .where(
+      and(
+        eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId),
+        eq(employeeLoneInstallemntsModel.tenantId, tenantId)
+      )
+    )
 
   if (!allInstallments.length) {
     throw BadRequestError('No installments found for this loan')
@@ -435,6 +444,7 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
       | 'December',
     loneInstallmentYear: newSalaryYear,
     isSkipped: false,
+    tenantId: tenantId,
     createdBy: updatedBy,
     createdAt: now,
     updatedAt: now,
@@ -445,7 +455,12 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
     await db
       .select()
       .from(employeeLoneInstallemntsModel)
-      .where(eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId))
+      .where(
+        and(
+          eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId),
+          eq(employeeLoneInstallemntsModel.tenantId, tenantId)
+        )
+      )
   ).sort((a, b) => {
     const dateA = toDate(
       a.loneInstallmentMonth,
@@ -490,14 +505,20 @@ export const skipLoneInstallment = async (params: SkipLoneParams) => {
 
 export const makeEmployeeLoneFullPaid = async (
   employeeLoneId: number,
-  updatedBy: number
+  updatedBy: number,
+  tenantId: number
 ) => {
   return await db.transaction(async (tx) => {
     // Check loan exists
     const [loan] = await tx
       .select()
       .from(employeeLoneModel)
-      .where(eq(employeeLoneModel.employeeLoneId, employeeLoneId))
+      .where(
+        and(
+          eq(employeeLoneModel.employeeLoneId, employeeLoneId),
+          eq(employeeLoneModel.tenantId, tenantId)
+        )
+      )
 
     if (!loan) {
       throw new Error('Loan not found')
@@ -519,7 +540,12 @@ export const makeEmployeeLoneFullPaid = async (
         isPaid: true,
         updatedBy,
       })
-      .where(eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId))
+      .where(
+        and(
+          eq(employeeLoneInstallemntsModel.employeeLoneId, employeeLoneId),
+          eq(employeeLoneInstallemntsModel.tenantId, tenantId)
+        )
+      )
 
     return {
       message: 'Loan marked as fully paid successfully.',

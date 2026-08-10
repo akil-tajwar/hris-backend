@@ -176,8 +176,12 @@ export const getEmployeeByIdController = async (
     if (!employeeId) {
       res.status(400).json({ message: 'Invalid employee ID' })
     }
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
 
-    const data = await getEmployeeById(employeeId)
+    const data = await getEmployeeById(employeeId, tenantId)
 
     if (!data) {
       res.status(404).json({ success: false, message: 'Employee not found' })
@@ -205,7 +209,12 @@ export const deleteEmployeeController = async (req: Request, res: Response) => {
       res.status(400).json({ message: 'Invalid employee ID' })
     }
 
-    const result = await deleteEmployee(employeeId)
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+
+    const result = await deleteEmployee(employeeId, tenantId)
     res.status(200).json(result)
   } catch (error: any) {
     console.error('Delete Employee Error:', error)
@@ -231,8 +240,12 @@ export const getEmployeeIdByUserIdController = async (
     if (!userId) {
       res.status(400).json({ message: 'Invalid userId' })
     }
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
 
-    const employeeId = await getEmployeeIdByUserIdService(Number(userId))
+    const employeeId = await getEmployeeIdByUserIdService(Number(userId), tenantId)
 
     res.status(200).json(employeeId)
   } catch (error: any) {

@@ -8,16 +8,16 @@ import {
   register,
   updateUserController,
 } from "../controllers/auth.controller";
-import { authenticateUser } from "../middlewares/auth.middleware";
+import { authenticateUser, authLimiter } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-router.post("/register", register);
-router.post("/login", login);
-router.get('/users',  getUserList);
+router.post("/register", authLimiter, register);
+router.post("/login", authLimiter, login);
+router.get('/users', authenticateUser,  getUserList);
 router.get("/users-by-roles", getUsersWithRoles);
 router.get("/roles", getRolesController);
-router.put("/users/:userId", updateUserController);
-router.patch("/change-password/:userId", changePasswordController);
+router.put("/users/:userId", authenticateUser, updateUserController);
+router.patch("/change-password/:userId", authenticateUser, changePasswordController);
 
 export default router;

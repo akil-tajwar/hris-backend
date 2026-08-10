@@ -99,8 +99,12 @@ export const updateSalaryController = async (
 ) => {
   try {
     requirePermission(req, 'edit_salary')
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
 
-    const result = await updateSalaryWithSalaryComponents(req.body)
+    const result = await updateSalaryWithSalaryComponents(req.body, tenantId)
 
     res.json({
       status: 'success',
@@ -120,8 +124,11 @@ export const deleteSalaryController = async (
     requirePermission(req, 'delete_salary')
 
     const { salaryId } = req.params
-
-    await deleteSalaryWithSalaryComponents(Number(salaryId))
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    await deleteSalaryWithSalaryComponents(Number(salaryId), tenantId)
 
     res.json({
       status: 'success',

@@ -2,11 +2,11 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 import helmet from 'helmet'
-import path from 'path'
 import { errorHandler } from './middlewares/error.middleware'
 import routes from './routes'
 import 'dotenv/config';
 import Redis from 'ioredis'
+import { generalLimiter } from './middlewares/auth.middleware'
 
 dotenv.config()
 
@@ -46,14 +46,11 @@ const redis = new Redis(redisUrl, {
   keyPrefix: process.env.REDIS_PREFIX, // Automatically prefixes everything with "app_one:"
 });
 
-const bcrypt = require("bcrypt");
-
-bcrypt.hash("A123456a!", 10).then(console.log);
-
 // This saves globally as "app_one:session:xyz"
 redis.set('session:xyz', 'active').catch(console.error)
 
 app.use(helmet())
+// app.use(generalLimiter)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

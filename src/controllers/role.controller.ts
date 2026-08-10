@@ -10,11 +10,8 @@ export const getAllRolesController = async (
 ) => {
   try {
     requirePermission(req, "view_roles");
-    const tenantId = req.user?.tenantId
-    if (tenantId === undefined) {
-      throw new Error('Tenant ID is required')
-    }
-    const roles = await getAllRoles(tenantId);
+    
+    const roles = await getAllRoles();
 
     res.status(200).json(roles);
   } catch (error) {

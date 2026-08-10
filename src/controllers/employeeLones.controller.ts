@@ -15,7 +15,7 @@ export const createLoneController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'create_employee_lone')
+    requirePermission(req, 'create_employee_lone')
     const tenantId = req.user?.tenantId
     const data = {
       ...req.body,
@@ -35,7 +35,7 @@ export const getLonesController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'view_employee_lone')
+    requirePermission(req, 'view_employee_lone')
     const tenantId = req.user?.tenantId
     if (tenantId === undefined) {
       throw new Error('Tenant ID is required')
@@ -53,7 +53,7 @@ export const updateLoneController = async (
   next: NextFunction
 ) => {
   try {
-    // requirePermission(req, 'edit_employee_lone')
+    requirePermission(req, 'edit_employee_lone')
     const { employeeLoneId } = req.params
 
     const lone = await updateLone({
@@ -97,10 +97,15 @@ export const skipLoneInstallmentController = async (
         message: 'employeeLoneInstallmentId and updatedBy are required',
       })
     }
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
 
     const result = await skipLoneInstallment({
       employeeLoneInstallmentId: parseInt(employeeLoneInstallmentId),
       updatedBy: parseInt(updatedBy),
+      tenantId,
     })
 
     res.status(200).json({
@@ -122,10 +127,14 @@ export const makeEmployeeLoneFullPaidController = async (
     const employeeLoneId = Number(req.params.employeeLoneId)
 
     const updatedBy = req.user?.userId
-
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
     const result = await makeEmployeeLoneFullPaid(
       employeeLoneId,
-      Number(updatedBy)
+      Number(updatedBy),
+      tenantId
     )
 
     res.status(200).json({

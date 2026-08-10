@@ -4,6 +4,7 @@ import { redis } from '../middlewares/redis'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as csv from 'csv-parse/sync'
+import { BadRequestError, ForbiddenError } from './utils/errors.utils'
 
 const PUNCH_CACHE_KEY = (tenantId: number) =>
   `attendance_punches:${tenantId}:all`
@@ -95,6 +96,40 @@ export const importAttendancePunchesFromCsv = async (
   createdBy: number,
   tenantId: number
 ) => {
+  // Validate file
+  if (!file || !file.filename) {
+    throw BadRequestError('No file provided')
+  }
+
+  // Ensure file is CSV
+  if (!file.filename.endsWith('.csv')) {
+    throw BadRequestError('Only CSV files are allowed')
+  }
+
+  // Store in tenant-specific directory
+  const tenantDir = path.join('uploads', 'attendance', `tenant_${tenantId}`)
+
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(tenantDir)) {
+    fs.mkdirSync(tenantDir, { recursive: true })
+  }
+
+  // Move file to tenant directory
+  const oldPath = file.path
+  const newPath = path.join(tenantDir, file.filename)
+
+  // Ensure the destination is within tenant directory
+  const resolvedDest = path.resolve(newPath)
+  const resolvedBase = path.resolve(tenantDir)
+  if (!resolvedDest.startsWith(resolvedBase)) {
+    throw ForbiddenError('Invalid file path')
+  }
+
+  // Move file
+  fs.renameSync(oldPath, newPath)
+  file.path = newPath
+
+  // Read file
   const fileContent = fs.readFileSync(file.path, 'utf-8')
 
   const rows: CsvPunchRow[] = csv.parse(fileContent, {
@@ -183,23 +218,21 @@ export const importAttendancePunchesFromCsv = async (
 // LIST CSV FILES
 // ===============================
 
-export const listCsvFiles = () => {
-  const dir = path.join('uploads', 'attendance')
+export const listCsvFiles = (tenantId: number) => {
+  // Create tenant-specific directory
+  const baseDir = path.join('uploads', 'attendance', `tenant_${tenantId}`)
 
-  if (!fs.existsSync(dir)) return []
+  if (!fs.existsSync(baseDir)) return []
 
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.csv'))
+  const files = fs.readdirSync(baseDir).filter((f) => f.endsWith('.csv'))
 
   return files.map((filename) => {
-    const filePath = path.join(dir, filename)
-
+    const filePath = path.join(baseDir, filename)
     const stats = fs.statSync(filePath)
 
     return {
       filename,
-
       size: stats.size,
-
       uploadedAt: stats.birthtime,
     }
   })
@@ -209,11 +242,49 @@ export const listCsvFiles = () => {
 // DOWNLOAD CSV
 // ===============================
 
-export const getCsvFilePath = (filename: string) => {
-  const filePath = path.join('uploads', 'attendance', filename)
+export const getCsvFilePath = (filename: string, tenantId: number) => {
+  // 1. Validate filename
+  if (!filename || typeof filename !== 'string') {
+    throw BadRequestError('Invalid filename')
+  }
 
+  // 2. Sanitize - allow only safe characters
+  const sanitized = filename
+    .replace(/[^a-zA-Z0-9_.-]/g, '') // Remove dangerous characters
+    .replace(/\.\./g, '') // Remove directory traversal
+    .trim()
+
+  if (!sanitized) {
+    throw BadRequestError('Invalid filename format')
+  }
+
+  // 3. Ensure it's a CSV file
+  if (!sanitized.endsWith('.csv')) {
+    throw BadRequestError('Only CSV files are allowed')
+  }
+
+  // 4. Build path with tenant isolation
+  const baseDir = path.join('uploads', 'attendance', `tenant_${tenantId}`)
+  const filePath = path.join(baseDir, sanitized)
+
+  // 5. Resolve to absolute path and verify it's within the base directory
+  const absoluteBase = path.resolve(baseDir)
+  const absoluteFile = path.resolve(filePath)
+
+  // 6. Ensure the resolved path is within the base directory
+  if (!absoluteFile.startsWith(absoluteBase)) {
+    throw ForbiddenError('Access denied')
+  }
+
+  // 7. Check if file exists
   if (!fs.existsSync(filePath)) {
     throw new Error('File not found')
+  }
+
+  // 8. Additional security: ensure it's not a symlink
+  const stats = fs.lstatSync(filePath)
+  if (stats.isSymbolicLink()) {
+    throw ForbiddenError('Symbolic links are not allowed')
   }
 
   return filePath

@@ -447,7 +447,8 @@ type UpdateSalaryPayload = {
   components?: ComponentType[]
 }
 export const updateSalaryWithSalaryComponents = async (
-  data: UpdateSalaryPayload
+  data: UpdateSalaryPayload,
+  tenantId: number
 ) => {
   return await db.transaction(async (tx) => {
     const {
@@ -467,7 +468,8 @@ export const updateSalaryWithSalaryComponents = async (
         and(
           eq(salaryModel.employeeId, employeeId),
           eq(salaryModel.salaryMonth, salaryMonth),
-          eq(salaryModel.salaryYear, salaryYear)
+          eq(salaryModel.salaryYear, salaryYear),
+          eq(salaryModel.tenantId, tenantId)
         )
       )
 
@@ -510,7 +512,8 @@ export const updateSalaryWithSalaryComponents = async (
         and(
           eq(employeeSalaryDetailsModel.employeeId, employeeId),
           eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
-          eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
+          eq(employeeSalaryDetailsModel.salaryYear, salaryYear),
+          eq(employeeSalaryDetailsModel.tenantId, tenantId)
         )
       )
 
@@ -522,7 +525,8 @@ export const updateSalaryWithSalaryComponents = async (
         and(
           eq(employeeSalaryDetailsModel.employeeId, employeeId),
           eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
-          eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
+          eq(employeeSalaryDetailsModel.salaryYear, salaryYear),
+          eq(employeeSalaryDetailsModel.tenantId, tenantId)
         )
       )
 
@@ -572,7 +576,8 @@ export const updateSalaryWithSalaryComponents = async (
         and(
           eq(employeeSalaryDetailsModel.employeeId, employeeId),
           eq(employeeSalaryDetailsModel.salaryMonth, salaryMonth),
-          eq(employeeSalaryDetailsModel.salaryYear, salaryYear)
+          eq(employeeSalaryDetailsModel.salaryYear, salaryYear),
+          eq(employeeSalaryDetailsModel.tenantId, tenantId)
         )
       )
 
@@ -584,7 +589,7 @@ export const updateSalaryWithSalaryComponents = async (
 }
 
 // DELETE
-export const deleteSalaryWithSalaryComponents = async (salaryId: number) => {
+export const deleteSalaryWithSalaryComponents = async (salaryId: number, tenantId: number) => {
   return await db.transaction(async (tx) => {
     /* ---------------- get salary ---------------- */
     const [salary] = await tx
@@ -601,7 +606,8 @@ export const deleteSalaryWithSalaryComponents = async (salaryId: number) => {
         and(
           eq(employeeSalaryDetailsModel.employeeId, salary.employeeId),
           eq(employeeSalaryDetailsModel.salaryMonth, salary.salaryMonth),
-          eq(employeeSalaryDetailsModel.salaryYear, salary.salaryYear)
+          eq(employeeSalaryDetailsModel.salaryYear, salary.salaryYear),
+          eq(employeeSalaryDetailsModel.tenantId, tenantId)
         )
       )
 

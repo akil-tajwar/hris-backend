@@ -5,7 +5,7 @@ import { permissionsModel, roleModel, rolePermissionsModel } from '../schemas'
 import { BadRequestError } from './utils/errors.utils'
 
 // Get all roles
-export const getAllRoles = async (tenantId: number) => {
+export const getAllRoles = async () => {
   const roles = await db
     .select({
       roleId: roleModel.roleId,
@@ -20,7 +20,6 @@ export const getAllRoles = async (tenantId: number) => {
       eq(roleModel.roleId, rolePermissionsModel.roleId)
     )
     .groupBy(roleModel.roleId, roleModel.roleName)
-    // .where(eq(rolePermissionsModel.tenantId, tenantId))
 
   return roles
 }
