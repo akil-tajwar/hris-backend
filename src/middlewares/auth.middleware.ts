@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { UnauthorizedError } from '../services/utils/errors.utils'
 import {
-  extractTokenFromHeader,
   getUserPermissions,
   verifyAccessToken,
 } from '../services/utils/jwt.utils'
@@ -16,11 +15,13 @@ export const authenticateUser = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization
-    const token = extractTokenFromHeader(authHeader)
-    // console.log(token);
+    const token = req.cookies?.token
+
+    if (!token) {
+      return next(UnauthorizedError('Not authenticated'))
+    }
+
     const decoded = verifyAccessToken(token)
-    // console.log("🚀 ~ authenticateUser ~ decoded:", decoded)
 
     const [user] = await db
       .select({ tenantId: userModel.tenantId })
@@ -31,9 +32,10 @@ export const authenticateUser = async (
       return next(UnauthorizedError('Invalid token'))
     }
 
-    // Super Admin doesn't need permission lookup
     const permissions =
-      decoded.role === 1 ? [] : await getUserPermissions(decoded.userId, user.tenantId)
+      decoded.role === 1
+        ? []
+        : await getUserPermissions(decoded.userId, user.tenantId)
 
     req.user = {
       userId: decoded.userId,
@@ -42,15 +44,11 @@ export const authenticateUser = async (
       tenantId: user.tenantId,
       permissions: permissions,
       hasPermission: (perm: string) => {
-        // Super Admin has access to everything
         if (decoded.role === 1) return true
-
         return permissions.includes(perm)
       },
       hasRole: (role: number) => decoded.role === role,
     }
-    // console.log('🚀 ~ authenticateUser ~ req.user:', req.user)
-    // console.log('permissions',permissions)
     next()
   } catch (error) {
     console.error(error)
@@ -58,28 +56,31 @@ export const authenticateUser = async (
   }
 }
 
-
-//for general api rate limiting
 export const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // per ip 15 minutes 300 requests
-  standardHeaders: true, // sends to RateLimit-* headers response
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
   legacyHeaders: false,
   message: {
     status: 'fail',
-    message: 'Too many requests from this IP, please try again after 15 minutes',
+    message:
+      'Too many requests from this IP, please try again after 15 minutes',
   },
 })
 
-//for login and register api
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // per ip 15 minutes 10 requests
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // only counts failed requests
   message: {
     status: 'fail',
     message: 'Too many login attempts, please try again after 15 minutes',
   },
+  keyGenerator: (req: Request) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown'
+    const username = req.body?.email || req.body?.username || 'unknown'
+    return `${ip}:${username}`
+  },
+  skip: (req) => req.method === 'OPTIONS',
 })

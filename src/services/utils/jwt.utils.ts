@@ -24,7 +24,10 @@ interface TenantPermissionFilterOperators {
 }
 
 interface TenantPermissionFilter {
-  (rolePermission: RolePermission, operators: TenantPermissionFilterOperators): unknown
+  (
+    rolePermission: RolePermission,
+    operators: TenantPermissionFilterOperators
+  ): unknown
 }
 
 interface UserRoleWithPermissions {
@@ -66,7 +69,6 @@ export const generateAccessToken = (
 
 export const verifyAccessToken = (token: string): TokenPayload => {
   try {
-    // console.log('before Varification',token,'payload',JWT_SECRET)
     return jwt.verify(token, JWT_SECRET) as TokenPayload
   } catch (error) {
     console.error(error)
@@ -171,5 +173,18 @@ export const requirePermission = (req: Request, permission: string) => {
   // console.log('Is permission',req.user?.hasPermission(permission))
   if (!req.user?.hasPermission(permission)) {
     throw new Error('Forbidden')
+  }
+}
+
+export const AUTH_COOKIE_NAME = 'token'
+
+export const getAuthCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === 'production'
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+    maxAge: getMillisecondsFromTimeString(ACCESS_TOKEN_EXPIRES_IN),
+    path: '/',
   }
 }

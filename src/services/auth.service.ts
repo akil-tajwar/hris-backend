@@ -8,6 +8,7 @@ import {
   validatePassword,
 } from './utils/password.utils'
 import { NewUser, roleModel, userModel, userRolesModel } from '../schemas'
+import { redis } from '../middlewares/redis'
 
 // Find user by username
 export const findUserByEmail = async (email: string) => {
@@ -127,26 +128,65 @@ export const updateUser = async (
   return updatedUser[0]
 }
 
-// Login user
-export const loginUser = async (email: string, password: string) => {
-  const user = await findUserByEmail(email)
-  console.log('🚀 ~ loginUser ~ user:', user)
+const getLoginDelay = async (identifier: string): Promise<number> => {
+  const attempts = await redis.get(`login_attempts:${identifier}`)
+  const count = parseInt(attempts || '0')
 
-  if (!user) {
-    throw UnauthorizedError(
-      'Wrong username/password. Please Contact with Administrator'
-    )
+  // Progressive delay: 1s, 5s, 15s, 30s, 1min, 5min...
+  const delays = [1000, 5000, 15000, 30000, 60000, 300000]
+  const index = Math.min(count, delays.length - 1)
+  return delays[index]
+}
+
+const trackFailedAttempt = async (identifier: string) => {
+  const key = `login_attempts:${identifier}`
+  const attempts = await redis.incr(key)
+  await redis.expire(key, 900) // 15 minutes
+
+  // Lock account after 5 failed attempts
+  if (attempts >= 5) {
+    await redis.setex(`locked:${identifier}`, 1800, 'true') // 30 minutes
   }
 
-  validatePassword(password)
+  // Store last attempt time for progressive delay
+  await redis.setex(`last_attempt:${identifier}`, 300, Date.now().toString())
+}
 
+// Login user
+export const loginUser = async (email: string, password: string) => {
+  const identifier = `${email}`
+
+  // ✅ Check if account is locked
+  const isLocked = await redis.get(`locked:${identifier}`)
+  if (isLocked) {
+    throw new Error('Account is temporarily locked. Please try again later.')
+  }
+
+  // ✅ Progressive delay
+  const delay = await getLoginDelay(identifier)
+  await new Promise((resolve) => setTimeout(resolve, delay))
+
+  // Find user
+  const user = await findUserByEmail(email)
+
+  if (!user) {
+    // ✅ Track failed attempts
+    await trackFailedAttempt(identifier)
+    throw UnauthorizedError('Invalid credentials')
+  }
+
+  // Validate password
   const isValidPassword = await comparePassword(password, user.password)
 
   if (!isValidPassword) {
-    throw UnauthorizedError(
-      'Wrong username/password. Please Contact with Administrator'
-    )
+    // ✅ Track failed attempts
+    await trackFailedAttempt(identifier)
+    throw UnauthorizedError('Invalid credentials')
   }
+
+  // ✅ Reset attempts on success
+  await redis.del(`login_attempts:${identifier}`)
+  await redis.del(`locked:${identifier}`)
 
   const userDetails = (await getUserDetailsByUserId(user.userId)) as {
     role?: {
@@ -168,13 +208,15 @@ export const loginUser = async (email: string, password: string) => {
     userId: user.userId,
     username: user.username,
     role: user.roleId || 0,
-    permissions,
-    hasPermission: (perm: string) => permissions.includes(perm),
+    // permissions,
+    // hasPermission: (perm: string) => permissions.includes(perm),
   })
+
+  const { password: _password, ...safeUser } = userDetails as any
 
   return {
     token,
-    user: userDetails,
+    user: safeUser,
   }
 }
 

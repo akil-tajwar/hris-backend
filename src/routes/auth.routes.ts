@@ -1,10 +1,12 @@
 import { Router } from "express";
 import {
   changePasswordController,
+  getCurrentUserController,
   getRolesController,
   getUserList,
   getUsersWithRoles,
   login,
+  logoutController,
   register,
   updateUserController,
 } from "../controllers/auth.controller";
@@ -14,6 +16,8 @@ const router = Router();
 
 router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
+router.post('/logout', logoutController);
+router.get('/currentUser', authenticateUser, getCurrentUserController);
 router.get('/users', authenticateUser,  getUserList);
 router.get("/users-by-roles", getUsersWithRoles);
 router.get("/roles", getRolesController);
