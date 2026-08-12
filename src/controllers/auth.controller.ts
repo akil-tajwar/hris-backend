@@ -9,10 +9,15 @@ import {
   changePassword,
   createUser,
   getRoles,
+  getUserDetailsByUserId,
   getUsers,
   loginUser,
   updateUser,
 } from '../services/auth.service'
+import {
+  AUTH_COOKIE_NAME,
+  getAuthCookieOptions,
+} from '../services/utils/jwt.utils'
 
 const loginSchema = z.object({
   email: z.string().min(1, 'email is required'),
@@ -58,7 +63,10 @@ export const login = async (
   try {
     const { email, password } = loginSchema.parse(req.body)
     const result = await loginUser(email, password)
-    res.json(result)
+
+    res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions())
+
+    res.json({ user: result.user })
   } catch (error) {
     next(error)
   }
@@ -102,6 +110,25 @@ export const register = async (
         },
       },
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const logoutController = async (req: Request, res: Response) => {
+  res.clearCookie(AUTH_COOKIE_NAME, getAuthCookieOptions())
+  res.json({ message: 'Logged out' })
+}
+
+export const getCurrentUserController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userDetails = await getUserDetailsByUserId(req.user!.userId)
+    const { password, ...safeUser } = userDetails as any
+    res.json({ user: safeUser })
   } catch (error) {
     next(error)
   }

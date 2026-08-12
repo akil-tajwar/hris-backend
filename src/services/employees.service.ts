@@ -1,4 +1,4 @@
-import { eq, InferInsertModel, sql } from 'drizzle-orm'
+import { and, eq, InferInsertModel, sql } from 'drizzle-orm'
 import { db } from '../config/database'
 import {
   employeeModel,
@@ -37,7 +37,7 @@ export const createEmployee = async (input: {
   userData: NewUser & { userCompanies?: number[]; createdBy: number }
 }) => {
   console.log('🚀 ~ createEmployee ~ input:', input)
-  const CACHE_KEY = 'employees:all'
+  const CACHE_KEY = `employees:all:${input.employeeData.tenantId}`
 
   return await db.transaction(async (tx) => {
     const { employeeData, userData } = input
@@ -632,7 +632,7 @@ export const getAllEmployees = async (tenantId: number) => {
 }
 
 //GET EMPLOYEE BY ID
-export const getEmployeeById = async (employeeId: number) => {
+export const getEmployeeById = async (employeeId: number, tenantId: number) => {
   const reportingAuthority = alias(employeeModel, 'reportingAuthority')
 
   const employee = await db
@@ -722,7 +722,12 @@ export const getEmployeeById = async (employeeId: number) => {
       updatedAt: employeeModel.updatedAt,
     })
     .from(employeeModel)
-    .where(eq(employeeModel.employeeId, employeeId))
+    .where(
+      and(
+        eq(employeeModel.employeeId, employeeId),
+        eq(employeeModel.tenantId, tenantId)
+      )
+    )
     .leftJoin(
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
@@ -766,10 +771,13 @@ export const getEmployeeById = async (employeeId: number) => {
 }
 
 //DELETE
-export const deleteEmployee = async (employeeId: number) => {
+export const deleteEmployee = async (employeeId: number, tenantId: number) => {
   return await db.transaction(async (tx) => {
     const existing = await tx.query.employeeModel.findFirst({
-      where: eq(employeeModel.employeeId, employeeId),
+      where: and(
+        eq(employeeModel.employeeId, employeeId),
+        eq(employeeModel.tenantId, tenantId)
+      ),
     })
 
     if (!existing) {
@@ -778,7 +786,12 @@ export const deleteEmployee = async (employeeId: number) => {
 
     await tx
       .delete(employeeModel)
-      .where(eq(employeeModel.employeeId, employeeId))
+      .where(
+        and(
+          eq(employeeModel.employeeId, employeeId),
+          eq(employeeModel.tenantId, tenantId)
+        )
+      )
 
     return {
       message: 'Employee deleted successfully',
@@ -787,13 +800,21 @@ export const deleteEmployee = async (employeeId: number) => {
   })
 }
 
-export const getEmployeeIdByUserIdService = async (userId: number) => {
+export const getEmployeeIdByUserIdService = async (
+  userId: number,
+  tenantId: number
+) => {
   const result = await db
     .select({
       employeeId: employeeModel.employeeId,
     })
     .from(employeeModel)
-    .where(eq(employeeModel.userId, userId))
+    .where(
+      and(
+        eq(employeeModel.userId, userId),
+        eq(employeeModel.tenantId, tenantId)
+      )
+    )
     .limit(1)
 
   if (!result.length) {

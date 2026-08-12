@@ -46,7 +46,11 @@ export const importCsvController = async (req: Request, res: Response) => {
 export const listCsvFilesController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'view_attendance_punch')
-    const files = listCsvFiles()
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const files = listCsvFiles(tenantId)
     res.json(files)
   } catch (error: any) {
     res
@@ -60,8 +64,11 @@ export const downloadCsvController = async (req: Request, res: Response) => {
   try {
     requirePermission(req, 'view_attendance_punch')
     const { filename } = req.params
-
-    const filePath = getCsvFilePath(filename)
+    const tenantId = req.user?.tenantId
+    if (tenantId === undefined) {
+      throw new Error('Tenant ID is required')
+    }
+    const filePath = getCsvFilePath(filename, tenantId)
     res.download(filePath)
   } catch (error: any) {
     res

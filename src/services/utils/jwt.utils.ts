@@ -1,125 +1,153 @@
-import jwt, { SignOptions } from "jsonwebtoken";
-import { BadRequestError, UnauthorizedError } from "./errors.utils";
-import { db } from "../../config/database";
-import { Request } from "express";
-import { cosineDistance } from "drizzle-orm";
+import jwt, { SignOptions } from 'jsonwebtoken'
+import { BadRequestError, UnauthorizedError } from './errors.utils'
+import { db } from '../../config/database'
+import { Request } from 'express'
+
 interface TokenPayload {
-  userId: number;
-  username: string;
-  role?:number;
-  [key: string]: any;
+  userId: number
+  username: string
+  role?: number
+  [key: string]: any
 }
 
-const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || "24h";
-const JWT_SECRET = process.env.JWT_SECRET;
-console.log(JWT_SECRET);
+interface Permission {
+  name: string
+}
+
+interface RolePermission {
+  tenantId: number
+  permission: Permission
+}
+
+interface TenantPermissionFilterOperators {
+  eq: (column: number, value: number) => unknown
+}
+
+interface TenantPermissionFilter {
+  (
+    rolePermission: RolePermission,
+    operators: TenantPermissionFilterOperators
+  ): unknown
+}
+
+interface UserRoleWithPermissions {
+  roleId: number
+  userId: number
+  role?: {
+    rolePermissions: RolePermission[]
+  }
+}
+
+const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '24h'
+const JWT_SECRET = process.env.JWT_SECRET
+// console.log(JWT_SECRET)
 if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is not configured");
+  throw new Error('JWT_SECRET environment variable is not configured')
 }
 
-export const generateAccessToken = (payload: TokenPayload): string|undefined => {
+export const generateAccessToken = (
+  payload: TokenPayload
+): string | undefined => {
   try {
-    const secret=JWT_SECRET as string;
-    const expiresIn = ACCESS_TOKEN_EXPIRES_IN as `${number}${'s'|'m'|'h'|'d'}` || "24h";
-    console.log(secret)
+    const secret = JWT_SECRET as string
+    const expiresIn =
+      (ACCESS_TOKEN_EXPIRES_IN as `${number}${'s' | 'm' | 'h' | 'd'}`) || '24h'
+    // console.log(secret)
     const options: SignOptions = {
       expiresIn: expiresIn,
-    };
-    const token= jwt.sign(payload, JWT_SECRET, options);
-    
-    console.log(`Token received:[${token}] length: ${token.length}`);
-    
-    return token;
+    }
+    const token = jwt.sign(payload, JWT_SECRET, options)
+
+    // console.log(`Token received:[${token}] length: ${token.length}`)
+
+    return token
   } catch (error) {
     console.error(error)
-    throw BadRequestError("Error generating access token");
+    throw BadRequestError('Error generating access token')
   }
-};
+}
 
-export const verifyAccessToken = (token: string):TokenPayload => {
+export const verifyAccessToken = (token: string): TokenPayload => {
   try {
-    // console.log('before Varification',token,'payload',JWT_SECRET)
-    return jwt.verify(token,JWT_SECRET) as TokenPayload;
+    return jwt.verify(token, JWT_SECRET) as TokenPayload
   } catch (error) {
     console.error(error)
     if (error instanceof jwt.TokenExpiredError) {
-      throw UnauthorizedError("Token has expired");
+      throw UnauthorizedError('Token has expired')
     }
     if (error instanceof jwt.JsonWebTokenError) {
-         throw UnauthorizedError("Invalid token");
+      throw UnauthorizedError('Invalid token')
     }
-    throw UnauthorizedError("Token verification failed");
+    throw UnauthorizedError('Token verification failed')
   }
-};
+}
 
 export const extractTokenFromHeader = (authHeader?: string): string => {
   if (!authHeader) {
-    throw UnauthorizedError("No authorization header");
+    throw UnauthorizedError('No authorization header')
   }
 
-  const [bearer, token] = authHeader.split(" ");
+  const [bearer, token] = authHeader.split(' ')
 
-  if (bearer !== "Bearer" || !token) {
-    throw UnauthorizedError("Invalid authorization header format");
+  if (bearer !== 'Bearer' || !token) {
+    throw UnauthorizedError('Invalid authorization header format')
   }
 
-  return token;
-};
+  return token
+}
 
 export const decodeToken = (token: string): TokenPayload | null => {
   try {
-    const decoded = jwt.decode(token);
+    const decoded = jwt.decode(token)
     if (decoded && typeof decoded === 'object') {
-      return decoded as TokenPayload;
+      return decoded as TokenPayload
     }
-    return null;
+    return null
   } catch (error) {
-    return null;
+    return null
   }
-};
+}
 
 export const isTokenExpired = (token: string): boolean => {
-  const decoded = decodeToken(token);
-  if (!decoded || typeof decoded.exp !== 'number') return true;
+  const decoded = decodeToken(token)
+  if (!decoded || typeof decoded.exp !== 'number') return true
 
-  const currentTime = Math.floor(Date.now() / 1000);
-  return decoded.exp < currentTime;
-};
+  const currentTime = Math.floor(Date.now() / 1000)
+  return decoded.exp < currentTime
+}
 
 export const getMillisecondsFromTimeString = (timeString: string): number => {
-  const unit = timeString.slice(-1);
-  const value = parseInt(timeString.slice(0, -1));
+  const unit = timeString.slice(-1)
+  const value = parseInt(timeString.slice(0, -1))
 
   switch (unit) {
-    case "s":
-      return value * 1000;
-    case "m":
-      return value * 60 * 1000;
-    case "h":
-      return value * 60 * 60 * 1000;
-    case "d":
-      return value * 24 * 60 * 60 * 1000;
+    case 's':
+      return value * 1000
+    case 'm':
+      return value * 60 * 1000
+    case 'h':
+      return value * 60 * 60 * 1000
+    case 'd':
+      return value * 24 * 60 * 60 * 1000
     default:
-      throw new Error("Invalid time string format");
+      throw new Error('Invalid time string format')
   }
-};
+}
 
-export async function getUserPermissions(userId: number) {
-  type UserRoleWithPermissions = {
-    roleId: number;
-    userId: number;
-    tenantId: number;
-    role?: {
-      rolePermissions: Array<{ permission: { name: string } }>;
-    };
-  };
-
-  const result = await db.query.userRolesModel.findMany({
+export async function getUserPermissions(
+  userId: number,
+  tenantId: number
+): Promise<string[]> {
+  const result = (await db.query.userRolesModel.findMany({
     where: (ur, { eq }) => eq(ur.userId, userId),
     with: {
       role: {
         with: {
           rolePermissions: {
+            where: ((
+              rp: RolePermission,
+              { eq }: TenantPermissionFilterOperators
+            ) => eq(rp.tenantId, tenantId)) as TenantPermissionFilter,
             with: {
               permission: true,
             },
@@ -127,22 +155,36 @@ export async function getUserPermissions(userId: number) {
         },
       },
     },
-  }) as UserRoleWithPermissions[];
+  })) as UserRoleWithPermissions[]
 
-  const permissions = new Set<string>();
+  const permissions = new Set<string>()
+
   for (const ur of result) {
     for (const perm of ur.role?.rolePermissions ?? []) {
-      permissions.add(perm.permission.name);
+      permissions.add(perm.permission.name)
     }
   }
 
-  return Array.from(permissions);
+  return Array.from(permissions)
 }
 
 export const requirePermission = (req: Request, permission: string) => {
   // console.log('this is current user',req.user)
   // console.log('Is permission',req.user?.hasPermission(permission))
   if (!req.user?.hasPermission(permission)) {
-    throw new Error('Forbidden');
+    throw new Error('Forbidden')
   }
-};
+}
+
+export const AUTH_COOKIE_NAME = 'token'
+
+export const getAuthCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === 'production'
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+    maxAge: getMillisecondsFromTimeString(ACCESS_TOKEN_EXPIRES_IN),
+    path: '/',
+  }
+}

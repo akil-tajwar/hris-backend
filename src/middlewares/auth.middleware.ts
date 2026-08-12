@@ -1,13 +1,13 @@
 import { NextFunction, Request, Response } from 'express'
 import { UnauthorizedError } from '../services/utils/errors.utils'
 import {
-  extractTokenFromHeader,
   getUserPermissions,
   verifyAccessToken,
 } from '../services/utils/jwt.utils'
 import { db } from '../config/database'
 import { userModel } from '../schemas'
 import { eq } from 'drizzle-orm'
+import rateLimit from 'express-rate-limit'
 
 export const authenticateUser = async (
   req: Request,
@@ -15,14 +15,13 @@ export const authenticateUser = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization
-    const token = extractTokenFromHeader(authHeader)
-    // console.log(token);
-    const decoded = verifyAccessToken(token)
+    const token = req.cookies?.token
 
-    // Super Admin doesn't need permission lookup
-    const permissions =
-      decoded.role === 1 ? [] : await getUserPermissions(decoded.userId)
+    if (!token) {
+      return next(UnauthorizedError('Not authenticated'))
+    }
+
+    const decoded = verifyAccessToken(token)
 
     const [user] = await db
       .select({ tenantId: userModel.tenantId })
@@ -33,6 +32,11 @@ export const authenticateUser = async (
       return next(UnauthorizedError('Invalid token'))
     }
 
+    const permissions =
+      decoded.role === 1
+        ? []
+        : await getUserPermissions(decoded.userId, user.tenantId)
+
     req.user = {
       userId: decoded.userId,
       username: decoded.username,
@@ -40,18 +44,43 @@ export const authenticateUser = async (
       tenantId: user.tenantId,
       permissions: permissions,
       hasPermission: (perm: string) => {
-        // Super Admin has access to everything
         if (decoded.role === 1) return true
-
         return permissions.includes(perm)
       },
       hasRole: (role: number) => decoded.role === role,
     }
-    // console.log('🚀 ~ authenticateUser ~ req.user:', req.user)
-    // console.log('permissions',permissions)
     next()
   } catch (error) {
     console.error(error)
     return next(UnauthorizedError('Invalid token'))
   }
 }
+
+export const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 'fail',
+    message:
+      'Too many requests from this IP, please try again after 15 minutes',
+  },
+})
+
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 'fail',
+    message: 'Too many login attempts, please try again after 15 minutes',
+  },
+  keyGenerator: (req: Request) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown'
+    const username = req.body?.email || req.body?.username || 'unknown'
+    return `${ip}:${username}`
+  },
+  skip: (req) => req.method === 'OPTIONS',
+})
