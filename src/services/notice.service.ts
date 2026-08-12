@@ -72,15 +72,16 @@ export const updateNotice = async (
   })
 }
 
-// READ ALL
+// GET ALL
 export const getNotices = async (tenantId: number) => {
   return await db
     .select()
     .from(noticeModel)
     .where(eq(noticeModel.tenantId, tenantId))
+    .orderBy(noticeModel.noticeDate)
 }
 
-// READ ONE
+// GET ONE
 export const getNoticeById = async (noticeId: number) => {
   const [notice] = await db
     .select()
