@@ -38,6 +38,7 @@ import attendanceProcessingRoutes from './attendanceProcessing.routes'
 import holidayCalendarRoutes from './holidayCalendar.routes'
 import holidaysRoutes from './holidays.routes'
 import noticeRoutes from './notice.routes'
+import aiRoutes from './ai.routes'
 
 const router = Router()
 
@@ -80,5 +81,5 @@ router.use('/csv', csvImportRoutes)
 router.use('/shiftAllocation', shiftAllocationRoutes)
 router.use('/attendanceProcessing', attendanceProcessingRoutes)
 router.use('/notice', noticeRoutes)
-
+router.use('/ai', aiRoutes)
 export default router
