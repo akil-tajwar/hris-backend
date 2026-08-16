@@ -7,7 +7,7 @@ import {
 import { db } from '../config/database'
 import { userModel } from '../schemas'
 import { eq } from 'drizzle-orm'
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 
 export const authenticateUser = async (
   req: Request,
@@ -78,7 +78,9 @@ export const authLimiter = rateLimit({
     message: 'Too many login attempts, please try again after 15 minutes',
   },
   keyGenerator: (req: Request) => {
-    const ip = req.ip || req.connection.remoteAddress || 'unknown'
+    const ip = ipKeyGenerator(
+      req.ip || req.connection.remoteAddress || 'unknown'
+    )
     const username = req.body?.email || req.body?.username || 'unknown'
     return `${ip}:${username}`
   },

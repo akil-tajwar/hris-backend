@@ -4,6 +4,7 @@ import { runAIChat } from '../services/ai.service'
 export const aiChatController = async (req: Request, res: Response) => {
   try {
     const { message } = req.body
+    console.log("🚀 ~ aiChatController ~ message:", message)
 
     if (!message || typeof message !== 'string') {
       res.status(400).json({
@@ -12,6 +13,7 @@ export const aiChatController = async (req: Request, res: Response) => {
     }
 
     const tenantId = req.user?.tenantId
+    console.log("🚀 ~ aiChatController ~ tenantId:", tenantId)
 
     if (!tenantId) {
       res.status(401).json({
@@ -19,7 +21,7 @@ export const aiChatController = async (req: Request, res: Response) => {
       })
       return
     }
-
+    console.log('Using client:', process.env.AI_MOCK === 'true' ? 'MOCK' : 'REAL GEMINI')
     const answer = await runAIChat({
       message,
       tenantId,
