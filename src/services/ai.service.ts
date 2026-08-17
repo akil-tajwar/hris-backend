@@ -3,6 +3,39 @@ import { openAiFormatTools } from '../ai-tools/ai.tools.openai-format'
 import { executeAITool } from '../ai-tools/ai.tools.executor'
 import { gemini } from '../config/gemini'
 import { localAI, LOCAL_MODEL } from '../config/local-ai'
+import { redis } from '../middlewares/redis'
+
+const HISTORY_TTL_SECONDS = 60 * 60 // 1 hour of inactivity clears history
+const MAX_HISTORY_MESSAGES = 20 // cap to avoid unbounded prompt growth
+
+const getHistoryKey = (tenantId: number, userId: number) =>
+  `chat_history:${tenantId}:${userId}`
+
+const getChatHistory = async (
+  tenantId: number,
+  userId: number
+): Promise<any[]> => {
+  const raw = await redis.get(getHistoryKey(tenantId, userId))
+  return raw ? JSON.parse(raw) : []
+}
+
+const saveChatHistory = async (
+  tenantId: number,
+  userId: number,
+  history: any[]
+) => {
+  const trimmed = history.slice(-MAX_HISTORY_MESSAGES)
+  await redis.set(
+    getHistoryKey(tenantId, userId),
+    JSON.stringify(trimmed),
+    'EX',
+    HISTORY_TTL_SECONDS
+  )
+}
+
+export const clearChatHistory = async (tenantId: number, userId: number) => {
+  await redis.del(getHistoryKey(tenantId, userId))
+}
 
 export const warmUpLocalModel = async () => {
   try {
@@ -19,13 +52,14 @@ export const warmUpLocalModel = async () => {
 export const runAIChat = async ({
   message,
   tenantId,
+  userId,
 }: {
   message: string
   tenantId: number
+  userId: number
 }) => {
   const useLocal = process.env.AI_MOCK === 'true'
-
-  const todayDate = new Date().toISOString().split('T')[0] // e.g. "2026-08-16"
+  const todayDate = new Date().toISOString().split('T')[0]
 
   const systemInstruction = `
 You are an AI assistant for an HR management system.
@@ -47,12 +81,14 @@ to confirm the date instead of guessing.
 Tailor your response to what was asked — give a count if asked "how
 many," list employee names if asked "which" or "who."
 
+Use the conversation history to understand follow-up questions. If the
+user refers to something ambiguous like "what about july?" after asking
+about august, infer they mean the same kind of question but for July.
+
 Only use the tools explicitly provided to you. Never invent a tool
 name that wasn't given to you. If no available tool can answer the
 question, say so directly in plain language — do not write JSON,
 function names, or pseudo tool-calls as text in your answer.
-
-You answer questions using the available tools.
 
 Important rules:
 1. Never invent employee information.
@@ -63,13 +99,17 @@ Important rules:
 6. Give concise and clear answers.
 `
 
+  const history = await getChatHistory(tenantId, userId)
+
   console.log('Using client:', useLocal ? 'LOCAL (Ollama)' : 'REAL GEMINI')
 
-  if (useLocal) {
-    return runLocalChat({ message, tenantId, systemInstruction })
-  }
+  const { answer, updatedHistory } = useLocal
+    ? await runLocalChat({ message, tenantId, systemInstruction, history })
+    : await runGeminiChat({ message, tenantId, systemInstruction, history })
 
-  return runGeminiChat({ message, tenantId, systemInstruction })
+  await saveChatHistory(tenantId, userId, updatedHistory)
+
+  return answer
 }
 
 // ---------- Gemini path ----------
@@ -78,23 +118,23 @@ const runGeminiChat = async ({
   message,
   tenantId,
   systemInstruction,
+  history,
 }: {
   message: string
   tenantId: number
   systemInstruction: string
+  history: any[]
 }) => {
-  const t0 = Date.now()
+  const contents: any[] = [
+    ...history,
+    { role: 'user', parts: [{ text: message }] },
+  ]
+
   let response = await gemini.models.generateContent({
     model: 'gemini-3.6-flash',
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: message }],
-      } as any,
-    ],
+    contents,
     config: { systemInstruction, tools: geminiTools as unknown as any },
   })
-  console.log(`First call: ${Date.now() - t0}ms`)
 
   while (true) {
     const functionCalls = response.functionCalls
@@ -108,42 +148,41 @@ const runGeminiChat = async ({
     for (const functionCall of functionCalls) {
       console.log('Tool call:', functionCall.name, functionCall.args)
 
-      const toolStart = Date.now()
       const result = await executeAITool({
         name: functionCall.name!,
         arguments: functionCall.args ?? {},
         tenantId,
       })
-      console.log(
-        `Tool exec (${functionCall.name}): ${Date.now() - toolStart}ms`
-      )
+
       console.log('Tool result:', JSON.stringify(result))
 
       functionResponses.push({
-        functionResponse: {
-          name: functionCall.name!,
-          response: result,
-        },
+        functionResponse: { name: functionCall.name!, response: result },
       })
     }
 
-    const t1 = Date.now()
+    contents.push({
+      role: 'model',
+      parts: response.candidates?.[0]?.content?.parts ?? [],
+    })
+    contents.push({ role: 'user', parts: functionResponses })
+
     response = await gemini.models.generateContent({
       model: 'gemini-3.6-flash',
-      contents: [
-        { role: 'user', parts: [{ text: message }] } as any,
-        {
-          role: 'model',
-          parts: response.candidates?.[0]?.content?.parts ?? [],
-        } as any,
-        { role: 'user', parts: functionResponses } as any,
-      ],
+      contents,
       config: { systemInstruction, tools: geminiTools as unknown as any },
     })
-    console.log(`Second call: ${Date.now() - t1}ms`)
   }
 
-  return response.text
+  const finalText = response.text ?? ''
+
+  const updatedHistory = [
+    ...history,
+    { role: 'user', parts: [{ text: message }] },
+    { role: 'model', parts: [{ text: finalText }] },
+  ]
+
+  return { answer: finalText, updatedHistory }
 }
 
 // ---------- Ollama (local) path ----------
@@ -152,17 +191,19 @@ const runLocalChat = async ({
   message,
   tenantId,
   systemInstruction,
+  history,
 }: {
   message: string
   tenantId: number
   systemInstruction: string
+  history: any[]
 }) => {
   const messages: any[] = [
     { role: 'system', content: systemInstruction },
+    ...history,
     { role: 'user', content: message },
   ]
 
-  const t0 = Date.now()
   let response = await localAI.chat.completions.create({
     model: LOCAL_MODEL,
     messages,
@@ -170,14 +211,21 @@ const runLocalChat = async ({
     // @ts-ignore - Ollama-specific extension not in OpenAI's types
     keep_alive: '30m',
   })
-  console.log(`First call: ${Date.now() - t0}ms`)
 
   while (true) {
     const choice = response.choices[0]
     const toolCalls = choice.message.tool_calls
 
     if (!toolCalls || toolCalls.length === 0) {
-      return choice.message.content ?? ''
+      const finalText = choice.message.content ?? ''
+
+      const updatedHistory = [
+        ...history,
+        { role: 'user', content: message },
+        { role: 'assistant', content: finalText },
+      ]
+
+      return { answer: finalText, updatedHistory }
     }
 
     messages.push(choice.message)
@@ -192,15 +240,12 @@ const runLocalChat = async ({
 
       console.log('Tool call:', toolCall.function.name, args)
 
-      const toolStart = Date.now()
       const result = await executeAITool({
         name: toolCall.function.name,
         arguments: args,
         tenantId,
       })
-      console.log(
-        `Tool exec (${toolCall.function.name}): ${Date.now() - toolStart}ms`
-      )
+
       console.log('Tool result:', JSON.stringify(result))
 
       messages.push({
@@ -210,14 +255,12 @@ const runLocalChat = async ({
       })
     }
 
-    const t1 = Date.now()
     response = await localAI.chat.completions.create({
       model: LOCAL_MODEL,
       messages,
       tools: openAiFormatTools,
-      // @ts-ignore - Ollama-specific extension not in OpenAI's types
+      // @ts-ignore
       keep_alive: '30m',
     })
-    console.log(`Second call: ${Date.now() - t1}ms`)
   }
 }

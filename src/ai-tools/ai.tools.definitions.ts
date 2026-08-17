@@ -246,6 +246,34 @@ export const geminiTools = [
         },
       },
       {
+        name: 'get_employees_with_salary_given',
+        description:
+          'Get employees who have actually been paid/given their salary for a specific month and year (isSalaryGiven = true), as opposed to employees whose salary was only generated but not yet paid.',
+        parameters: {
+          type: 'object',
+          properties: {
+            month: { type: 'string', description: 'Month name, e.g. "July".' },
+            year: { type: 'integer', description: 'Year, e.g. 2026.' },
+          },
+          required: ['month', 'year'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_employees_with_salary_pending',
+        description:
+          'Get employees whose salary was generated for a month but has NOT yet been given/paid to them (isSalaryGiven = false).',
+        parameters: {
+          type: 'object',
+          properties: {
+            month: { type: 'string', description: 'Month name, e.g. "July".' },
+            year: { type: 'integer', description: 'Year, e.g. 2026.' },
+          },
+          required: ['month', 'year'],
+          additionalProperties: false,
+        },
+      },
+      {
         name: 'get_departments',
         description: 'List all active departments for the tenant.',
         parameters: {

@@ -451,7 +451,9 @@ export const getMonthlyPayrollSummary = async (
 ) => {
   const result = await db
     .select({
-      totalEmployees: sql<number>`count(*)`,
+      totalGenerated: sql<number>`count(*)`,
+      totalGiven: sql<number>`sum(case when ${salaryModel.isSalaryGiven} = true then 1 else 0 end)`,
+      totalPending: sql<number>`sum(case when ${salaryModel.isSalaryGiven} = false then 1 else 0 end)`,
       totalGross: sql<number>`sum(${salaryModel.grossSalary})`,
       totalNet: sql<number>`sum(${salaryModel.netSalary})`,
     })
@@ -464,7 +466,67 @@ export const getMonthlyPayrollSummary = async (
       )
     )
 
-  return result[0] ?? { totalEmployees: 0, totalGross: 0, totalNet: 0 }
+  return (
+    result[0] ?? {
+      totalGenerated: 0,
+      totalGiven: 0,
+      totalPending: 0,
+      totalGross: 0,
+      totalNet: 0,
+    }
+  )
+}
+
+export const getEmployeesWithSalaryGiven = async (
+  tenantId: number,
+  month: string,
+  year: number
+) => {
+  return db
+    .select({
+      employeeId: employeeModel.employeeId,
+      employeeName: employeeModel.empFullName,
+      netSalary: salaryModel.netSalary,
+    })
+    .from(salaryModel)
+    .innerJoin(
+      employeeModel,
+      eq(salaryModel.employeeId, employeeModel.employeeId)
+    )
+    .where(
+      and(
+        eq(salaryModel.tenantId, tenantId),
+        eq(salaryModel.salaryMonth, month as any),
+        eq(salaryModel.salaryYear, year),
+        eq(salaryModel.isSalaryGiven, true)
+      )
+    )
+}
+
+export const getEmployeesWithSalaryPending = async (
+  tenantId: number,
+  month: string,
+  year: number
+) => {
+  return db
+    .select({
+      employeeId: employeeModel.employeeId,
+      employeeName: employeeModel.empFullName,
+      netSalary: salaryModel.netSalary,
+    })
+    .from(salaryModel)
+    .innerJoin(
+      employeeModel,
+      eq(salaryModel.employeeId, employeeModel.employeeId)
+    )
+    .where(
+      and(
+        eq(salaryModel.tenantId, tenantId),
+        eq(salaryModel.salaryMonth, month as any),
+        eq(salaryModel.salaryYear, year),
+        eq(salaryModel.isSalaryGiven, false)
+      )
+    )
 }
 
 // ===== COMPANY STRUCTURE =====
@@ -616,7 +678,96 @@ export const geminiTools = [
     functionDeclarations: [
       // ... your existing 5 (get_today_attendance_summary, search_employees,
       // get_employee_attendance, get_absent_employees, get_late_employees) ...
-
+      {
+        name: 'get_today_attendance_summary',
+        description:
+          "Get today's employee attendance summary for the current tenant.",
+        parameters: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'search_employees',
+        description: 'Search employees by employee name or employee code.',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Employee name to search for.',
+            },
+          },
+          required: ['name'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_employee_attendance',
+        description: "Get an employee's attendance for a specific date.",
+        parameters: {
+          type: 'object',
+          properties: {
+            employeeId: { type: 'integer', description: 'Employee ID.' },
+            date: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+          },
+          required: ['employeeId', 'date'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_absent_employees',
+        description: 'Get employees who are absent on a specific date.',
+        parameters: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+          },
+          required: ['date'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_late_employees',
+        description: 'Get employees who arrived late on a specific date.',
+        parameters: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', description: 'Date in YYYY-MM-DD format.' },
+          },
+          required: ['date'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_employees_with_salary_given',
+        description:
+          'Get employees who have actually been paid/given their salary for a specific month and year (isSalaryGiven = true), as opposed to employees whose salary was only generated but not yet paid.',
+        parameters: {
+          type: 'object',
+          properties: {
+            month: { type: 'string', description: 'Month name, e.g. "July".' },
+            year: { type: 'integer', description: 'Year, e.g. 2026.' },
+          },
+          required: ['month', 'year'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_employees_with_salary_pending',
+        description:
+          'Get employees whose salary was generated for a month but has NOT yet been given/paid to them (isSalaryGiven = false).',
+        parameters: {
+          type: 'object',
+          properties: {
+            month: { type: 'string', description: 'Month name, e.g. "July".' },
+            year: { type: 'integer', description: 'Year, e.g. 2026.' },
+          },
+          required: ['month', 'year'],
+          additionalProperties: false,
+        },
+      },
       {
         name: 'get_present_employees',
         description: 'Get employees who were present on a specific date.',

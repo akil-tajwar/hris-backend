@@ -25,6 +25,8 @@ import {
   getUpcomingHolidays,
   getNotices,
   getEmployeeLoans,
+  getEmployeesWithSalaryGiven,
+  getEmployeesWithSalaryPending,
 } from './ai.tools'
 
 export const executeAITool = async ({
@@ -103,6 +105,10 @@ export const executeAITool = async ({
 
       case 'get_employee_loans':
         return getEmployeeLoans(tenantId, args.employeeId)
+      case 'get_employees_with_salary_given':
+        return getEmployeesWithSalaryGiven(tenantId, args.month, args.year)
+      case 'get_employees_with_salary_pending':
+        return getEmployeesWithSalaryPending(tenantId, args.month, args.year)
 
       default:
         throw new Error(`Unknown AI tool: ${name}`)
