@@ -13,11 +13,12 @@ export const aiChatController = async (req: Request, res: Response) => {
     }
 
     const tenantId = req.user?.tenantId
+    const userId = req.user?.userId
     console.log("🚀 ~ aiChatController ~ tenantId:", tenantId)
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       res.status(401).json({
-        message: 'Tenant not found.',
+        message: 'Tenant or user not found.',
       })
       return
     }
@@ -25,6 +26,7 @@ export const aiChatController = async (req: Request, res: Response) => {
     const answer = await runAIChat({
       message,
       tenantId,
+      userId,
     })
 
     res.status(200).json({
