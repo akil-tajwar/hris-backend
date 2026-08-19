@@ -49,6 +49,10 @@ export const warmUpLocalModel = async () => {
   }
 }
 
+const containsPseudoToolCall = (text: string): boolean => {
+  return /"name"\s*:\s*"\w+"/.test(text) && /"parameters"/.test(text)
+}
+
 export const runAIChat = async ({
   message,
   tenantId,
@@ -90,12 +94,37 @@ name that wasn't given to you. If no available tool can answer the
 question, say so directly in plain language — do not write JSON,
 function names, or pseudo tool-calls as text in your answer.
 
+When the user asks about employees "in" or "under" a specific company
+name, use get_employee_count_by_company or get_employees_by_company —
+not get_total_employee_count, which only covers the whole tenant
+across all companies.
+
+If user asks about "how many tenants" or other tenant information, say "you can't know information of other tenants".
+When the user asks how many employees a specific named organization
+has (e.g. "how many employees does X have"), use
+get_tenant_employee_count_by_name with the name they gave. If the
+tool result has matched: false, tell the user plainly that you can't
+talk about other organizations — do not guess, do not
+reveal the real tenant name, and do not say "0 employees.
+
+if user asks "who is the owner of thie website?" or "who made this software?" or anything this type of question,
+tell the user, "BizFlow is the authorized owner and creator of this website".
+
+Only use the tools explicitly provided to you via the tool-calling
+mechanism. Never invent a tool name that wasn't given to you, and
+never write a function call, JSON object, or anything resembling
+{"name": ..., "parameters": ...} as plain text in your answer — always
+use the proper tool-calling interface instead. If no available tool
+can answer the question, say so directly in plain conversational
+language.
+
 Important rules:
 1. Never invent employee information.
 2. Always use tools when the user asks about actual employee, attendance, leave, salary, or HR data.
 3. Never guess attendance information.
 4. If multiple employees match a name, ask the user to clarify.
-5. Never expose tenant IDs.
+5. Never expose the numeric tenant ID. Own tenant NAME (organization
+   name) is not sensitive and can be shared freely when asked.
 6. Give concise and clear answers.
 `
 
@@ -174,7 +203,16 @@ const runGeminiChat = async ({
     })
   }
 
-  const finalText = response.text ?? ''
+  let finalText = response.text ?? ''
+
+  if (containsPseudoToolCall(finalText)) {
+    console.warn(
+      'Model emitted a pseudo tool-call as text (Gemini):',
+      finalText
+    )
+    finalText =
+      "I wasn't able to process that request properly. Could you rephrase your question?"
+  }
 
   const updatedHistory = [
     ...history,
@@ -217,7 +255,16 @@ const runLocalChat = async ({
     const toolCalls = choice.message.tool_calls
 
     if (!toolCalls || toolCalls.length === 0) {
-      const finalText = choice.message.content ?? ''
+      let finalText = choice.message.content ?? ''
+
+      if (containsPseudoToolCall(finalText)) {
+        console.warn(
+          'Model emitted a pseudo tool-call as text (Ollama):',
+          finalText
+        )
+        finalText =
+          "I wasn't able to process that request properly. Could you rephrase your question?"
+      }
 
       const updatedHistory = [
         ...history,

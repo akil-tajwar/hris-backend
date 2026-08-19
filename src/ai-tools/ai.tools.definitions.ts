@@ -2,6 +2,32 @@ export const geminiTools = [
   {
     functionDeclarations: [
       {
+        name: 'get_tenant_details',
+        description: "Get the current tenant's name/organization name.",
+        parameters: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_tenant_employee_count_by_name',
+        description:
+          "Get the total employee count for an organization by name, but ONLY if the named organization matches the current authenticated user's own tenant. Use this whenever the user asks how many employees a specific named company/organization/group has.",
+        parameters: {
+          type: 'object',
+          properties: {
+            nameAsked: {
+              type: 'string',
+              description:
+                'The organization/tenant name the user asked about, e.g. "Habib Group".',
+            },
+          },
+          required: ['nameAsked'],
+          additionalProperties: false,
+        },
+      },
+      {
         name: 'get_today_attendance_summary',
         description:
           "Get today's employee attendance summary for the current tenant.",
@@ -23,6 +49,40 @@ export const geminiTools = [
             },
           },
           required: ['name'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_employees_by_company',
+        description:
+          'List all employees who work under a specific company name (a tenant can have multiple companies).',
+        parameters: {
+          type: 'object',
+          properties: {
+            companyName: {
+              type: 'string',
+              description:
+                'Company name to search for, e.g. "Kattoli Textile Ltd".',
+            },
+          },
+          required: ['companyName'],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'get_employee_count_by_company',
+        description:
+          'Get the total number of active employees who work under a specific company name (a tenant can have multiple companies).',
+        parameters: {
+          type: 'object',
+          properties: {
+            companyName: {
+              type: 'string',
+              description:
+                'Company name to search for, e.g. "Kattoli Textile Ltd".',
+            },
+          },
+          required: ['companyName'],
           additionalProperties: false,
         },
       },

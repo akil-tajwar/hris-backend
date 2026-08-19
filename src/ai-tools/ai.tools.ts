@@ -26,7 +26,63 @@ import {
   leaveTypeModel,
   noticeModel,
   salaryModel,
+  tenantModel,
 } from '../schemas'
+
+export const getTenantDetails = async (tenantId: number) => {
+  const result = await db
+    .select({ tenantName: tenantModel.tenantName })
+    .from(tenantModel)
+    .where(eq(tenantModel.tenantId, tenantId))
+    .limit(1)
+
+  return result[0] ?? null
+}
+
+export const getTenantEmployeeCountByName = async (
+  tenantId: number,
+  nameAsked: string
+) => {
+  const tenant = await db
+    .select({
+      tenantId: tenantModel.tenantId,
+      tenantName: tenantModel.tenantName,
+    })
+    .from(tenantModel)
+    .where(eq(tenantModel.tenantId, tenantId))
+    .limit(1)
+
+  const actualTenant = tenant[0]
+
+  if (!actualTenant) {
+    return { matched: false, reason: 'Tenant not found.' }
+  }
+
+  const normalize = (s: string) => s.trim().toLowerCase()
+
+  if (normalize(actualTenant.tenantName) !== normalize(nameAsked)) {
+    return {
+      matched: false,
+      reason: `"${nameAsked}" does not match the current user's organization. Access denied.`,
+    }
+  }
+
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(employeeModel)
+    .where(
+      and(
+        eq(employeeModel.tenantId, tenantId),
+        eq(employeeModel.isActive, true)
+      )
+    )
+
+  return {
+    matched: true,
+    tenantName: actualTenant.tenantName,
+    totalActiveEmployees: result[0]?.count ?? 0,
+  }
+}
 
 export const getTodayAttendanceSummary = async (tenantId: number) => {
   const now = new Date()
@@ -571,6 +627,51 @@ export const getCompanies = async (tenantId: number) => {
     .where(
       and(eq(companyModel.tenantId, tenantId), eq(companyModel.status, true))
     )
+}
+
+export const getEmployeesByCompany = async (
+  tenantId: number,
+  companyName: string
+) => {
+  return db
+    .select({
+      employeeId: employeeModel.employeeId,
+      employeeName: employeeModel.empFullName,
+      empCode: employeeModel.empCode,
+    })
+    .from(employeeModel)
+    .innerJoin(
+      companyModel,
+      eq(employeeModel.companyId, companyModel.companyId)
+    )
+    .where(
+      and(
+        eq(employeeModel.tenantId, tenantId),
+        like(companyModel.companyName, `%${companyName}%`)
+      )
+    )
+}
+
+export const getEmployeeCountByCompany = async (
+  tenantId: number,
+  companyName: string
+) => {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(employeeModel)
+    .innerJoin(
+      companyModel,
+      eq(employeeModel.companyId, companyModel.companyId)
+    )
+    .where(
+      and(
+        eq(employeeModel.tenantId, tenantId),
+        eq(employeeModel.isActive, true),
+        like(companyModel.companyName, `%${companyName}%`)
+      )
+    )
+
+  return { companyName, totalActiveEmployees: result[0]?.count ?? 0 }
 }
 
 // ===== ASSETS =====

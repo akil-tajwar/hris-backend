@@ -1,4 +1,6 @@
 import {
+  getTenantDetails,
+  getTenantEmployeeCountByName,
   getTodayAttendanceSummary,
   searchEmployees,
   getEmployeeAttendance,
@@ -27,6 +29,8 @@ import {
   getEmployeeLoans,
   getEmployeesWithSalaryGiven,
   getEmployeesWithSalaryPending,
+  getEmployeesByCompany,
+  getEmployeeCountByCompany,
 } from './ai.tools'
 
 export const executeAITool = async ({
@@ -40,6 +44,10 @@ export const executeAITool = async ({
 }) => {
   const result = await (async () => {
     switch (name) {
+      case 'get_tenant_details':
+        return getTenantDetails(tenantId)
+      case 'get_tenant_employee_count_by_name':
+        return getTenantEmployeeCountByName(tenantId, args.nameAsked)
       case 'get_today_attendance_summary':
         return getTodayAttendanceSummary(tenantId)
       case 'search_employees':
@@ -92,6 +100,10 @@ export const executeAITool = async ({
         return getDesignations(tenantId)
       case 'get_companies':
         return getCompanies(tenantId)
+      case 'get_employees_by_company':
+        return getEmployeesByCompany(tenantId, args.companyName)
+      case 'get_employee_count_by_company':
+        return getEmployeeCountByCompany(tenantId, args.companyName)
 
       case 'get_employee_assets':
         return getEmployeeAssets(tenantId, args.employeeId)
