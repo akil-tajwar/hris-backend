@@ -1,10 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
-
-import jwt from 'jsonwebtoken'
 import { db } from '../config/database'
 import { roleModel, userModel } from '../schemas'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
   changePassword,
   createUser,
