@@ -1772,6 +1772,42 @@ export const noticeModel = mysqlTable('notice', {
   ),
 })
 
+export const companyPolicyModel = mysqlTable('company_policy', {
+  companyPolicy: int('company_policy').autoincrement().primaryKey(),
+  name: varchar('name', {length: 100}).notNull(),
+  pdfUrl: varchar('pdf_url', { length: 255 }),
+  description: text('description'),
+  companyId: int('company_id').references(() => companyModel.companyId, {
+    onDelete: 'restrict',
+  }),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
+  year: int('year').notNull(),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const companyPolicyChunksModel = mysqlTable('company_policy_chunks', {
+  id: int('id').autoincrement().primaryKey(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
+  companyId: int('company_id').references(() => companyModel.companyId, {
+    onDelete: 'restrict',
+  }),
+  year: int('year').notNull(),
+  documentName: varchar('document_name', { length: 255 }).notNull(), // e.g. "HR Policy 2026.pdf"
+  chunkIndex: int('chunk_index').notNull(), // order within the document
+  chunkText: text('chunk_text').notNull(), // the actual paragraph/section text
+  embedding: json('embedding').notNull(), // vector, e.g. [0.023, -0.041, ...]
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+})
+
 // ========================
 // Relations (unchanged)
 // ========================
@@ -2319,3 +2355,5 @@ export type Holiday = typeof holidaysModel.$inferSelect
 export type NewHoliday = typeof holidaysModel.$inferInsert
 export type Notice = typeof noticeModel.$inferSelect
 export type NewNotice = typeof noticeModel.$inferInsert
+export type CompanyPolicy = typeof companyPolicyModel.$inferSelect
+export type NewCompanyPolicy = typeof companyPolicyModel.$inferInsert
