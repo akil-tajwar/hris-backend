@@ -17,23 +17,18 @@ export const createCompanyPoliciesController = async (
       throw new Error('Tenant ID and user ID are required')
     }
 
-    // multer.array('pdfFiles') — new uploads only, matched by array index
     const files = req.files as Express.Multer.File[] | undefined
     const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`
 
-    // Sent as a JSON string in a multipart field, since multipart forms
-    // can't natively carry nested JSON arrays
     const policies: Array<{
       companyId: number
       name: string
       description?: string
       year: number
-      pdfUrl?: string // present when copying from a previous year (no re-upload)
+      pdfUrl?: string
     }> = JSON.parse(req.body.policies)
 
     const data = policies.map((policy, index) => {
-      // A new file at this index overrides any existing pdfUrl (fresh upload
-      // takes priority over a copied-forward URL)
       const uploadedFile = files?.[index]
       const pdfUrl = uploadedFile
         ? `${baseUrl}${uploadedFile.filename}`

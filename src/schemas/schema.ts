@@ -1773,7 +1773,7 @@ export const noticeModel = mysqlTable('notice', {
 })
 
 export const companyPolicyModel = mysqlTable('company_policy', {
-  companyPolicy: int('company_policy').autoincrement().primaryKey(),
+  companyPolicyId: int('company_policy_id').autoincrement().primaryKey(),
   name: varchar('name', {length: 100}).notNull(),
   pdfUrl: varchar('pdf_url', { length: 255 }),
   description: text('description'),
@@ -1793,7 +1793,7 @@ export const companyPolicyModel = mysqlTable('company_policy', {
 })
 
 export const companyPolicyChunksModel = mysqlTable('company_policy_chunks', {
-  id: int('id').autoincrement().primaryKey(),
+  companyPolicyChunkId: int('company_policy_chunk_id').autoincrement().primaryKey(),
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
     onDelete: 'restrict',
   }),
@@ -1801,10 +1801,10 @@ export const companyPolicyChunksModel = mysqlTable('company_policy_chunks', {
     onDelete: 'restrict',
   }),
   year: int('year').notNull(),
-  documentName: varchar('document_name', { length: 255 }).notNull(), // e.g. "HR Policy 2026.pdf"
-  chunkIndex: int('chunk_index').notNull(), // order within the document
-  chunkText: text('chunk_text').notNull(), // the actual paragraph/section text
-  embedding: json('embedding').notNull(), // vector, e.g. [0.023, -0.041, ...]
+  documentName: varchar('document_name', { length: 255 }).notNull(),
+  chunkIndex: int('chunk_index').notNull(),
+  chunkText: text('chunk_text').notNull(),
+  embedding: json('embedding').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 

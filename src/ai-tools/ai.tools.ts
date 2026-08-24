@@ -28,6 +28,7 @@ import {
   salaryModel,
   tenantModel,
 } from '../schemas'
+import { searchPolicyChunks } from '../services/companyPolicyChunk.service'
 
 export const getTenantDetails = async (tenantId: number) => {
   const result = await db
@@ -768,6 +769,22 @@ export const getEmployeeLoans = async (
         eq(employeeLoneModel.employeeId, employeeId)
       )
     )
+}
+
+export const searchCompanyPolicy = async (
+  tenantId: number,
+  question: string
+): Promise<{ found: boolean; context: string }> => {
+  const chunks = await searchPolicyChunks(tenantId, question, 5)
+
+  if (chunks.length === 0) {
+    return { found: false, context: '' }
+  }
+
+  return {
+    found: true,
+    context: chunks.join('\n\n---\n\n'),
+  }
 }
 // 2. ai-tools/ai.tools.definitions.ts — extend the functionDeclarations array
 

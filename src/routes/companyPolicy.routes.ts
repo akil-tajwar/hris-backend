@@ -17,8 +17,8 @@ const router = Router()
 
 router.post(
   '/create',
-  upload.fields([{ name: 'pdfUrl', maxCount: 1 }]),
   authenticateUser,
+  upload.array('pdfUrl'),
   createCompanyPoliciesController
 )
 router.get('/getAll', authenticateUser, getCompanyPoliciesController)
