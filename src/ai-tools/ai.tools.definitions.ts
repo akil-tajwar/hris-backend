@@ -418,6 +418,25 @@ export const geminiTools = [
           additionalProperties: false,
         },
       },
+      {
+        name: 'search_company_policy',
+        description: `Search the company's HR policy documents for information about rules, 
+    entitlements, procedures, or guidelines. Use this when the user asks about 
+    leave entitlements, notice periods, working hours, salary rules, overtime, 
+    probation, code of conduct, resignation, assets, or any HR policy topic. 
+    Always try this alongside other tools when answering HR-related questions.`,
+        parameters: {
+          type: 'object',
+          properties: {
+            question: {
+              type: 'string',
+              description: 'The exact question to search the policy for.',
+            },
+          },
+          required: ['question'],
+          additionalProperties: false,
+        },
+      },
     ],
   },
 ]

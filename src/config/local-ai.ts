@@ -6,3 +6,4 @@ export const localAI = new OpenAI({
 })
 
 export const LOCAL_MODEL = process.env.OLLAMA_MODEL || 'llama3.1'
+export const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'nomic-embed-text'

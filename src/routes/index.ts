@@ -39,6 +39,7 @@ import holidayCalendarRoutes from './holidayCalendar.routes'
 import holidaysRoutes from './holidays.routes'
 import noticeRoutes from './notice.routes'
 import aiRoutes from './ai.routes'
+import companyPolicyRoutes from './companyPolicy.routes'
 
 const router = Router()
 
@@ -59,7 +60,7 @@ router.use('/notifications', notificationRoutes)
 router.use('/shift', shiftRoutes)
 router.use('/holidays', holidayRoutes)
 router.use('/holidayCalendar', holidayCalendarRoutes)
-router.use ('/holidays', holidaysRoutes) 
+router.use('/holidays', holidaysRoutes)
 router.use('/leaveTypes', leaveTypeRoutes)
 router.use('/leavePolicy', leavePolicyRoutes)
 router.use('/employeeLeaveAssignments', employeeLeaveAssignmentRoutes)
@@ -82,4 +83,6 @@ router.use('/shiftAllocation', shiftAllocationRoutes)
 router.use('/attendanceProcessing', attendanceProcessingRoutes)
 router.use('/notice', noticeRoutes)
 router.use('/ai', aiRoutes)
+router.use('/companyPolicy', companyPolicyRoutes)
+
 export default router

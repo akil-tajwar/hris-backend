@@ -31,6 +31,7 @@ import {
   getEmployeesWithSalaryPending,
   getEmployeesByCompany,
   getEmployeeCountByCompany,
+  searchCompanyPolicy,
 } from './ai.tools'
 
 export const executeAITool = async ({
@@ -121,6 +122,8 @@ export const executeAITool = async ({
         return getEmployeesWithSalaryGiven(tenantId, args.month, args.year)
       case 'get_employees_with_salary_pending':
         return getEmployeesWithSalaryPending(tenantId, args.month, args.year)
+      case 'search_company_policy':
+        return searchCompanyPolicy(tenantId, args.question)
 
       default:
         throw new Error(`Unknown AI tool: ${name}`)
