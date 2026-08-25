@@ -4,7 +4,6 @@ import path from 'path'
 import { db } from '../config/database'
 import { companyPolicyChunksModel } from '../schemas'
 import { localAI, EMBEDDING_MODEL } from '../config/local-ai'
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { eq } from 'drizzle-orm'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
@@ -19,6 +18,7 @@ const resolveLocalPathFromUrl = (pdfUrl: string): string => {
 }
 
 const extractTextFromPdf = async (filePath: string): Promise<string> => {
+  const pdfjsLib = await import('pdfjs-dist')
   const data = new Uint8Array(fs.readFileSync(filePath))
   const loadingTask = pdfjsLib.getDocument({ data })
   const pdf = await loadingTask.promise
