@@ -1761,6 +1761,7 @@ export const noticeModel = mysqlTable('notice', {
   description: text('description'),
   pdfUrl: varchar('pdf_url', { length: 255 }),
   noticeDate: date('notice_date').notNull(),
+  showTill: date('show_till').notNull(),
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
     onDelete: 'restrict',
   }),
@@ -1784,6 +1785,7 @@ export const companyPolicyModel = mysqlTable('company_policy', {
     onDelete: 'restrict',
   }),
   year: int('year').notNull(),
+  active: boolean('active').notNull().default(false),
   createdBy: int('created_by').notNull(),
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedBy: int('updated_by'),

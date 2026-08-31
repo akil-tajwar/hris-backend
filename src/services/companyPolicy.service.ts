@@ -1,7 +1,14 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '../config/database'
-import { companyPolicyChunksModel, companyPolicyModel, NewCompanyPolicy } from '../schemas'
-import { buildChunksForPolicy, chunkAndStorePolicy } from './companyPolicyChunk.service'
+import {
+  companyPolicyChunksModel,
+  companyPolicyModel,
+  NewCompanyPolicy,
+} from '../schemas'
+import {
+  buildChunksForPolicy,
+  chunkAndStorePolicy,
+} from './companyPolicyChunk.service'
 
 export const bulkCreateCompanyPolicies = async (
   dataArray: NewCompanyPolicy[]
@@ -60,6 +67,55 @@ export const bulkCreateCompanyPolicies = async (
     }
 
     return result
+  })
+}
+
+export const editCompanyPolicy = async (
+  companyPolicyId: number,
+  data: Partial<NewCompanyPolicy>
+) => {
+  return await db.transaction(async (tx) => {
+    // 🔍 Check existing company policy
+    const existing = await tx.query.companyPolicyModel.findFirst({
+      where: eq(companyPolicyModel.companyPolicyId, companyPolicyId),
+    })
+
+    if (!existing) {
+      throw new Error('Company policy not found')
+    }
+
+    // 🔧 Normalize values
+    const normalizeValue = (val: any) =>
+      val === '' || val === undefined ? null : val
+
+    // 🎯 Dynamic update object
+    const updateData: any = {}
+
+    Object.entries(data).forEach(([key, value]) => {
+      updateData[key] = normalizeValue(value)
+    })
+
+    // 🕒 Updated time and updatedBy
+    updateData.updatedAt = new Date()
+
+    if (data.updatedBy) {
+      updateData.updatedBy = data.updatedBy
+    }
+
+    // ✅ Update
+    if (Object.keys(updateData).length > 0) {
+      await tx
+        .update(companyPolicyModel)
+        .set(updateData)
+        .where(eq(companyPolicyModel.companyPolicyId, companyPolicyId))
+    }
+
+    // 📦 Return updated company policy
+    const updatedCompanyPolicy = await tx.query.companyPolicyModel.findFirst({
+      where: eq(companyPolicyModel.companyPolicyId, companyPolicyId),
+    })
+
+    return updatedCompanyPolicy
   })
 }
 

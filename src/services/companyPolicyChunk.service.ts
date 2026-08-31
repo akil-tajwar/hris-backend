@@ -1,10 +1,9 @@
 import fs from 'fs'
 import path from 'path'
-// const pdfParse = require('pdf-parse')
 import { db } from '../config/database'
-import { companyPolicyChunksModel } from '../schemas'
+import { companyPolicyChunksModel, companyPolicyModel } from '../schemas'
 import { localAI, EMBEDDING_MODEL } from '../config/local-ai'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads')
 
@@ -141,23 +140,43 @@ export const chunkAndStorePolicy = async (
 export const searchPolicyChunks = async (
   tenantId: number,
   question: string,
-  topK = 5
+  topK = 5,
+  companyId?: number,
+  year?: number
 ): Promise<string[]> => {
-  // Embed the question using the same model used during chunking
   const questionEmbedding = await generateEmbedding(question)
 
-  // Fetch all chunks for this tenant
+  const currentYear = new Date().getFullYear()
+  const resolvedYear = year ?? currentYear
+
+  // Only fetch chunks whose parent policy is active
   const chunks = await db
     .select({
       chunkText: companyPolicyChunksModel.chunkText,
       embedding: companyPolicyChunksModel.embedding,
     })
     .from(companyPolicyChunksModel)
-    .where(eq(companyPolicyChunksModel.tenantId, tenantId))
+    .innerJoin(
+      companyPolicyModel,
+      and(
+        eq(companyPolicyChunksModel.companyId, companyPolicyModel.companyId),
+        eq(companyPolicyChunksModel.tenantId, companyPolicyModel.tenantId),
+        eq(companyPolicyChunksModel.year, companyPolicyModel.year)
+      )
+    )
+    .where(
+      and(
+        eq(companyPolicyChunksModel.tenantId, tenantId),
+        eq(companyPolicyChunksModel.year, resolvedYear),
+        eq(companyPolicyModel.active, true),
+        ...(companyId
+          ? [eq(companyPolicyChunksModel.companyId, companyId)]
+          : [])
+      )
+    )
 
   if (chunks.length === 0) return []
 
-  // Cosine similarity between two vectors
   const cosineSimilarity = (a: number[], b: number[]): number => {
     const dot = a.reduce((sum, val, i) => sum + val * b[i], 0)
     const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0))
@@ -165,7 +184,6 @@ export const searchPolicyChunks = async (
     return magA && magB ? dot / (magA * magB) : 0
   }
 
-  // Score each chunk and pick the top K
   const scored = chunks
     .map((chunk) => ({
       text: chunk.chunkText,
