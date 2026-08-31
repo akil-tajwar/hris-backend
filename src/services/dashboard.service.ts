@@ -4,24 +4,34 @@ import {
   attendanceDaily,
   departmentModel,
   designationModel,
-  employeeAttendanceModel,
   employeeLeaveBalanceModel,
   employeeLoneInstallemntsModel,
   employeeLoneModel,
   employeeModel,
-  leavePolicyDetailsModel,
   leaveTypeModel,
   salaryModel,
 } from '../schemas'
 
-export const getEmployeeLeaveSummary = async (tenantId?: number) => {
+export const getEmployeeLeaveSummary = async (
+  tenantId: number,
+  companyId?: number,
+  departmentId?: number
+) => {
   const currentYear = new Date().getFullYear()
 
-  // Build where conditions
-  const conditions = [eq(employeeLeaveBalanceModel.year, currentYear)]
+  const conditions = [
+    eq(employeeLeaveBalanceModel.year, currentYear),
+    eq(employeeLeaveBalanceModel.tenantId, tenantId),
+  ]
 
-  if (tenantId) {
-    conditions.push(eq(employeeLeaveBalanceModel.tenantId, tenantId))
+  // Add company filter if provided
+  if (companyId && companyId > 0) {
+    conditions.push(eq(employeeModel.companyId, companyId))
+  }
+
+  // Add department filter if provided
+  if (departmentId && departmentId > 0) {
+    conditions.push(eq(employeeModel.departmentId, departmentId))
   }
 
   const leaveBalances = await db
@@ -37,6 +47,7 @@ export const getEmployeeLeaveSummary = async (tenantId?: number) => {
       earnedDays: employeeLeaveBalanceModel.earnedDays,
       usedDays: employeeLeaveBalanceModel.usedDays,
       remainingDays: employeeLeaveBalanceModel.remainingDays,
+      createdAt: employeeLeaveBalanceModel.createdAt,
     })
     .from(employeeLeaveBalanceModel)
     .leftJoin(
@@ -57,7 +68,6 @@ export const getEmployeeLeaveSummary = async (tenantId?: number) => {
     )
     .where(and(...conditions))
 
-  // Group by employee
   const employeeMap = new Map()
 
   for (const leave of leaveBalances) {
@@ -72,14 +82,18 @@ export const getEmployeeLeaveSummary = async (tenantId?: number) => {
           designationName: leave.designationName,
           departmentName: leave.departmentName,
           totalLeavesTaken: 0,
+          createdAt: leave.createdAt,
         },
         leaveDetails: [],
       })
     }
 
+    if (employeeId === null) {
+      continue
+    }
+
     const employeeData = employeeMap.get(employeeId)
 
-    // Add leave type details
     employeeData.leaveDetails.push({
       leaveTypeId: leave.leaveTypeId,
       leaveTypeName: leave.leaveTypeName,
@@ -88,28 +102,36 @@ export const getEmployeeLeaveSummary = async (tenantId?: number) => {
       remainingLeaves: leave.remainingDays,
     })
 
-    // Accumulate total leaves taken across all leave types
     employeeData.employeeDetails.totalLeavesTaken += leave.usedDays ?? 0
   }
 
   return Array.from(employeeMap.values())
 }
 
-export const getEmployeeAttendanceSummary = async (tenantId?: number) => {
+export const getEmployeeAttendanceSummary = async (
+  tenantId: number,
+  companyId?: number,
+  departmentId?: number
+) => {
   const currentYear = new Date().getFullYear()
 
-  // Calculate date range
   const yearStart = new Date(`${currentYear}-01-01`)
   const yearEnd = new Date(`${currentYear}-12-31`)
 
-  // Build where conditions
   const conditions = [
     gte(attendanceDaily.attendanceDate, yearStart),
     lte(attendanceDaily.attendanceDate, yearEnd),
+    eq(attendanceDaily.tenantId, tenantId),
   ]
 
-  if (tenantId) {
-    conditions.push(eq(attendanceDaily.tenantId, tenantId))
+  // Add company filter if provided
+  if (companyId && companyId > 0) {
+    conditions.push(eq(employeeModel.companyId, companyId))
+  }
+
+  // Add department filter if provided
+  if (departmentId && departmentId > 0) {
+    conditions.push(eq(employeeModel.departmentId, departmentId))
   }
 
   const attendances = await db
@@ -124,6 +146,7 @@ export const getEmployeeAttendanceSummary = async (tenantId?: number) => {
       status: attendanceDaily.status,
       lateMinutes: attendanceDaily.lateMinutes,
       earlyOutMinutes: attendanceDaily.earlyOutMinutes,
+      createdAt: attendanceDaily.createdAt,
     })
     .from(attendanceDaily)
     .leftJoin(
@@ -140,13 +163,16 @@ export const getEmployeeAttendanceSummary = async (tenantId?: number) => {
     )
     .where(and(...conditions))
 
-  // Group by employee
   const employeeMap = new Map()
 
   for (const att of attendances) {
     const employeeId = att.employeeId
 
-    if (employeeId !== null && !employeeMap.has(employeeId)) {
+    if (employeeId === null) {
+      continue
+    }
+
+    if (!employeeMap.has(employeeId)) {
       employeeMap.set(employeeId, {
         employeeDetails: {
           employeeId: att.employeeId,
@@ -157,6 +183,7 @@ export const getEmployeeAttendanceSummary = async (tenantId?: number) => {
           totalAbsent: 0,
           totalLateInMinutes: 0,
           totalEarlyOutMinutes: 0,
+          createdAt: att.createdAt,
         },
         attendanceDetails: [],
       })
@@ -164,17 +191,15 @@ export const getEmployeeAttendanceSummary = async (tenantId?: number) => {
 
     const employeeData = employeeMap.get(employeeId)
 
-    // Count ABSENT status
     if (att.status === 'ABSENT') {
       employeeData.employeeDetails.totalAbsent += 1
     }
 
-    // Accumulate minutes
     employeeData.employeeDetails.totalLateInMinutes += att.lateMinutes ?? 0
+
     employeeData.employeeDetails.totalEarlyOutMinutes +=
       att.earlyOutMinutes ?? 0
 
-    // Push daily record
     employeeData.attendanceDetails.push({
       attendanceDate: att.attendanceDate,
       isAbsent: att.status === 'ABSENT' ? 1 : 0,
@@ -186,7 +211,11 @@ export const getEmployeeAttendanceSummary = async (tenantId?: number) => {
   return Array.from(employeeMap.values())
 }
 
-export const getSalaryStatus = async (tenantId: number) => {
+export const getSalaryStatus = async (
+  tenantId: number,
+  companyId?: number,
+  departmentId?: number
+) => {
   const monthNames = [
     'January',
     'February',
@@ -204,7 +233,6 @@ export const getSalaryStatus = async (tenantId: number) => {
 
   const currentYear = new Date().getFullYear()
 
-  // Create a CASE expression for ordering
   const monthOrder = sql`
     CASE ${salaryModel.salaryMonth}
       WHEN 'January' THEN 1
@@ -222,12 +250,34 @@ export const getSalaryStatus = async (tenantId: number) => {
     END
   `
 
+  const conditions = [
+    eq(salaryModel.tenantId, tenantId),
+    eq(salaryModel.salaryYear, currentYear),
+  ]
+
+  // Add company filter if provided
+  if (companyId && companyId > 0) {
+    conditions.push(eq(employeeModel.companyId, companyId))
+  }
+
+  // Add department filter if provided
+  if (departmentId && departmentId > 0) {
+    conditions.push(eq(employeeModel.departmentId, departmentId))
+  }
+
   const results = await db
     .select({
       salaryMonth: salaryModel.salaryMonth,
       salaryYear: salaryModel.salaryYear,
-      grossPayroll: sql<number>`COALESCE(SUM(${salaryModel.grossSalary}), 0)`,
-      netPayroll: sql<number>`COALESCE(SUM(${salaryModel.netSalary}), 0)`,
+
+      grossPayroll: sql<number>`
+        COALESCE(SUM(${salaryModel.grossSalary}), 0)
+      `,
+
+      netPayroll: sql<number>`
+        COALESCE(SUM(${salaryModel.netSalary}), 0)
+      `,
+
       totalPaidAmount: sql<number>`
         COALESCE(
           SUM(
@@ -240,6 +290,7 @@ export const getSalaryStatus = async (tenantId: number) => {
           0
         )
       `,
+
       totalUnpaidAmount: sql<number>`
         COALESCE(
           SUM(
@@ -252,20 +303,20 @@ export const getSalaryStatus = async (tenantId: number) => {
           0
         )
       `,
+
+      createdAt: sql<Date | null>`MAX(${salaryModel.createdAt})`,
     })
     .from(salaryModel)
-    .where(
-      and(
-        eq(salaryModel.tenantId, tenantId),
-        eq(salaryModel.salaryYear, currentYear)
-      )
+    .leftJoin(
+      employeeModel,
+      eq(salaryModel.employeeId, employeeModel.employeeId)
     )
+    .where(and(...conditions))
     .groupBy(salaryModel.salaryMonth, salaryModel.salaryYear)
     .orderBy(monthOrder)
 
-  // Create a map of existing months with data
   const monthDataMap = new Map()
-  
+
   results.forEach((result) => {
     monthDataMap.set(result.salaryMonth, {
       month: result.salaryMonth,
@@ -274,35 +325,46 @@ export const getSalaryStatus = async (tenantId: number) => {
       totalUnpaidAmount: Number(result.totalUnpaidAmount),
       grossPayroll: Number(result.grossPayroll),
       netPayroll: Number(result.netPayroll),
+      createdAt: result.createdAt,
     })
   })
 
-  // Create array with all months of the year
   const allMonthsData = monthNames.map((month, index) => {
     const existingData = monthDataMap.get(month)
-    
+
     return {
       id: index + 1,
-      month: month,
+      month,
       year: currentYear,
       totalPaidAmount: existingData?.totalPaidAmount ?? 0,
       totalUnpaidAmount: existingData?.totalUnpaidAmount ?? 0,
       grossPayroll: existingData?.grossPayroll ?? 0,
       netPayroll: existingData?.netPayroll ?? 0,
       isDataAvailable: !!existingData,
+      createdAt: existingData?.createdAt ?? null,
     }
   })
 
   return allMonthsData
 }
 
-export const getEmployeeLoneSummary = async (tenantId?: number) => {
+export const getEmployeeLoneSummary = async (
+  tenantId: number,
+  companyId?: number,
+  departmentId?: number
+) => {
   const currentYear = new Date().getFullYear()
 
-  const loanConditions = []
+  const conditions = [eq(employeeLoneModel.tenantId, tenantId)]
 
-  if (tenantId) {
-    loanConditions.push(eq(employeeLoneModel.tenantId, tenantId))
+  // Add company filter if provided
+  if (companyId && companyId > 0) {
+    conditions.push(eq(employeeModel.companyId, companyId))
+  }
+
+  // Add department filter if provided
+  if (departmentId && departmentId > 0) {
+    conditions.push(eq(employeeModel.departmentId, departmentId))
   }
 
   const loans = await db
@@ -316,6 +378,7 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
       employeeLoneId: employeeLoneModel.employeeLoneId,
       totalLoanAmount: employeeLoneModel.amount,
       loneDate: employeeLoneModel.loneDate,
+      loanCreatedAt: employeeLoneModel.createdAt,
 
       installmentId: employeeLoneInstallemntsModel.employeeLoneInstallmentId,
       installmentAmount: employeeLoneInstallemntsModel.amount,
@@ -343,7 +406,7 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
       departmentModel,
       eq(employeeModel.departmentId, departmentModel.departmentId)
     )
-    .where(loanConditions.length ? and(...loanConditions) : undefined)
+    .where(and(...conditions))
 
   const employeeMap = new Map<
     number,
@@ -360,6 +423,7 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
       paidInstallments: number
       pendingInstallments: number
       skippedInstallments: number
+      createdAt: Date | null
       _processedLoans: Set<number>
     }
   >()
@@ -367,12 +431,10 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
   for (const loan of loans) {
     const employeeId = loan.employeeId
 
-    // Skip if employeeId is null
     if (employeeId === null) {
       continue
     }
 
-    // Loan belongs to the year it was created
     const loanYear = new Date(loan.loneDate).getFullYear()
 
     if (loanYear !== currentYear) {
@@ -381,7 +443,7 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
 
     if (!employeeMap.has(employeeId)) {
       employeeMap.set(employeeId, {
-        employeeId: loan.employeeId!,
+        employeeId,
         empCode: loan.empCode,
         empFullName: loan.empFullName,
         designationName: loan.designationName,
@@ -393,19 +455,19 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
         paidInstallments: 0,
         pendingInstallments: 0,
         skippedInstallments: 0,
+        createdAt: loan.loanCreatedAt,
         _processedLoans: new Set<number>(),
       })
     }
 
     const employeeData = employeeMap.get(employeeId)!
 
-    // Count loan amount once per loan
     if (!employeeData._processedLoans.has(loan.employeeLoneId)) {
       employeeData._processedLoans.add(loan.employeeLoneId)
+
       employeeData.totalLoanAmount += Number(loan.totalLoanAmount)
     }
 
-    // Count every installment of that loan, regardless of installment year
     if (loan.installmentId) {
       employeeData.totalInstallments += 1
 
@@ -413,6 +475,7 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
         employeeData.skippedInstallments += 1
       } else if (loan.isPaid) {
         employeeData.totalPaid += Number(loan.installmentAmount)
+
         employeeData.paidInstallments += 1
       } else {
         employeeData.pendingInstallments += 1
@@ -426,6 +489,261 @@ export const getEmployeeLoneSummary = async (tenantId?: number) => {
     delete (employee as any)._processedLoans
 
     return employee
+  })
+
+  return result
+}
+
+export const getEmployeeLateAndEarlyOutSummary = async (
+  tenantId: number,
+  companyId?: number,
+  departmentId?: number
+) => {
+  const currentYear = new Date().getFullYear()
+
+  const yearStart = new Date(`${currentYear}-01-01`)
+  const yearEnd = new Date(`${currentYear}-12-31`)
+
+  const conditions = [
+    eq(attendanceDaily.tenantId, tenantId),
+    gte(attendanceDaily.attendanceDate, yearStart),
+    lte(attendanceDaily.attendanceDate, yearEnd),
+  ]
+
+  // Add company filter if provided
+  if (companyId && companyId > 0) {
+    conditions.push(eq(employeeModel.companyId, companyId))
+  }
+
+  // Add department filter if provided
+  if (departmentId && departmentId > 0) {
+    conditions.push(eq(employeeModel.departmentId, departmentId))
+  }
+
+  const attendances = await db
+    .select({
+      employeeId: employeeModel.employeeId,
+      empCode: employeeModel.empCode,
+      empFullName: employeeModel.empFullName,
+      designationName: designationModel.designationName,
+      departmentName: departmentModel.departmentName,
+
+      attendanceDate: attendanceDaily.attendanceDate,
+      status: attendanceDaily.status,
+      lateMinutes: attendanceDaily.lateMinutes,
+      earlyOutMinutes: attendanceDaily.earlyOutMinutes,
+      createdAt: attendanceDaily.createdAt,
+    })
+    .from(attendanceDaily)
+    .leftJoin(
+      employeeModel,
+      eq(attendanceDaily.employeeId, employeeModel.employeeId)
+    )
+    .leftJoin(
+      designationModel,
+      eq(employeeModel.designationId, designationModel.designationId)
+    )
+    .leftJoin(
+      departmentModel,
+      eq(employeeModel.departmentId, departmentModel.departmentId)
+    )
+    .where(and(...conditions))
+
+  const employeeMap = new Map<
+    number,
+    {
+      employeeDetails: {
+        employeeId: number
+        empCode: string | null
+        empFullName: string | null
+        designationName: string | null
+        departmentName: string | null
+        totalLateInMinutes: number
+        totalEarlyOutMinutes: number
+        lateInOccurrences: number
+        earlyOutOccurrences: number
+        createdAt: Date | null
+      }
+      attendanceDetails: {
+        attendanceDate: Date
+        status: string
+        lateInMinutes: number
+        earlyOutMinutes: number
+      }[]
+    }
+  >()
+
+  for (const att of attendances) {
+    const employeeId = att.employeeId
+
+    if (employeeId === null) {
+      continue
+    }
+
+    if (!employeeMap.has(employeeId)) {
+      employeeMap.set(employeeId, {
+        employeeDetails: {
+          employeeId: att.employeeId ?? 0,
+          empCode: att.empCode,
+          empFullName: att.empFullName,
+          designationName: att.designationName,
+          departmentName: att.departmentName,
+          totalLateInMinutes: 0,
+          totalEarlyOutMinutes: 0,
+          lateInOccurrences: 0,
+          earlyOutOccurrences: 0,
+          createdAt: att.createdAt,
+        },
+        attendanceDetails: [],
+      })
+    }
+
+    const employeeData = employeeMap.get(employeeId)!
+
+    const lateMinutes = att.lateMinutes ?? 0
+    const earlyOutMinutes = att.earlyOutMinutes ?? 0
+
+    // Total late minutes
+    employeeData.employeeDetails.totalLateInMinutes += lateMinutes
+
+    // Total early-out minutes
+    employeeData.employeeDetails.totalEarlyOutMinutes += earlyOutMinutes
+
+    // Count late occurrences
+    if (lateMinutes > 0) {
+      employeeData.employeeDetails.lateInOccurrences += 1
+    }
+
+    // Count early-out occurrences
+    if (earlyOutMinutes > 0) {
+      employeeData.employeeDetails.earlyOutOccurrences += 1
+    }
+
+    // Daily attendance details
+    employeeData.attendanceDetails.push({
+      attendanceDate: att.attendanceDate,
+      status: att.status,
+      lateInMinutes: lateMinutes,
+      earlyOutMinutes: earlyOutMinutes,
+    })
+  }
+
+  return Array.from(employeeMap.values())
+}
+
+export const getEmployeeHeadCountSummary = async (
+  tenantId: number,
+  companyId?: number,
+  departmentId?: number
+) => {
+  const currentYear = new Date().getFullYear()
+
+  const yearEnd = new Date(`${currentYear}-12-31`)
+
+  const conditions = [
+    eq(employeeModel.tenantId, tenantId),
+    lte(employeeModel.doj, yearEnd),
+  ]
+
+  // Add company filter if provided
+  if (companyId && companyId > 0) {
+    conditions.push(eq(employeeModel.companyId, companyId))
+  }
+
+  // Add department filter if provided
+  if (departmentId && departmentId > 0) {
+    conditions.push(eq(employeeModel.departmentId, departmentId))
+  }
+
+  const employees = await db
+    .select({
+      employeeId: employeeModel.employeeId,
+      doj: employeeModel.doj,
+    })
+    .from(employeeModel)
+    .where(and(...conditions))
+
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ] as const
+
+  // Calculate employee count for every month
+  const monthlyData = monthNames.map((month, index) => {
+    // Last day of the month
+    const monthEnd = new Date(currentYear, index + 1, 0)
+
+    const employeeCount = employees.filter((employee) => {
+      if (!employee.doj) {
+        return false
+      }
+
+      const doj = new Date(employee.doj)
+
+      return doj <= monthEnd
+    }).length
+
+    return {
+      month,
+      year: currentYear,
+      employeeCount,
+    }
+  })
+
+  // Calculate month-to-month percentage change
+  const result = monthlyData.map((current, index) => {
+    // January has no previous month in the current year
+    if (index === 0) {
+      return {
+        ...current,
+        percentageChange: null,
+        changeType: 'INITIAL' as const,
+      }
+    }
+
+    const previous = monthlyData[index - 1]
+
+    let percentageChange = 0
+
+    if (previous.employeeCount === 0) {
+      // If previous month had 0 employees
+      // and current month has employees,
+      // consider it a 100% increase.
+      percentageChange = current.employeeCount > 0 ? 100 : 0
+    } else {
+      percentageChange =
+        ((current.employeeCount - previous.employeeCount) /
+          previous.employeeCount) *
+        100
+    }
+
+    percentageChange = Number(percentageChange.toFixed(2))
+
+    let changeType: 'INCREASE' | 'DECREASE' | 'NO_CHANGE'
+
+    if (percentageChange > 0) {
+      changeType = 'INCREASE'
+    } else if (percentageChange < 0) {
+      changeType = 'DECREASE'
+    } else {
+      changeType = 'NO_CHANGE'
+    }
+
+    return {
+      ...current,
+      percentageChange,
+      changeType,
+    }
   })
 
   return result

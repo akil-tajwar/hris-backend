@@ -1254,6 +1254,10 @@ export const employeeLeaveBalanceModel = mysqlTable('employee_leave_balance', {
   earnedDays: double('earned_days').notNull(),
   usedDays: double('used_days').notNull().default(0),
   remainingDays: int('remaining_days').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
 })
 
 export const employeeLeaveApplyModel = mysqlTable('employee_leave_apply', {
