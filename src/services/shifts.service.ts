@@ -11,74 +11,86 @@ import {
    CREATE SHIFT
 ========================= */
 
-export const createShift = async (data: any) => {
+export const createShift = async (data: any[]) => {
   return await db.transaction(async (tx) => {
-    // 1️⃣ INSERT SHIFT
-    const result = await tx.insert(shiftModel).values({
-      companyId: data.shift.companyId,
-      shiftName: data.shift.shiftName,
-      shiftCode: data.shift.shiftCode,
-      shiftType: data.shift.shiftType,
-      startTime: data.shift.startTime,
-      endTime: data.shift.endTime,
-      breakMinutes: data.shift.breakMinutes,
-      expectedWorkHours: data.shift.expectedWorkHours,
-      crossDay: data.shift.crossDay ?? false,
-      isFlexible: data.shift.isFlexible ?? false,
-      flexibleInFrom: data.shift.flexibleInFrom || null,
-      flexibleInTo: data.shift.flexibleInTo || null,
-      minimumHoursForPresent: data.shift.minimumHoursForPresent,
-      status: data.shift.status ?? true,
-      tenantId: data.shift.tenantId,
-      createdBy: data.shift.createdBy,
-    })
+    const createdShifts: {
+      shiftId: number
+    }[] = []
 
-    const shiftId = Number((result as any).insertId ?? result[0]?.insertId)
+    for (const item of data) {
+      // 1️⃣ INSERT SHIFT
+      const result = await tx.insert(shiftModel).values({
+        companyId: item.shift.companyId,
+        shiftName: item.shift.shiftName,
+        shiftCode: item.shift.shiftCode,
+        shiftType: item.shift.shiftType,
+        startTime: item.shift.startTime,
+        endTime: item.shift.endTime,
+        breakMinutes: item.shift.breakMinutes,
+        expectedWorkHours: item.shift.expectedWorkHours,
+        crossDay: item.shift.crossDay ?? false,
+        isFlexible: item.shift.isFlexible ?? false,
+        flexibleInFrom: item.shift.flexibleInFrom || null,
+        flexibleInTo: item.shift.flexibleInTo || null,
+        minimumHoursForPresent: item.shift.minimumHoursForPresent,
+        status: item.shift.status ?? true,
+        tenantId: item.shift.tenantId,
+        createdBy: item.shift.createdBy,
+      })
 
-    if (!shiftId) {
-      throw new Error('Shift insert failed: no insertId returned')
+      const shiftId = Number((result as any).insertId ?? result[0]?.insertId)
+
+      if (!shiftId) {
+        throw new Error(
+          `Shift insert failed for shift "${item.shift.shiftName}"`
+        )
+      }
+
+      // 2️⃣ CLEAN & INSERT SHIFT DAY CONFIGS
+      const configs = (item.shiftDayAndWeekDays || []).map((day: any) => ({
+        shiftId,
+        weekDayId: day.weekDayId,
+        dayType: day.dayType,
+
+        startTime:
+          day.dayType === 'Weekend'
+            ? '00:00'
+            : (day.startTime ?? item.shift.startTime),
+
+        endTime:
+          day.dayType === 'Weekend'
+            ? '00:00'
+            : (day.endTime ?? item.shift.endTime),
+
+        breakMinutes:
+          day.dayType === 'Weekend'
+            ? 0
+            : (day.breakMinutes ?? item.shift.breakMinutes),
+
+        expectedWorkHours:
+          day.dayType === 'Weekend'
+            ? 0
+            : (day.expectedWorkHours ?? item.shift.expectedWorkHours),
+
+        minimumHoursForPresent:
+          day.dayType === 'Weekend'
+            ? 0
+            : (day.minimumHoursForPresent ?? item.shift.minimumHoursForPresent),
+
+        tenantId: item.shift.tenantId,
+        createdBy: item.shift.createdBy,
+      }))
+
+      if (configs.length > 0) {
+        await tx.insert(shiftDayAndWeekDaysModel).values(configs)
+      }
+
+      createdShifts.push({
+        shiftId,
+      })
     }
 
-    // 2️⃣ CLEAN & INSERT SHIFT DAY CONFIGS
-    const configs = (data.shiftDayAndWeekDays || []).map((item: any) => ({
-      shiftId,
-      weekDayId: item.weekDayId,
-      dayType: item.dayType,
-
-      startTime:
-        item.dayType === 'Weekend'
-          ? '00:00'
-          : (item.startTime ?? data.shift.startTime),
-
-      endTime:
-        item.dayType === 'Weekend'
-          ? '00:00'
-          : (item.endTime ?? data.shift.endTime),
-
-      breakMinutes:
-        item.dayType === 'Weekend'
-          ? 0
-          : (item.breakMinutes ?? data.shift.breakMinutes),
-
-      expectedWorkHours:
-        item.dayType === 'Weekend'
-          ? 0
-          : (item.expectedWorkHours ?? data.shift.expectedWorkHours),
-
-      minimumHoursForPresent:
-        item.dayType === 'Weekend'
-          ? 0
-          : (item.minimumHoursForPresent ?? data.shift.minimumHoursForPresent),
-
-      tenantId: data.shift.tenantId,
-      createdBy: data.shift.createdBy,
-    }))
-
-    if (configs.length > 0) {
-      await tx.insert(shiftDayAndWeekDaysModel).values(configs)
-    }
-
-    return { shiftId }
+    return createdShifts
   })
 }
 
