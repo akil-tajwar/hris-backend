@@ -1030,6 +1030,9 @@ export const employeeShiftAllocations = mysqlTable(
     employeeId: int('employee_id')
       .notNull()
       .references(() => employeeModel.employeeId, { onDelete: 'restrict' }),
+    companyId: int('company_id')
+      .references(() => companyModel.companyId)
+      .notNull(),
     shiftId: int('shift_id')
       .notNull()
       .references(() => shiftModel.shiftId, { onDelete: 'restrict' }),
@@ -1779,7 +1782,7 @@ export const noticeModel = mysqlTable('notice', {
 
 export const companyPolicyModel = mysqlTable('company_policy', {
   companyPolicyId: int('company_policy_id').autoincrement().primaryKey(),
-  name: varchar('name', {length: 100}).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
   pdfUrl: varchar('pdf_url', { length: 255 }),
   description: text('description'),
   companyId: int('company_id').references(() => companyModel.companyId, {
@@ -1799,7 +1802,9 @@ export const companyPolicyModel = mysqlTable('company_policy', {
 })
 
 export const companyPolicyChunksModel = mysqlTable('company_policy_chunks', {
-  companyPolicyChunkId: int('company_policy_chunk_id').autoincrement().primaryKey(),
+  companyPolicyChunkId: int('company_policy_chunk_id')
+    .autoincrement()
+    .primaryKey(),
   tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
     onDelete: 'restrict',
   }),

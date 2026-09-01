@@ -9,6 +9,7 @@ import {
   NewEmployeeShiftAllocation,
   designationModel,
   departmentModel,
+  companyModel,
 } from '../schemas/schema'
 import { redis } from '../middlewares/redis'
 import { getCache, setCache } from '../middlewares/cache'
@@ -161,13 +162,22 @@ export const createShiftAllocation = async (
 ) => {
   return await db.transaction(async (tx) => {
     for (const item of data) {
-      // Employee exists
+      // Employee exists and get companyId
       const employee = await tx.query.employeeModel.findFirst({
         where: eq(employeeModel.employeeId, item.employeeId),
       })
 
       if (!employee) {
         throw new Error(`Employee ${item.employeeId} not found`)
+      }
+
+      // Get companyId from employee record
+      const companyId = employee.companyId
+
+      if (!companyId) {
+        throw new Error(
+          `Employee ${item.employeeId} does not have a company assigned`
+        )
       }
 
       // Shift exists
@@ -202,8 +212,10 @@ export const createShiftAllocation = async (
         )
       }
 
+      // Insert with companyId from employee
       await tx.insert(employeeShiftAllocations).values({
         employeeId: item.employeeId,
+        companyId: companyId, // Using companyId from employee
         shiftId: item.shiftId,
         effectiveFrom: toDateString(item.effectiveFrom),
         effectiveTo: item.effectiveTo ? toDateString(item.effectiveTo) : null,
@@ -278,6 +290,7 @@ export const createBulkShiftAllocation = async (
 
   const rows = employeeIds.map((employeeId) => ({
     employeeId,
+    companyId: rest.companyId,
     shiftId: rest.shiftId,
     effectiveFrom: toDateString(rest.effectiveFrom),
     effectiveTo: rest.effectiveTo ? toDateString(rest.effectiveTo) : null,
@@ -392,6 +405,7 @@ export const copyShiftAllocation = async (id: number, createdBy: number) => {
 
   const [result] = await db.insert(employeeShiftAllocations).values({
     employeeId: existing.employeeId,
+    companyId: existing.companyId,
     shiftId: existing.shiftId,
     effectiveFrom: dateRange.effectiveFrom,
     effectiveTo: dateRange.effectiveTo,
@@ -430,7 +444,7 @@ export const copyAllActiveAllocations = async (
     )
 
   if (!activeAllocations.length)
-    throw new Error(`কোনো active ${recurrenceType} allocation পাওয়া যায়নি`)
+    throw new Error(`No active ${recurrenceType} allocation is found to copy`)
 
   // প্রতিটা employee এর latest allocation বের করো
   const latestPerEmployee = new Map<number, (typeof activeAllocations)[0]>()
@@ -452,6 +466,7 @@ export const copyAllActiveAllocations = async (
 
     return {
       employeeId: alloc.employeeId,
+      companyId: alloc.companyId,
       shiftId: alloc.shiftId,
       effectiveFrom: dateRange.effectiveFrom,
       effectiveTo: dateRange.effectiveTo,
@@ -483,7 +498,7 @@ export const copyAllActiveAllocations = async (
   const filteredRows = rows.filter((r) => !existingSet.has(`${r.employeeId}`))
 
   if (!filteredRows.length)
-    throw new Error(`সব employee এর পরবর্তী period এ allocation ইতিমধ্যে আছে`)
+    throw new Error(`All employee already has allocations for next period`)
 
   await db.insert(employeeShiftAllocations).values(filteredRows)
   await redis.del(CACHE_KEY)
@@ -520,6 +535,8 @@ export const getAllShiftAllocations = async (tenantId: number) => {
       empDepartment: departmentModel.departmentName,
       departmentId: employeeModel.departmentId,
       departmentName: departmentModel.departmentName,
+      companyId: employeeShiftAllocations.companyId,
+      companyName: companyModel.companyName,
       shiftId: employeeShiftAllocations.shiftId,
       shiftName: shiftModel.shiftName,
       effectiveFrom: employeeShiftAllocations.effectiveFrom,
@@ -536,6 +553,10 @@ export const getAllShiftAllocations = async (tenantId: number) => {
     .leftJoin(
       employeeModel,
       eq(employeeShiftAllocations.employeeId, employeeModel.employeeId)
+    )
+    .leftJoin(
+      companyModel,
+      eq(employeeShiftAllocations.companyId, companyModel.companyId)
     )
     .leftJoin(
       shiftModel,
