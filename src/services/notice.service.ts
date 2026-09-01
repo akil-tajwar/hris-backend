@@ -2,7 +2,6 @@ import { db } from '../config/database'
 import { noticeModel, NewNotice } from '../schemas'
 import { eq } from 'drizzle-orm'
 
-// CREATE
 /* ================================
    CREATE NOTICE
 ================================ */
