@@ -20,22 +20,29 @@ export const createShiftController = async (req: Request, res: Response) => {
 
     const tenantId = req.user?.tenantId
 
-    const data = {
+    if (!Array.isArray(req.body)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Request body must be an array',
+      })
+    }
+
+    const data = req.body.map((item: any) => ({
       shift: {
-        ...req.body.shift,
+        ...item.shift,
         tenantId,
       },
-      shiftDayAndWeekDays: req.body.shiftDayAndWeekDays.map((item: any) => ({
-        ...item,
+      shiftDayAndWeekDays: (item.shiftDayAndWeekDays || []).map((day: any) => ({
+        ...day,
         tenantId,
       })),
-    }
+    }))
 
     const result = await createShift(data)
 
     res.status(201).json({
       status: 'success',
-      message: 'Shift created successfully',
+      message: `${result.length} shift${result.length > 1 ? 's' : ''} created successfully`,
       data: result,
     })
   } catch (error: any) {

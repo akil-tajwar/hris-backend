@@ -64,7 +64,12 @@ export const createBulkShiftAllocationController = async (
     res.status(201).json(shiftAllocation)
   } catch (error: any) {
     console.error('❌ Bulk shift allocation error:', error)
-    res.status(400).json({ success: false, message: error.message || 'Something went wrong' })
+    res
+      .status(400)
+      .json({
+        success: false,
+        message: error.message || 'Something went wrong',
+      })
   }
 }
 
@@ -84,7 +89,12 @@ export const updateShiftAllocationController = async (
     res.json({ success: true, data })
   } catch (error: any) {
     console.error('❌ Shift allocation update error:', error)
-    res.status(500).json({ success: false, message: error.message || 'Internal server error' })
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: error.message || 'Internal server error',
+      })
   }
 }
 
@@ -101,11 +111,17 @@ export const updateRecurrenceSettingController = async (
       return
     }
     const { recurrenceType, recurrenceActive } = req.body
-    const data = await updateRecurrenceSetting(id, recurrenceType, recurrenceActive)
+    const data = await updateRecurrenceSetting(
+      id,
+      recurrenceType,
+      recurrenceActive
+    )
     res.json({ success: true, data })
   } catch (error: any) {
     console.error('❌ Update recurrence error:', error)
-    res.status(500).json({ success: false, message: error.message || 'Server error' })
+    res
+      .status(500)
+      .json({ success: false, message: error.message || 'Server error' })
   }
 }
 
@@ -121,7 +137,7 @@ export const copyShiftAllocationController = async (
       res.status(400).json({ message: 'Invalid ID' })
       return
     }
-    
+
     const tenantId = req.user?.tenantId
     const data = {
       ...req.body,
@@ -131,7 +147,9 @@ export const copyShiftAllocationController = async (
     res.status(201).json(copyShiftAllocationData)
   } catch (error: any) {
     console.error('❌ Copy shift allocation error:', error)
-    res.status(400).json({ success: false, message: error.message || 'Server error' })
+    res
+      .status(400)
+      .json({ success: false, message: error.message || 'Server error' })
   }
 }
 
@@ -148,15 +166,23 @@ export const copyAllActiveAllocationsController = async (
       throw new Error('Tenant ID is required')
     }
     if (!recurrenceType || !['weekly', 'monthly'].includes(recurrenceType)) {
-      res.status(400).json({ message: 'recurrenceType must be weekly or monthly' })
+      res
+        .status(400)
+        .json({ message: 'recurrenceType must be weekly or monthly' })
       return
     }
 
-    const copyAllActiveAllocationsData = await copyAllActiveAllocations(recurrenceType, createdBy, tenantId)
+    const copyAllActiveAllocationsData = await copyAllActiveAllocations(
+      recurrenceType,
+      createdBy,
+      tenantId
+    )
     res.status(201).json(copyAllActiveAllocationsData)
   } catch (error: any) {
     console.error('❌ Copy all allocations error:', error)
-    res.status(400).json({ success: false, message: error.message || 'Server error' })
+    res
+      .status(400)
+      .json({ success: false, message: error.message || 'Server error' })
   }
 }
 
@@ -241,7 +267,9 @@ export const deleteShiftAllocationController = async (
     res.status(200).json(result)
   } catch (error: any) {
     console.error('❌ Delete Shift Allocation Error:', error)
-    res.status(500).json({ success: false, message: error.message || 'Server error' })
+    res
+      .status(500)
+      .json({ success: false, message: error.message || 'Server error' })
   }
 }
 
