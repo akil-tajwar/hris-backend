@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   getEmployeeAttendanceSummaryController,
+  getEmployeeDepartmentHeadStatusController,
   getEmployeeHeadCountSummaryController,
   getEmployeeLateAndEarlyOutSummaryController,
   getEmployeeLeaveSummaryController,
@@ -40,6 +41,11 @@ router.get(
   '/head-count-summary',
   authenticateUser,
   getEmployeeHeadCountSummaryController
+)
+router.get(
+  '/department-head-status/:userId',
+  authenticateUser,
+  getEmployeeDepartmentHeadStatusController
 )
 
 export default router
