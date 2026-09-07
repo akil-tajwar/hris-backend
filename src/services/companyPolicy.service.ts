@@ -7,7 +7,6 @@ import {
 } from '../schemas'
 import {
   buildChunksForPolicy,
-  chunkAndStorePolicy,
 } from './companyPolicyChunk.service'
 
 export const bulkCreateCompanyPolicies = async (
