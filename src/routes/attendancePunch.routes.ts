@@ -12,6 +12,7 @@ import {
 const router = express.Router()
 
 router.post('/create', authenticateUser, createAttendancePunchController)
+// router.post('/create/auto', authenticateUser, createAutoAttendancePunchController)
 router.patch('/edit/:id', authenticateUser, updateAttendancePunchController)
 router.get('/getAll', authenticateUser, getAllAttendancePunchesController)
 router.get('/getById/:id', authenticateUser, getAttendancePunchByIdController)
