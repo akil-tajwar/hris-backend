@@ -1824,7 +1824,6 @@ export const officeLocationsModel = mysqlTable('office_locations', {
   companyId: int('company_id')
     .references(() => companyModel.companyId)
     .notNull(),
-  locationName: varchar('location_name', { length: 100 }).notNull(),
   address: text('address').notNull(),
   latitude: double('latitude').notNull(),
   longitude: double('longitude').notNull(),

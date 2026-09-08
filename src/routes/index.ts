@@ -40,6 +40,7 @@ import holidaysRoutes from './holidays.routes'
 import noticeRoutes from './notice.routes'
 import aiRoutes from './ai.routes'
 import companyPolicyRoutes from './companyPolicy.routes'
+import officeLocationsRoutes from './officeLocations.routes'
 
 const router = Router()
 
@@ -84,5 +85,6 @@ router.use('/attendanceProcessing', attendanceProcessingRoutes)
 router.use('/notice', noticeRoutes)
 router.use('/ai', aiRoutes)
 router.use('/companyPolicy', companyPolicyRoutes)
+router.use('/officeLocations', officeLocationsRoutes)
 
 export default router
