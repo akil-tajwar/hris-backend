@@ -7,10 +7,15 @@ import {
   getAttendancePunchById,
   getAttendancePunchesByEmployee,
   deleteAttendancePunch,
+  processGeofencePunch,
+  GeofencePunchNotFoundError,
 } from '../services/attendancePunch.service'
 import { processAttendanceForDate } from '../services/attendanceProcessing.service'
 
-export const createAttendancePunchController = async (req: Request, res: Response) => {
+export const createAttendancePunchController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     requirePermission(req, 'create_attendance_punch')
 
@@ -19,7 +24,7 @@ export const createAttendancePunchController = async (req: Request, res: Respons
       ...req.body,
       tenantId,
     }
-    
+
     const attendancePunch = await createAttendancePunch(data)
 
     // ✅ instant process
@@ -50,9 +55,10 @@ export const updateAttendancePunchController = async (
     res.json({ success: true, data })
   } catch (error: any) {
     console.error('❌ Attendance Punch update error:', error)
-    res
-      .status(500)
-      .json({ success: false, message: error.message || 'Internal server error' })
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    })
   }
 }
 
@@ -140,5 +146,31 @@ export const deleteAttendancePunchController = async (
     res
       .status(500)
       .json({ success: false, message: error.message || 'Server error' })
+  }
+}
+
+export async function geofencePunchController(req: Request, res: Response) {
+  try {
+    const { phoneNumber, latitude, longitude } = req.body
+
+    if (!phoneNumber || latitude == null || longitude == null) {
+      res
+        .status(400)
+        .json({ error: 'phoneNumber, latitude, and longitude are required' })
+    }
+
+    const result = await processGeofencePunch({
+      phoneNumber,
+      latitude,
+      longitude,
+    })
+
+    res.status(result.punched ? 201 : 200).json(result)
+  } catch (err) {
+    if (err instanceof GeofencePunchNotFoundError) {
+      res.status(404).json({ error: err.message })
+    }
+    console.error('Geofence punch error:', err)
+    res.status(500).json({ error: 'Internal server error' })
   }
 }

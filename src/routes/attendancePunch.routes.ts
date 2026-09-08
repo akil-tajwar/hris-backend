@@ -7,11 +7,13 @@ import {
   getAttendancePunchByIdController,
   getAttendancePunchesByEmployeeController,
   deleteAttendancePunchController,
+  geofencePunchController,
 } from '../controllers/attendancePunch.controller'
 
 const router = express.Router()
 
 router.post('/create', authenticateUser, createAttendancePunchController)
+router.post('/create/auto', geofencePunchController)
 router.patch('/edit/:id', authenticateUser, updateAttendancePunchController)
 router.get('/getAll', authenticateUser, getAllAttendancePunchesController)
 router.get('/getById/:id', authenticateUser, getAttendancePunchByIdController)

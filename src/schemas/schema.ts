@@ -1819,6 +1819,52 @@ export const companyPolicyChunksModel = mysqlTable('company_policy_chunks', {
   createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
+export const officeLocationsModel = mysqlTable('office_locations', {
+  officeLocationId: int('office_location_id').autoincrement().primaryKey(),
+  companyId: int('company_id')
+    .references(() => companyModel.companyId)
+    .notNull(),
+  address: text('address').notNull(),
+  latitude: double('latitude').notNull(),
+  longitude: double('longitude').notNull(),
+  radiusMeters: double('radius_meters').notNull(),
+  tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+    onDelete: 'restrict',
+  }),
+  createdBy: int('created_by').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedBy: int('updated_by'),
+  updatedAt: timestamp('updated_at').default(
+    sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+  ),
+})
+
+export const employeeOfficeLocationModel = mysqlTable(
+  'employee_office_locations',
+  {
+    employeeOfficeLocationId: int('employee_office_location_id')
+      .autoincrement()
+      .primaryKey(),
+    fromDate: date('from_date').notNull(),
+    toDate: date('to_date'),
+    officeLocationId: int('office_location_id')
+      .references(() => officeLocationsModel.officeLocationId)
+      .notNull(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
 // ========================
 // Relations (unchanged)
 // ========================
@@ -2368,3 +2414,5 @@ export type Notice = typeof noticeModel.$inferSelect
 export type NewNotice = typeof noticeModel.$inferInsert
 export type CompanyPolicy = typeof companyPolicyModel.$inferSelect
 export type NewCompanyPolicy = typeof companyPolicyModel.$inferInsert
+export type OfficeLocation = typeof officeLocationsModel.$inferSelect
+export type NewOfficeLocation = typeof officeLocationsModel.$inferInsert
