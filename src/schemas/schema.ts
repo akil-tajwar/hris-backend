@@ -1839,6 +1839,32 @@ export const officeLocationsModel = mysqlTable('office_locations', {
   ),
 })
 
+export const employeeOfficeLocationModel = mysqlTable(
+  'employee_office_locations',
+  {
+    employeeOfficeLocationId: int('employee_office_location_id')
+      .autoincrement()
+      .primaryKey(),
+    fromDate: date('from_date').notNull(),
+    toDate: date('to_date'),
+    officeLocationId: int('office_location_id')
+      .references(() => officeLocationsModel.officeLocationId)
+      .notNull(),
+    employeeId: int('employee_id')
+      .references(() => employeeModel.employeeId)
+      .notNull(),
+    tenantId: int('tenant_id').references(() => tenantModel.tenantId, {
+      onDelete: 'restrict',
+    }),
+    createdBy: int('created_by').notNull(),
+    createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedBy: int('updated_by'),
+    updatedAt: timestamp('updated_at').default(
+      sql`CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`
+    ),
+  }
+)
+
 // ========================
 // Relations (unchanged)
 // ========================
