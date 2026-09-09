@@ -222,11 +222,57 @@ export async function processGeofencePunch(params: {
 }) {
   const { phoneNumber, latitude, longitude } = params
 
-  // 1. Find employee by phone number
-  const [employee] = await db
+  // Helper function to normalize phone number
+  const normalizePhoneNumber = (phone: string): string => {
+    // Remove all non-digit characters (including +, -, spaces, etc.)
+    let cleaned = phone.replace(/\D/g, '')
+
+    // If it starts with 88 (Bangladesh country code without +)
+    if (cleaned.startsWith('88')) {
+      cleaned = cleaned.slice(2)
+    }
+
+    // If it starts with 00, remove it
+    if (cleaned.startsWith('00')) {
+      cleaned = cleaned.slice(2)
+    }
+
+    // If it starts with 0, keep it, otherwise add 0
+    if (!cleaned.startsWith('0')) {
+      cleaned = '0' + cleaned
+    }
+
+    // Return the normalized number (first 11 digits for BD mobile numbers)
+    return cleaned.slice(0, 11)
+  }
+
+  // Normalize the input phone number
+  const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
+
+  // Also normalize the database phone number in the query
+  // Since we can't easily transform database values in the query with Drizzle,
+  // we'll normalize both sides and try to find a match
+
+  // First, try exact match with normalized number
+  let [employee] = await db
     .select()
     .from(employeeModel)
-    .where(eq(employeeModel.officialPhone, phoneNumber))
+    .where(eq(employeeModel.officialPhone, normalizedPhoneNumber))
+
+  // If not found, try to find by checking all employees and normalizing their phone numbers
+  if (!employee) {
+    const allEmployees = await db.select().from(employeeModel)
+
+    // Find employee whose normalized phone matches
+    const matchedEmployee = allEmployees.find((emp) => {
+      const normalizedDbPhone = normalizePhoneNumber(emp.officialPhone || '')
+      return normalizedDbPhone === normalizedPhoneNumber
+    })
+
+    if (matchedEmployee) {
+      employee = matchedEmployee
+    }
+  }
 
   if (!employee) {
     throw new GeofencePunchNotFoundError('Employee not found')
