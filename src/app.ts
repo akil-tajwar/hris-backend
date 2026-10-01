@@ -26,6 +26,7 @@ app.use(
         'http://srv938571.hstgr.cloud:6070',
         'https://www.srv938571.hstgr.cloud:6070',
         'https://hris-frontend-swart.vercel.app',
+        'https://hris-frontend-personal.vercel.app'
       ]
 
       if (!origin || allowedOrigins.includes(origin)) {
