@@ -8,18 +8,17 @@ import { eq } from 'drizzle-orm'
 export const createNotice = async (data: NewNotice) => {
   const insertResult = await db.insert(noticeModel).values({
     ...data,
+    noticeDate: data.noticeDate ? new Date(data.noticeDate) : new Date(),
+    showTill: data.showTill ? new Date(data.showTill) : new Date(),
   })
 
   const noticeId = Number(insertResult[0].insertId)
-
   const [notice] = await db
     .select()
     .from(noticeModel)
     .where(eq(noticeModel.noticeId, noticeId))
-
   return notice
 }
-
 /* ================================
    UPDATE NOTICE
 ================================ */
